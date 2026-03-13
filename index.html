@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STYRE OS PRO</title>
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#09090b">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="wiz-bg"></div>
+    <div id="app" class="app-container"></div>
+
+    <div id="m-switcher" class="modal-overlay hidden">
+        <div class="panel" style="width:100%; max-width:380px; border-color:var(--muted); text-align:center;">
+            <div style="font-size:3rem; margin-bottom:10px;">🎛️</div>
+            <h3 style="color:#fff; margin:0 0 20px 0; font-size:1.3rem;">Zarządzanie Profilami</h3>
+            <div id="switcher-btns" style="display:flex; flex-direction:column; gap:10px;"></div>
+            <button class="btn" style="background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.1); margin-top:20px;" onclick="document.getElementById('m-switcher').classList.add('hidden')">Zamknij</button>
+        </div>
+    </div>
+
+    <script src="db.js"></script>
+    <script src="home.js"></script>
+    <script src="taxi.js"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>
