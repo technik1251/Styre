@@ -1,14 +1,13 @@
 // ==========================================
-// PLIK 2: home.js - BUDŻET DOMOWY (Z obsługą transakcji planowanych, filtrami i ikonami)
+// PLIK 2: home.js - BUDŻET DOMOWY (Z obsługą transakcji planowanych, edycją i zakładką Planowane)
 // ==========================================
 const C_EXP = { 'Stałe opłaty / Czynsz': {c: '#f59e0b', i: '🏢'}, 'Prąd / Gaz / Woda': {c: '#0ea5e9', i: '⚡'}, 'Internet i Telefon': {c: '#8b5cf6', i: '🌐'}, 'Kredyt / Leasing': {c: '#ef4444', i: '🏦'}, 'Zakupy Spożywcze': {c: '#22c55e', i: '🛒'}, 'Dom i Rachunki': {c: '#14b8a6', i: '🏠'}, 'Auto i Transport': {c: '#f59e0b', i: '🚗'}, 'Rozrywka': {c: '#a855f7', i: '🎉'}, 'Jedzenie na mieście': {c: '#ef4444', i: '🍔'}, 'Ubrania': {c: '#ec4899', i: '👗'}, 'Zdrowie': {c: '#10b981', i: '💊'}, 'Oszczędności / Skarbonka': {c: '#10b981', i: '🐷'}, 'Inne Wydatki': {c: '#64748b', i: '📦'} };
 const C_INC = { 'Wypłata z Etatu': {c: '#22c55e', i: '💼'}, 'Utarg z Taxi': {c: '#3b82f6', i: '🚕'}, 'Premia / Prezent': {c: '#10b981', i: '🎁'}, 'Inne Wpływy': {c: '#14b8a6', i: '📈'} };
 const FIXED_EXP_CATS = ['Stałe opłaty / Czynsz', 'Prąd / Gaz / Woda', 'Internet i Telefon', 'Kredyt / Leasing', 'Oszczędności / Skarbonka'];
 
-// Zmienna globalna do filtrów w historii
 window.hHistFilter = window.hHistFilter || 'all';
+window.hCalMode = window.hCalMode || 'history'; // 'history' lub 'planned'
 
-// --- NOWA LOGIKA SALDA ---
 window.hGetBal = function() { 
     let b = {}; 
     db.home.accs.forEach(a => b[a.id] = a.startBal || 0); 
@@ -58,19 +57,16 @@ window.hAddDebt = function() { let n = document.getElementById('hd-name').value;
 window.hDelDebt = function(id) { db.home.debts = db.home.debts.filter(d => d.id !== id); window.save(); window.render(); }
 window.hSaveAcc = function(id) { let n = document.getElementById('edit_n_'+id).value; let b = parseFloat(document.getElementById('edit_b_'+id).value) || 0; let acc = db.home.accs.find(a => a.id === id); if(acc) { acc.n = n; acc.startBal = b; save(); render(); window.sysAlert("Sukces", "Konto zaktualizowane.", "success"); } }
 
-// --- NOWY KREATOR KONTA (Z WYBOREM IKONY) ---
 window.hAddNewAcc = function() { 
     window.sysPrompt("Nazwa Konta", "Wpisz nazwę (np. mBank, Skarbonka)", (n) => { 
         if(!n) return;
-        // Prompt dla ikony (szybki wybór)
         let iconOpts = "Wpisz cyfrę:\n1 = 🏦 Bank\n2 = 💵 Portfel\n3 = 💳 Karta\n4 = 🐷 Skarbonka\n5 = 📈 Inwestycje";
         window.sysPrompt("Wybierz Ikonę", iconOpts, (iChoice) => {
-            let ico = '🏦'; let col = '#8b5cf6'; // Domyślne Bank
+            let ico = '🏦'; let col = '#8b5cf6';
             if(iChoice == '2') { ico = '💵'; col = '#22c55e'; }
             if(iChoice == '3') { ico = '💳'; col = '#f59e0b'; }
             if(iChoice == '4') { ico = '🐷'; col = '#ec4899'; }
             if(iChoice == '5') { ico = '📈'; col = '#0ea5e9'; }
-            
             db.home.accs.push({id:'acc_'+Date.now(), n:n, c:col, i:ico, startBal:0}); 
             save(); render(); 
         });
@@ -78,6 +74,48 @@ window.hAddNewAcc = function() {
 }
 window.hDelAcc = function(id) { if(db.home.accs.length <= 1) return window.sysAlert("Błąd", "Musisz mieć min. 1 konto!"); window.sysConfirm("Usuwanie konta", "Na pewno?", () => { db.home.accs = db.home.accs.filter(a => a.id !== id); save(); render(); }); }
 window.hSetBudget = function() { let cat = document.getElementById('hb-cat').value; let val = parseFloat(document.getElementById('hb-val').value); if(!db.home.budgets) db.home.budgets = {}; if(val > 0) { db.home.budgets[cat] = val; window.sysAlert("Sukces", "Ustawiono limit.", "success");} else { delete db.home.budgets[cat]; } save(); render(); }
+
+// --- EDYCJA I USUWANIE TRANSAKCJI ---
+window.hDelTrans = function(id) {
+    window.sysConfirm("Usuwanie", "Na pewno usunąć tę operację?", () => {
+        db.home.trans = db.home.trans.filter(x => x.id !== id);
+        window.save(); window.render();
+    });
+};
+
+window.hEditTrans = function(id) {
+    let tr = db.home.trans.find(x => x.id === id);
+    if(!tr) return;
+    let html = `<div id="m-edit-h-trans" class="modal-overlay" style="z-index: 30000; animation: fadeIn 0.2s;">
+    <div class="panel" style="width:100%; max-width:380px; background: #09090b;">
+        <h3 style="margin-top:0;">Edytuj operację</h3>
+        <div class="inp-group"><label>Kwota (zł)</label><input type="number" step="0.01" id="eht-v" value="${tr.v}"></div>
+        <div class="inp-group"><label>Data operacji</label><input type="date" id="eht-d" value="${tr.rD.split('T')[0]}"></div>
+        <button class="btn btn-success" style="margin-top:15px; padding:15px;" onclick="window.hSaveEditTrans(${id})">ZAPISZ ZMIANY</button>
+        <button class="btn" style="background:transparent; color:var(--muted); box-shadow:none; margin-top:5px;" onclick="document.getElementById('m-edit-h-trans').remove()">ANULUJ</button>
+    </div></div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+};
+
+window.hSaveEditTrans = function(id) {
+    let tr = db.home.trans.find(x => x.id === id);
+    if(tr) {
+        let nv = window.safeVal('eht-v');
+        let nd = document.getElementById('eht-d').value;
+        if(nv > 0 && nd) {
+            tr.v = nv;
+            let dObj = new Date(nd);
+            dObj.setHours(12,0,0);
+            tr.rD = dObj.toISOString();
+            tr.dt = dObj.toLocaleDateString('pl-PL');
+            tr.isPlanned = nd > window.getLocalYMD(); // Aktualizacja statusu planowanego na podstawie daty!
+            db.home.trans.sort((a,b) => new Date(b.rD) - new Date(a.rD));
+            window.save(); window.render();
+        }
+    }
+    document.getElementById('m-edit-h-trans').remove();
+};
+
 
 window.hAction = function() { 
     let el = document.getElementById('h-v'); 
@@ -90,10 +128,8 @@ window.hAction = function() {
     let d = dEl ? dEl.value : ''; 
     let who = window.hMem || db.home.members[0]; 
     let dVal = document.getElementById('h-date') ? document.getElementById('h-date').value : ''; 
-    
     let todayYMD = window.getLocalYMD();
     let isPlannedTrans = dVal > todayYMD; 
-
     let dObj = dVal ? new Date(dVal) : new Date(); 
     if(dVal) dObj.setHours(12,0,0); 
 
@@ -150,7 +186,7 @@ window.rHome = function() {
         APP.innerHTML = hdr + `<div style="background: linear-gradient(180deg, rgba(20,184,166,0.15) 0%, var(--bg) 100%); padding: 30px 20px 40px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); border-bottom-left-radius:30px; border-bottom-right-radius:30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
         <p style="margin:0 0 5px 0; font-size:0.8rem; color:var(--muted); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Dostępne środki</p>
         <h1 style="margin:0; font-size:3.8rem; font-weight:900; color:${globalBalance >= 0 ? '#fff' : 'var(--danger)'}; letter-spacing:-1.5px;">${globalBalance.toFixed(2)} zł</h1>
-        ${plannedSum > 0 ? `<div style="margin-top:10px; font-size:0.85rem; color:var(--warning); display:flex; align-items:center; justify-content:center; gap:5px; background:rgba(245, 158, 11, 0.1); padding:5px 10px; border-radius:8px; border:1px solid rgba(245, 158, 11, 0.3); width:max-content; margin-left:auto; margin-right:auto;"><span>⏳ Zaplanowane wydatki w tym m-cu:</span> <strong>-${plannedSum.toFixed(2)} zł</strong></div>` : ''}
+        ${plannedSum > 0 ? `<div style="margin-top:10px; font-size:0.85rem; color:var(--warning); display:flex; align-items:center; justify-content:center; gap:5px; background:rgba(245, 158, 11, 0.1); padding:5px 10px; border-radius:8px; border:1px solid rgba(245, 158, 11, 0.3); width:max-content; margin-left:auto; margin-right:auto; cursor:pointer;" onclick="window.hCalMode='planned'; db.tab='cal'; window.render()"><span>⏳ Zaplanowane w tym m-cu:</span> <strong>-${plannedSum.toFixed(2)} zł</strong> <span style="font-size:0.7rem; margin-left:5px;">(Pokaż >)</span></div>` : ''}
         <div style="display:flex; justify-content:center; gap:10px; margin-top:20px;">
         <div style="flex:1; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px; padding:10px;">
         <div style="color:var(--success); font-weight:bold; margin-bottom:8px; font-size:1.1rem;">+${currInc.toFixed(0)} zł</div>
@@ -173,10 +209,10 @@ window.rHome = function() {
             let sign = isExp ? '-' : (isTrans ? '' : '+'); 
             
             let color = isExp ? 'var(--danger)' : (isTrans ? '#fff' : 'var(--success)'); 
-            let opacity = x.isPlanned ? '0.5' : '1';
-            let planLbl = x.isPlanned ? `<span style="color:var(--warning); font-size:0.65rem; border:1px solid var(--warning); padding:1px 4px; border-radius:4px; margin-left:6px;">PLAN: ${x.dt}</span>` : '';
+            let opacity = x.isPlanned ? '0.6' : '1';
+            let planLbl = x.isPlanned ? `<span style="color:var(--warning); font-size:0.65rem; border:1px solid var(--warning); padding:1px 4px; border-radius:4px; margin-left:6px; white-space:nowrap;">PLAN: ${x.dt}</span>` : '';
 
-            return `<div class="log-item" style="border:none; border-bottom:1px solid rgba(255,255,255,0.05); border-radius:0; margin-bottom:0; background:transparent; padding:15px 5px; opacity:${opacity};"><div style="display:flex; align-items:center; gap:15px;"><div style="width:45px; height:45px; border-radius:50%; background:${cd.c}22; border:1px solid ${cd.c}55; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">${cd.i}</div><div><strong style="font-size:1rem; color:#fff; display:flex; align-items:center; gap:6px;">${catName} ${planLbl}</strong><br><small style="color:var(--muted);">${accName} • ${x.isPlanned ? 'ZAPLANOWANE' : x.dt} • <span style="background:rgba(20,184,166,0.15); color:var(--life); padding:1px 4px; border-radius:4px; font-size:0.6rem;">👤 ${x.who||'Nieznany'}</span></small></div></div><strong style="color:${color}; font-size:1.1rem;">${sign}${x.v.toFixed(2)} zł</strong></div>`; 
+            return `<div class="log-item" style="border:none; border-bottom:1px solid rgba(255,255,255,0.05); border-radius:0; margin-bottom:0; background:transparent; padding:15px 5px; opacity:${opacity};"><div style="display:flex; align-items:center; gap:15px; flex:1;"><div style="width:45px; height:45px; border-radius:50%; background:${cd.c}22; border:1px solid ${cd.c}55; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">${cd.i}</div><div><strong style="font-size:0.95rem; color:#fff; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">${catName} ${planLbl}</strong><small style="color:var(--muted); display:block; margin-top:4px;">${accName} • ${x.isPlanned ? 'ZAPLANOWANE' : x.dt} • <span style="background:rgba(20,184,166,0.15); color:var(--life); padding:1px 4px; border-radius:4px; font-size:0.6rem;">👤 ${x.who||'Nieznany'}</span></small></div></div><div style="text-align:right;"><strong style="color:${color}; font-size:1.1rem; white-space:nowrap;">${sign}${x.v.toFixed(2)} zł</strong><div style="display:flex; gap:5px; margin-top:5px; justify-content:flex-end;"><button style="background:rgba(255,255,255,0.1); color:#fff; border:none; border-radius:6px; padding:4px 8px; cursor:pointer;" onclick="window.hEditTrans(${x.id})">✏️</button><button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; border-radius:6px; padding:4px 8px; cursor:pointer;" onclick="window.hDelTrans(${x.id})">🗑️</button></div></div></div>`; 
         }).join('') || '<div style="text-align:center;color:var(--muted);padding:20px 0; font-size:0.8rem;">Brak operacji na koncie.</div>'}</div>` + nav; 
     } 
     
@@ -184,13 +220,42 @@ window.rHome = function() {
     if(t === 'add') { let isExp = window.hTransType === 'exp'; let isTrans = window.hTransType === 'transfer'; let col = isExp ? 'var(--danger)' : (isTrans ? 'var(--info)' : 'var(--success)'); let topBg = isExp ? 'var(--bg-exp)' : (isTrans ? 'linear-gradient(180deg, #0ea5e9 0%, #09090b 100%)' : 'var(--bg-inc)'); let todayStr = window.getLocalYMD(); let catSrc = isExp ? C_EXP : C_INC; if(!isTrans && (!window.hSelCat || !catSrc[window.hSelCat])) window.hSelCat = Object.keys(catSrc)[0]; let accOptions = h.accs.map(a => `<option value="${a.id}" ${window.hSelAcc===a.id?'selected':''}>${a.n} (${balances[a.id].toFixed(0)} zł)</option>`).join(''); let gridHtml = !isTrans ? `<div class="cat-grid">` + Object.keys(catSrc).map(k => `<div class="cat-item ${window.hSelCat===k?'active':''}" onclick="window.hSelCat='${k}'; window.render();" style="${window.hSelCat===k?`background:${catSrc[k].c}22; border-color:${catSrc[k].c};`:''}"><span class="cat-icon">${catSrc[k].i}</span><span class="cat-lbl">${k}</span></div>`).join('') + `</div>` : ''; let memChips = h.members.map(m => `<div class="chip ${window.hMem === m ? 'active' : ''}" style="${window.hMem === m ? 'background:var(--life);color:#fff;border-color:var(--life)' : 'color:var(--muted)'}" onclick="window.hMem='${m}'; window.render();">${m}</div>`).join(''); APP.innerHTML = hdr + `<div style="background: ${topBg}; padding: 20px 15px; border-bottom: 1px solid rgba(255,255,255,0.1);"><div class="mode-switch" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);"><div class="m-btn" style="${isExp?'background:var(--danger); color:#fff;':'color:var(--muted)'}" onclick="window.hTransType='exp';window.render()">WYDATEK</div><div class="m-btn" style="${!isExp&&!isTrans?'background:var(--success); color:#fff;':'color:var(--muted)'}" onclick="window.hTransType='inc';window.render()">WPŁYW</div><div class="m-btn" style="${isTrans?'background:var(--info); color:#fff;':'color:var(--muted)'}" onclick="window.hTransType='transfer';window.render()">TRANSFER</div></div><div style="text-align:center; padding: 10px 0;"><label style="color:#fff; font-size:0.8rem; font-weight:bold; text-transform:uppercase; opacity:0.8;">Wprowadź Kwotę</label><div style="display:flex; justify-content:center; align-items:center; gap:5px; margin-top:5px;"><input type="number" id="h-v" style="background:transparent; border:none; border-bottom:2px solid #fff; color:#fff; font-size:4rem!important; font-weight:900; text-align:center; width:200px; padding:5px; outline:none;" placeholder="0"><span style="font-size:2rem; font-weight:900; color:#fff;">zł</span></div></div></div><div style="padding: 20px 15px;"><div class="form-section" style="padding:12px; margin-bottom:15px; border-color:var(--life);"><div class="fs-title" style="margin-bottom:8px; color:var(--life);">Kto wykonuje operację?</div><div class="chip-box" style="margin-bottom:0; padding-bottom:0;">${memChips}</div></div>${isTrans ? `<div class="inp-group" style="margin-bottom:15px;"><label>Z konta (Wypływ)</label><select id="h-acc-from" style="background:#18181b;">${accOptions}</select></div><div class="inp-group" style="margin-bottom:20px;"><label>Na konto (Wpływ)</label><select id="h-acc-to" style="background:#18181b;">${accOptions}</select></div>` : `<div class="inp-group" style="margin-bottom:20px;"><label>Wybierz Konto</label><select id="h-acc" onchange="window.hSelAcc=this.value" style="background:#18181b;">${accOptions}</select></div><label style="font-size:0.75rem; color:var(--muted); font-weight:800; text-transform:uppercase; margin-bottom:10px; display:block; padding-left:5px;">Wybierz Kategorię</label>${gridHtml}`}<div class="inp-group" style="margin-bottom:15px;"><label>Notatka (Opcjonalnie)</label><input type="text" id="h-d" placeholder="Wpisz krótki opis" style="background:#18181b;"></div><div class="inp-group" style="margin-bottom:20px;"><label>Data operacji</label><input type="date" id="h-date" value="${todayStr}" style="background:#18181b;"></div><button class="btn" style="background:${col}; color:#fff; font-size:1.2rem; padding:20px;" onclick="window.hAction()">${isTrans?'WYKONAJ PRZELEW':'ZAPISZ TRANSAKCJĘ'}</button></div>` + nav; } 
     if(t === 'stats') { let now = new Date(); let cats = {}; let sumExp = 0; let sumInc = 0; let sumFixed = 0; let sumVar = 0; h.trans.forEach(x => { let d = new Date(x.rD); if(!x.isPlanned && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear()) { if(x.type === 'exp') { if(!cats[x.cat]) cats[x.cat] = 0; cats[x.cat] += x.v; sumExp += x.v; if(FIXED_EXP_CATS.includes(x.cat)) sumFixed += x.v; else sumVar += x.v; } if(x.type === 'inc') sumInc += x.v; } }); let sortedCats = Object.keys(cats).sort((a,b) => cats[b] - cats[a]); let cLabels = sortedCats; let cData = sortedCats.map(k => cats[k]); let cColors = sortedCats.map(k => C_EXP[k] ? C_EXP[k].c : '#8b5cf6'); let catListHtml = sortedCats.map((lbl, idx) => { let val = cData[idx]; let pct = sumExp > 0 ? ((val / sumExp) * 100).toFixed(0) : 0; let color = cColors[idx]; let icon = C_EXP[lbl] ? C_EXP[lbl].i : '📦'; return `<div class="cat-list-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);"><div style="display:flex; align-items:center;"><div style="width:30px; height:30px; border-radius:50%; background:${color}22; display:flex; align-items:center; justify-content:center; margin-right:12px; font-size:1rem; border:1px solid ${color}55;">${icon}</div><span style="font-weight:bold;">${lbl}</span></div><div style="display:flex; align-items:center;"><span style="color:var(--muted);font-size:0.8rem;margin-right:10px;">${pct}%</span><span style="color:${color};font-weight:bold;">-${val.toFixed(2)} zł</span></div></div>`; }).join(''); let bilans = sumInc - sumExp; APP.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:10px;"><p>BILANS W TYM MIESIĄCU</p><h1 style="color:${bilans >= 0 ? 'var(--success)' : 'var(--danger)'}; font-size:3.5rem;">${bilans > 0 ? '+' : ''}${bilans.toFixed(2)} zł</h1></div><div class="grid-2" style="padding: 0 15px; margin-bottom: 20px;"><div class="box" style="border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.05);"><span style="color:var(--success)">Przychody</span><strong style="color:#fff">${sumInc.toFixed(2)} zł</strong></div><div class="box" style="border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.05);"><span style="color:var(--danger)">Wydatki</span><strong style="color:#fff">-${sumExp.toFixed(2)} zł</strong></div></div><div class="panel" style="margin-bottom:20px; border-color:var(--info);"><div class="p-title" style="color:var(--info); margin-bottom:10px;">Podział Wydatków</div><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="color:var(--muted); font-size:0.8rem; font-weight:bold;">Stałe opłaty: <span style="color:#f59e0b">${sumFixed.toFixed(2)} zł</span></span><span style="color:var(--muted); font-size:0.8rem; font-weight:bold;">Zmienne: <span style="color:#0ea5e9">${sumVar.toFixed(2)} zł</span></span></div><div style="width:100%; height:12px; background:rgba(255,255,255,0.1); border-radius:6px; overflow:hidden; display:flex;"><div style="width:${sumExp > 0 ? (sumFixed/sumExp)*100 : 0}%; background:#f59e0b; height:100%;"></div><div style="width:${sumExp > 0 ? (sumVar/sumExp)*100 : 0}%; background:#0ea5e9; height:100%;"></div></div><p style="font-size:0.7rem; color:var(--muted); text-align:center; margin-top:10px;">Opłaty stałe stanowią ${(sumExp > 0 ? (sumFixed/sumExp)*100 : 0).toFixed(0)}% Twoich wydatków.</p></div><div class="panel" style="padding: 20px;"><div class="p-title">Struktura Kosztów Zmiennych</div><div style="height:250px; position:relative; margin-bottom:20px;"><canvas id="h-chart"></canvas>${sumExp === 0 ? '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:var(--muted); font-size:0.9rem;">Brak danych</div>' : ''}</div><div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">${catListHtml || '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:10px;">Brak wydatków w tym miesiącu.</div>'}</div></div>` + nav; if(sumExp > 0) { setTimeout(() => { if(window.hCh) window.hCh.destroy(); let ctx = document.getElementById('h-chart').getContext('2d'); window.hCh = new Chart(ctx, { type: 'doughnut', data: { labels: cLabels, datasets: [{ data: cData, backgroundColor: cColors, borderWidth: 0, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '75%', layout: {padding: 10} } }); }, 100); } } 
     if(t === 'cal') { 
-        // --- LOGIKA FILTROWANIA HISTORII ---
-        let filteredTrans = h.trans;
-        if(window.hHistFilter === 'inc') filteredTrans = h.trans.filter(x => x.type === 'inc');
-        if(window.hHistFilter === 'exp') filteredTrans = h.trans.filter(x => x.type === 'exp');
+        let isPlannedMode = window.hCalMode === 'planned';
+        
+        let switchHtml = `<div class="mode-switch" style="margin: 15px 15px 5px 15px;">
+            <div class="m-btn ${!isPlannedMode?'active':''}" style="${!isPlannedMode?'background:var(--success);color:#000;':''}" onclick="window.hCalMode='history'; window.render()">📅 Zrealizowane</div>
+            <div class="m-btn ${isPlannedMode?'active':''}" style="${isPlannedMode?'background:var(--warning);color:#000;':''}" onclick="window.hCalMode='planned'; window.render()">⏳ Planowane</div>
+        </div>`;
+
+        let filteredTrans = h.trans.filter(x => isPlannedMode ? x.isPlanned : !x.isPlanned);
+        if(window.hHistFilter === 'inc') filteredTrans = filteredTrans.filter(x => x.type === 'inc');
+        if(window.hHistFilter === 'exp') filteredTrans = filteredTrans.filter(x => x.type === 'exp');
+
+        // Podsumowanie miesięczne dla trybu Planowane
+        let monthlySummaryHtml = '';
+        if(isPlannedMode && filteredTrans.length > 0) {
+            let mTotals = {};
+            filteredTrans.forEach(x => {
+                let dObj = new Date(x.rD);
+                let mKey = dObj.toLocaleDateString('pl-PL', {month:'long', year:'numeric'}).toUpperCase(); 
+                if(!mTotals[mKey]) mTotals[mKey] = {exp:0, inc:0};
+                if(x.type === 'exp') mTotals[mKey].exp += x.v;
+                if(x.type === 'inc') mTotals[mKey].inc += x.v;
+            });
+            monthlySummaryHtml = `<div style="padding:0 15px;">` + Object.keys(mTotals).map(k => `
+                <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); padding:12px; border-radius:12px; margin-bottom:15px; text-align:center;">
+                    <div style="color:var(--warning); font-size:0.9rem; font-weight:900; letter-spacing:1px; margin-bottom:8px;">${k}</div>
+                    <div style="display:flex; justify-content:space-around;">
+                        <div><span style="font-size:0.7rem; color:var(--muted)">Do wydania</span><br><strong style="color:var(--danger); font-size:1.1rem;">-${mTotals[k].exp.toFixed(2)} zł</strong></div>
+                        <div style="border-left:1px solid rgba(245,158,11,0.2); padding-left:15px;"><span style="font-size:0.7rem; color:var(--muted)">Spodziewany wpływ</span><br><strong style="color:var(--success); font-size:1.1rem;">+${mTotals[k].inc.toFixed(2)} zł</strong></div>
+                    </div>
+                </div>
+            `).join('') + `</div>`;
+        }
 
         let groups = {}; 
-        filteredTrans.sort((a,b) => new Date(b.rD) - new Date(a.rD)).forEach(x => { if(!groups[x.dt]) groups[x.dt] = []; groups[x.dt].push(x); }); 
+        filteredTrans.sort((a,b) => isPlannedMode ? new Date(a.rD) - new Date(b.rD) : new Date(b.rD) - new Date(a.rD))
+        .forEach(x => { if(!groups[x.dt]) groups[x.dt] = []; groups[x.dt].push(x); }); 
         
         let calHtml = Object.keys(groups).map(date => { 
             let dayTrans = groups[date]; 
@@ -203,20 +268,19 @@ window.rHome = function() {
                 let accName = isTrans ? `${h.accs.find(a=>a.id===x.fromAcc)?.n} -> ${h.accs.find(a=>a.id===x.toAcc)?.n}` : (h.accs.find(a=>a.id===x.acc)?.n || 'Konto'); 
                 let catName = isTrans ? 'Przelew' : x.cat; 
                 let planLbl = x.isPlanned ? `<span style="color:var(--warning); font-size:0.6rem; margin-left:5px;">(PLAN)</span>` : ''; 
-                return `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.03); opacity:${x.isPlanned?'0.5':'1'};"><div style="display:flex; align-items:center; gap:12px;"><div style="width:35px; height:35px; border-radius:50%; background:${cd.c}22; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">${cd.i}</div><div><span style="color:#fff; font-size:0.95rem; font-weight:600;">${catName}${planLbl}</span><br><small style="color:var(--muted); font-size:0.7rem;">${accName} ${x.d ? '• '+x.d : ''}</small></div></div><strong style="color:${isExp?'var(--danger)':(isTrans?'#fff':'var(--success)')};">${isExp?'-':(isTrans?'':'+')}${x.v.toFixed(2)} zł</strong></div>`; 
+                return `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.03); opacity:${x.isPlanned?'0.7':'1'};"><div style="display:flex; align-items:center; gap:12px; flex:1;"><div style="width:35px; height:35px; border-radius:50%; background:${cd.c}22; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">${cd.i}</div><div><span style="color:#fff; font-size:0.95rem; font-weight:600; display:flex; align-items:center; flex-wrap:wrap;">${catName}${planLbl}</span><small style="color:var(--muted); font-size:0.7rem; display:block; margin-top:2px;">${accName} ${x.d ? '• '+x.d : ''}</small></div></div><div style="text-align:right;"><strong style="color:${isExp?'var(--danger)':(isTrans?'#fff':'var(--success)')}; white-space:nowrap;">${isExp?'-':(isTrans?'':'+')}${x.v.toFixed(2)} zł</strong><div style="display:flex; gap:5px; margin-top:5px; justify-content:flex-end;"><button style="background:rgba(255,255,255,0.1); color:#fff; border:none; border-radius:6px; padding:4px 8px; cursor:pointer;" onclick="window.hEditTrans(${x.id})">✏️</button><button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; border-radius:6px; padding:4px 8px; cursor:pointer;" onclick="window.hDelTrans(${x.id})">🗑️</button></div></div></div>`; 
             }).join(''); 
             return `<div class="date-group" style="margin-top:20px; display:flex; justify-content:space-between; font-weight:bold; font-size:0.85rem; color:var(--muted); text-transform:uppercase; padding:0 10px;"><span>${date}</span> <span><span style="color:var(--success)">+${dayInc.toFixed(0)}</span> / <span style="color:var(--danger)">-${dayExp.toFixed(0)}</span></span></div><div class="panel" style="margin-top:5px; padding:5px 15px; border-radius:12px;">${itemsHtml}</div>`; 
         }).join(''); 
 
-        // --- PRZYCISKI FILTROWANIA W HISTORII ---
         let filterButtons = `
-        <div style="display:flex; gap:10px; padding: 0 15px 15px; border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:10px;">
+        <div style="display:flex; gap:10px; padding: 10px 15px 15px; border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:10px;">
             <button onclick="window.hHistFilter='all'; window.render()" style="flex:1; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:${window.hHistFilter==='all'?'rgba(255,255,255,0.1)':'transparent'}; color:#fff; font-size:0.8rem;">Wszystko</button>
             <button onclick="window.hHistFilter='inc'; window.render()" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--success); background:${window.hHistFilter==='inc'?'rgba(34,197,94,0.1)':'transparent'}; color:var(--success); font-size:0.8rem;">Wpływy</button>
             <button onclick="window.hHistFilter='exp'; window.render()" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--danger); background:${window.hHistFilter==='exp'?'rgba(239,68,68,0.1)':'transparent'}; color:var(--danger); font-size:0.8rem;">Wydatki</button>
         </div>`;
 
-        APP.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:5px;"><p>HISTORIA KALENDARZA</p></div>${filterButtons}<div style="padding:0 15px 30px;">${calHtml || '<div style="text-align:center; color:var(--muted); padding:30px;">Brak historii dla tego filtru.</div>'}</div>` + nav; 
+        APP.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:0;"><p>HISTORIA I ZAPLANOWANE</p></div>${switchHtml}${filterButtons}${monthlySummaryHtml}<div style="padding:0 15px 30px;">${calHtml || '<div style="text-align:center; color:var(--muted); padding:30px;">Brak danych w tym widoku.</div>'}</div>` + nav; 
     }
     if(t === 'set') { let catSrcSet = window.hRecType === 'exp' ? C_EXP : C_INC; if(!catSrcSet[window.hRecCat]) window.hRecCat = Object.keys(catSrcSet)[0]; let accOptionsSet = h.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join(''); APP.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:10px;"><p>USTAWIENIA BUDŻETU</p></div><div class="section-lbl" style="color:var(--info); border-color:var(--info);">⚙️ Automatyzacja (Stałe Koszty i Wpływy)</div><div class="panel" style="border-color:var(--info);"><p style="font-size:0.75rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">Dodaj tu rachunki lub wpływy, a system sam doda je wybranego dnia każdego miesiąca!</p><div class="mode-switch" style="background:rgba(0,0,0,0.5); margin-bottom:15px;"><div class="m-btn ${window.hRecType==='exp'?'active':''}" style="${window.hRecType==='exp'?'background:var(--danger);color:#fff;':''}" onclick="window.hRecType='exp';window.render()">WYDATEK</div><div class="m-btn ${window.hRecType==='inc'?'active':''}" style="${window.hRecType==='inc'?'background:var(--success);color:#fff;':''}" onclick="window.hRecType='inc';window.render()">WPŁYW</div></div><div class="inp-row"><div class="inp-group"><label>Nazwa</label><input type="text" id="hr-name" placeholder="np. Czynsz" style="background:#000;"></div><div class="inp-group"><label>Kwota</label><input type="number" id="hr-val" placeholder="np. 2000" style="background:#000;"></div></div><div class="inp-row" style="margin-bottom:10px;"><div class="inp-group" style="flex:2;"><label>Kategoria</label><select onchange="window.hRecCat=this.value" style="background:#000;">${Object.keys(catSrcSet).map(k => `<option value="${k}" ${window.hRecCat===k?'selected':''}>${k}</option>`).join('')}</select></div><div class="inp-group" style="flex:1;"><label>Dzień m-ca</label><input type="number" id="hr-day" value="1" min="1" max="31" placeholder="1-31" style="background:#000;"></div></div><div class="inp-group" style="margin-bottom:15px;"><label>Konto docelowe</label><select id="hr-acc" onchange="window.hRecAcc=this.value" style="background:#000;">${accOptionsSet}</select></div><button class="btn" style="background:var(--info); color:#fff; padding:15px; margin-bottom:20px;" onclick="window.hAddRecurring()">DODAJ DO AUTOMATU</button><div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;"><span style="font-size:0.75rem; color:var(--muted); font-weight:bold; text-transform:uppercase; margin-bottom:10px; display:block;">Twoje automaty (${h.recurring.length}):</span>${h.recurring.map(r => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px 15px; border-radius:12px; margin-bottom:10px; border-left:4px solid ${r.t === 'exp' ? 'var(--danger)' : 'var(--success)'};"><div><strong style="color:#fff; font-size:1rem;">${r.n}</strong><span style="font-size:0.7rem; color:var(--muted); display:block;">${r.c} <strong style="color:#fff;">(Dzień: ${r.day||1})</strong></span></div><div style="display:flex; align-items:center; gap:15px;"><strong style="color:${r.t === 'exp' ? 'var(--danger)' : 'var(--success)'};">${r.v.toFixed(0)} zł</strong><button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; padding:6px 10px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="window.hDelRecurring(${r.id})">USUŃ</button></div></div>`).join('') || '<div style="color:var(--muted); font-size:0.8rem;">Brak skonfigurowanych automatów.</div>'}</div></div><div class="section-lbl" style="color:var(--life); border-color:var(--life);">👥 Członkowie Rodziny</div><div class="panel" style="border-color:rgba(20,184,166,0.3);"><div class="inp-row"><div class="inp-group"><input type="text" id="h-new-mem" placeholder="Nowy domownik"></div><button class="btn btn-home" style="width:auto; margin-top:0; padding: 0 20px;" onclick="window.hAddMem()">DODAJ</button></div><div style="margin-top:15px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">${h.members.map(m => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:12px 15px; border-radius:12px; margin-bottom:10px; border-left:4px solid var(--life);"><strong style="color:#fff; font-size:1.1rem;">${m}</strong>${h.members.length > 1 ? `<button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="window.hDelMem('${m}')">USUŃ</button>` : `<span style="color:var(--muted); font-size:0.75rem;">(Główny)</span>`}</div>`).join('')}</div></div><div class="section-lbl" style="color:var(--plan); border-color:var(--plan);">🎯 Limity i Cele miesięczne</div><div class="panel" style="border-color:var(--plan);"><div class="inp-group" style="margin-bottom:12px;"><label>Wybierz Kategorię do limitu</label><select id="hb-cat">${Object.keys(C_EXP).map(k=>`<option value="${k}">${k}</option>`).join('')}</select></div><div class="inp-row"><div class="inp-group"><label>Miesięczny Limit (zł)</label><input type="number" id="hb-val" placeholder="np. 500"></div></div><button class="btn" style="background:var(--plan); color:#fff; padding:15px;" onclick="window.hSetBudget()">USTAW LIMIT KATEGORII</button><div style="margin-top:20px;">${Object.keys(h.budgets || {}).map(k => { let limit = h.budgets[k]; let spent = 0; let now = new Date(); h.trans.forEach(x => { if(!x.isPlanned && x.type==='exp' && x.cat===k && new Date(x.rD).getMonth()===now.getMonth()) spent += x.v; }); let pct = Math.min((spent / limit) * 100, 100); let color = pct > 90 ? 'var(--danger)' : (pct > 70 ? 'var(--warning)' : 'var(--success)'); return `<div style="margin-bottom:15px;"><div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:5px;"><span>${k}</span><span style="color:${color}">Wydano: ${spent.toFixed(0)} / ${limit} zł</span></div><div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;"><div style="width:${pct}%; background:${color}; height:100%;"></div></div></div>`; }).join('')}</div></div>
     
