@@ -36,11 +36,12 @@ window.hGetBal = function() {
     }); return b;
 }
 
-// Generowanie harmonogramów (Kredyty i Automaty)
+// Generowanie harmonogramów (Kredyty, Karty i Automaty)
 window.hSyncSchedule = function() {
     db.home.trans = db.home.trans.filter(x => !(x.isPlanned && (x.loanId || x.recId)));
     let n = new Date(); let y = n.getFullYear(); let m = n.getMonth();
 
+    // 1. Zwykłe Automaty Kosztowe
     for(let i=0; i<12; i++) {
         let curD = new Date(y, m+i, 1);
         if(db.home.recurring) db.home.recurring.forEach(r => {
@@ -51,20 +52,46 @@ window.hSyncSchedule = function() {
         });
     }
 
+    // 2. Kredyty i Karty Kredytowe
     if(db.home.loans) db.home.loans.filter(l => !l.isClosed).forEach(l => {
-        let generated = 0;
-        let instLeft = parseInt(l.installmentsLeft)||0;
-        for(let i=0; i<24 && generated < instLeft; i++) {
-            let curD = new Date(y, m+i, 1);
-            let curMStr = curD.getFullYear() + '-' + String(curD.getMonth()+1).padStart(2,'0');
-
-            if(l.holidayMonth === curMStr) continue;
-
-            let dObj = new Date(curD.getFullYear(), curD.getMonth(), l.day || 10, 12, 0, 0);
-            if(dObj > n || (generated===0 && dObj.getDate() >= n.getDate())) {
-                 db.home.trans.push({ id: 'loan_'+l.id+'_'+i, type: 'exp', cat: 'Kredyt / Leasing', acc: l.accId || db.home.accs[0].id, d: 'Rata: ' + l.n, v: parseFloat(l.rata), who: 'System', dt: dObj.toLocaleDateString('pl-PL'), rD: dObj.toISOString(), isPlanned: true, loanId: l.id });
+        let isCard = (l.type === 'Karta');
+        
+        // Logika dla KARTY KREDYTOWEJ
+        if (isCard) {
+            let kap = parseFloat(l.kapital) || 0;
+            if (kap > 0) {
+                // Obliczamy ile dodać do kalendarza na podstawie preferencji (Minimum czy 100%)
+                let minP = (kap * (parseFloat(l.minPayPct) || 5)) / 100;
+                if (minP < 50 && kap > 0) minP = Math.min(50, kap);
+                let plannedV = l.declaredPay === 'min' ? minP : kap;
+                
+                // Dodajemy tylko NAJBLIŻSZĄ płatność (karta nie ma stałych rat na lata)
+                for(let i=0; i<12; i++) {
+                    let curD = new Date(y, m+i, 1);
+                    let dObj = new Date(curD.getFullYear(), curD.getMonth(), l.day || 10, 12, 0, 0);
+                    if(dObj > n || (i===0 && dObj.getDate() >= n.getDate())) {
+                        db.home.trans.push({ id: 'loan_'+l.id+'_'+i, type: 'exp', cat: 'Kredyt / Leasing', acc: l.accId || db.home.accs[0].id, d: 'Karta: ' + l.n, v: plannedV, who: 'System', dt: dObj.toLocaleDateString('pl-PL'), rD: dObj.toISOString(), isPlanned: true, loanId: l.id });
+                        break; // Przerwij pętlę po dodaniu pierwszej spłaty!
+                    }
+                }
             }
-            generated++;
+        } 
+        // Logika dla KREDYTÓW / LEASINGÓW
+        else {
+            let generated = 0;
+            let instLeft = parseInt(l.installmentsLeft)||0;
+            for(let i=0; i<24 && generated < instLeft; i++) {
+                let curD = new Date(y, m+i, 1);
+                let curMStr = curD.getFullYear() + '-' + String(curD.getMonth()+1).padStart(2,'0');
+
+                if(l.holidayMonth === curMStr) continue;
+
+                let dObj = new Date(curD.getFullYear(), curD.getMonth(), l.day || 10, 12, 0, 0);
+                if(dObj > n || (generated===0 && dObj.getDate() >= n.getDate())) {
+                     db.home.trans.push({ id: 'loan_'+l.id+'_'+i, type: 'exp', cat: 'Kredyt / Leasing', acc: l.accId || db.home.accs[0].id, d: 'Rata: ' + l.n, v: parseFloat(l.rata), who: 'System', dt: dObj.toLocaleDateString('pl-PL'), rD: dObj.toISOString(), isPlanned: true, loanId: l.id });
+                }
+                generated++;
+            }
         }
     });
 
