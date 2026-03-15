@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK 2: home.js - StyreOS 13.0 PRO (Inteligentny Wygląd Kredytów: Duży vs Kompaktowy)
+// PLIK 2: home.js - StyreOS 13.1 PRO (Rozwijane Szczegóły w widoku kompaktowym)
 // ==========================================
 const FIXED_EXP_CATS = ['Stałe opłaty / Czynsz', 'Prąd / Gaz / Woda', 'Internet i Telefon', 'Kredyt / Leasing', 'Dom i Rachunki'];
 const C_EXP = { 'Stałe opłaty / Czynsz': {c: '#f59e0b', i: '🏢'}, 'Prąd / Gaz / Woda': {c: '#0ea5e9', i: '⚡'}, 'Internet i Telefon': {c: '#8b5cf6', i: '🌐'}, 'Kredyt / Leasing': {c: '#ef4444', i: '🏦'}, 'Zakupy Spożywcze': {c: '#22c55e', i: '🛒'}, 'Dom i Rachunki': {c: '#14b8a6', i: '🏠'}, 'Auto i Transport': {c: '#f59e0b', i: '🚗'}, 'Rozrywka': {c: '#a855f7', i: '🎉'}, 'Jedzenie na mieście': {c: '#ef4444', i: '🍔'}, 'Ubrania': {c: '#ec4899', i: '👗'}, 'Zdrowie': {c: '#10b981', i: '💊'}, 'Oszczędności / Skarbonka': {c: '#10b981', i: '🐷'}, 'Inne Wydatki': {c: '#64748b', i: '📦'} };
@@ -210,6 +210,7 @@ window.hShowIconPicker = function(accId) {
 window.hApplyIcon = function(id, ico, col) { let ac = db.home.accs.find(x => x.id === id); if(ac) { ac.i = ico; ac.c = col; window.save(); window.render(); } document.getElementById('m-icon-picker').remove(); }
 window.hDelAcc = function(id) { if(db.home.accs.length <= 1) return window.sysAlert("Błąd", "Musisz mieć min. 1 konto!"); window.sysConfirm("Usuwanie konta", "Na pewno? Znikną przypisane środki.", () => { db.home.accs = db.home.accs.filter(a => a.id !== id); window.save(); window.render(); }); }
 
+
 // --- MODUŁ KREDYTÓW I WYBÓR KONTA ---
 window.hOpenLoanModal = function(id = null) {
     let ln = id ? db.home.loans.find(x => x.id == id) : null;
@@ -310,11 +311,15 @@ window.hExecPayLoan = function(loanId, transId) {
         let kap = parseFloat(ln.kapital)||0; let pct = parseFloat(ln.pct)||0; 
         let interest = kap * (pct / 100) / 12; let principalPaid = val - interest; 
         if(principalPaid < 0) principalPaid = 0; 
+        
         db.home.trans.unshift({ id: Date.now(), type: 'exp', cat: 'Kredyt / Leasing', v: val, d: 'Spłata raty: ' + ln.n, dt: new Date().toLocaleDateString('pl-PL'), rD: new Date().toISOString(), isPlanned: false, acc: accId, loanAction: 'pay', loanId: ln.id, principalPaid: principalPaid, instReduced: 1 });
+        
         ln.kapital = kap - principalPaid; ln.installmentsLeft = (parseInt(ln.installmentsLeft)||0) - 1;
         if(ln.kapital < 0) ln.kapital = 0; if(ln.installmentsLeft < 0) ln.installmentsLeft = 0;
+        
         if(transId) { db.home.trans = db.home.trans.filter(x => x.id != transId); } 
         else { let today = window.getLocalYMD().substring(0,7); db.home.trans = db.home.trans.filter(x => !(x.isPlanned && x.loanId == loanId && x.rD.startsWith(today))); }
+        
         window.hSyncSchedule(); window.save(); window.render(); 
         window.sysAlert("Rata opłacona!", `Z konta pobrano ${val.toFixed(2)} zł.\nOdsetki dla banku: ${interest.toFixed(2)} zł.\nKapitał pomniejszono o: ${principalPaid.toFixed(2)} zł.`, "success");
     }
@@ -503,8 +508,7 @@ window.rHome = function() {
 
         if (activeLoans.length === 0) {
             loansHtml = '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:10px 0 30px;">Brak kredytów. Ciesz się wolnością finansową! 🕊️</div>';
-        } else if (activeLoans.length <= 3) {
-            // WIDOK SZCZEGÓŁOWY
+        } else if (activeLoans.length === 1) { // TYLKO JEDEN KREDYT (DUŻY WIDOK)
             loansHtml = activeLoans.map(l => {
                 let kap = parseFloat(l.kapital); if(isNaN(kap)) kap = parseFloat(l.left)||0;
                 let rat = parseFloat(l.rata)||0;
@@ -536,9 +540,11 @@ window.rHome = function() {
                         ${errorHtml}
                         <span style="font-size:0.75rem; color:var(--muted); text-transform:uppercase;">KAPITAŁ POZOSTAŁY DO SPŁATY</span>
                         <div style="font-size:2.2rem; font-weight:900; color:#fff; margin-top:5px; letter-spacing:-1px;">${kap.toFixed(2)} PLN</div>
-                        ${savingsHtml}
                     </div>
                     <div style="padding:0 20px 15px;">
+                        <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                            <span style="color:var(--muted); font-size:0.85rem;">Przyznana kwota z banku</span><strong style="color:#fff; font-size:0.9rem;">${bor.toFixed(2)} PLN</strong>
+                        </div>
                         <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
                             <span style="color:var(--muted); font-size:0.85rem;">Całkowity koszt (Z odsetkami)</span><strong style="color:var(--danger); font-size:0.9rem;">${totalCostRemaining.toFixed(2)} PLN</strong>
                         </div>
@@ -555,6 +561,7 @@ window.rHome = function() {
                             <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.75rem; color:var(--muted);"><span>Progres spłaty (W ratach)</span><span style="color:var(--success); font-weight:bold;">${pct.toFixed(1)}%</span></div>
                             <div style="width:100%; height:8px; background:rgba(0,0,0,0.5); border-radius:4px; overflow:hidden;"><div style="width:${pct}%; background:var(--success); height:100%;"></div></div>
                         </div>
+                        ${savingsHtml}
                     </div>
                     <div style="padding:0 20px 20px; display:flex; flex-direction:column; gap:10px;">
                         <button style="background:var(--danger); color:#fff; width:100%; padding:15px; border-radius:14px; font-weight:bold; font-size:0.9rem; border:none; box-shadow:0 6px 15px rgba(239,68,68,0.3); cursor:pointer;" onclick="window.hOpenPayLoanModal(${l.id})">💸 SPŁAĆ RATĘ ( ${rat.toFixed(2)} zł )</button>
@@ -567,14 +574,16 @@ window.rHome = function() {
                 </div>`;
             }).join('');
         } else {
-            // WIDOK KOMPAKTOWY
+            // WIDOK KOMPAKTOWY + ROZWIJANIE SZCZEGÓŁÓW (Więcej niż 1)
             loansHtml = `<div style="margin-bottom:15px; text-align:center; font-size:0.75rem; color:var(--info); font-weight:bold; background:rgba(14,165,233,0.1); padding:8px; border-radius:8px; border:1px solid rgba(14,165,233,0.3);">Włączono widok kompaktowy (${activeLoans.length} aktywne zobowiązania)</div>` + 
             activeLoans.map(l => {
                 let kap = parseFloat(l.kapital); if(isNaN(kap)) kap = parseFloat(l.left)||0;
                 let rat = parseFloat(l.rata)||0;
                 let instL = parseInt(l.installmentsLeft)||0;
                 let totInst = parseInt(l.totalInst)||0;
-                
+                let bor = parseFloat(l.borrowed); if(isNaN(bor)) bor = parseFloat(l.total)||0;
+                let pctBank = parseFloat(l.pct)||0;
+
                 let totalCostRemaining = rat * instL; 
                 let savings = totalCostRemaining - kap; 
                 let isError = totalCostRemaining < kap;
@@ -585,6 +594,23 @@ window.rHome = function() {
                 if(totInst > 0) { pct = ((totInst - instL) / totInst) * 100; }
                 if(pct > 100) pct = 100; if(pct < 0) pct = 0;
                 
+                let hiddenDetails = `
+                    <div id="ldet_${l.id}" style="display:none; margin-bottom:12px; border-top:1px dashed rgba(255,255,255,0.05); padding-top:10px;">
+                        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.02);">
+                            <span style="color:var(--muted); font-size:0.75rem;">Przyznana kwota</span><strong style="color:#fff; font-size:0.8rem;">${bor.toFixed(2)} PLN</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.02);">
+                            <span style="color:var(--muted); font-size:0.75rem;">Całkowity koszt do końca</span><strong style="color:var(--danger); font-size:0.8rem;">${totalCostRemaining.toFixed(2)} PLN</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.02);">
+                            <span style="color:var(--muted); font-size:0.75rem;">Kwota najbliższej raty</span><strong style="color:#fff; font-size:0.8rem;">${rat.toFixed(2)} PLN</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.02);">
+                            <span style="color:var(--muted); font-size:0.75rem;">Dzień spłaty / Procent</span><strong style="color:#fff; font-size:0.8rem;">${l.day} dzień / ${pctBank}%</strong>
+                        </div>
+                    </div>
+                `;
+
                 return `
                 <div class="panel" style="padding:15px; border-left:4px solid var(--danger); border-radius:16px; margin-bottom:12px; background:linear-gradient(145deg, #18181b, #09090b);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -592,19 +618,25 @@ window.rHome = function() {
                             <div style="width:35px; height:35px; border-radius:10px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); display:flex; align-items:center; justify-content:center; font-size:1.2rem;">🏦</div>
                             <div>
                                 <strong style="color:#fff; font-size:1rem; display:block; line-height:1.2;">${l.n}</strong>
-                                <span style="color:var(--muted); font-size:0.7rem;">Rata: <strong style="color:#fff">${rat.toFixed(2)} zł</strong> (${l.day} dzień)</span>
+                                <span style="color:var(--muted); font-size:0.7rem;">Rata: <strong style="color:#fff">${rat.toFixed(2)} zł</strong></span>
                             </div>
                         </div>
                         <div style="text-align:right;">
                             <strong style="color:#fff; font-size:1.1rem; line-height:1.2; display:block;">${kap.toFixed(2)} zł</strong>
-                            <span style="color:var(--muted); font-size:0.7rem;">Pozostało: ${instL} z ${totInst} rat</span>
+                            <span style="color:var(--muted); font-size:0.7rem;">Pozostało: ${instL} rat</span>
                         </div>
                     </div>
                     ${savingsHtml}
                     ${errorHtml}
-                    <div style="width:100%; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; margin-bottom:12px;">
+                    <div style="width:100%; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; margin-bottom:8px;">
                         <div style="width:${pct}%; background:var(--success); height:100%;"></div>
                     </div>
+                    
+                    <div style="text-align:center; margin-bottom:10px;">
+                        <span onclick="let el=document.getElementById('ldet_${l.id}'); let txt=this; if(el.style.display==='none'){el.style.display='block'; txt.innerHTML='🔼 Zwiń szczegóły';}else{el.style.display='none'; txt.innerHTML='🔽 Rozwiń szczegóły';}" style="color:var(--info); font-size:0.75rem; cursor:pointer; font-weight:bold; display:inline-block; padding:5px;">🔽 Rozwiń szczegóły</span>
+                    </div>
+                    ${hiddenDetails}
+
                     <div style="display:flex; gap:6px;">
                         <button style="background:var(--danger); color:#fff; flex:1; padding:8px 0; border-radius:8px; font-weight:bold; font-size:0.75rem; border:none; cursor:pointer;" onclick="window.hOpenPayLoanModal(${l.id})">💸 SPŁAĆ</button>
                         <button style="background:rgba(14,165,233,0.15); color:var(--info); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(14,165,233,0.3); cursor:pointer;" onclick="window.hOverpayLoan(${l.id})">💰</button>
