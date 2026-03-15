@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK 2: home.js - StyreOS 10.0 PRO (Wakacje Kredytowe, Tarcza Ochronna, Całkowita Spłata)
+// PLIK 2: home.js - StyreOS 11.1 PRO (KOMPLETNY MERGE: Modale, Wakacje, Tarcza, Kompakt, Szukajka)
 // ==========================================
 const FIXED_EXP_CATS = ['Stałe opłaty / Czynsz', 'Prąd / Gaz / Woda', 'Internet i Telefon', 'Kredyt / Leasing', 'Dom i Rachunki'];
 const C_EXP = { 'Stałe opłaty / Czynsz': {c: '#f59e0b', i: '🏢'}, 'Prąd / Gaz / Woda': {c: '#0ea5e9', i: '⚡'}, 'Internet i Telefon': {c: '#8b5cf6', i: '🌐'}, 'Kredyt / Leasing': {c: '#ef4444', i: '🏦'}, 'Zakupy Spożywcze': {c: '#22c55e', i: '🛒'}, 'Dom i Rachunki': {c: '#14b8a6', i: '🏠'}, 'Auto i Transport': {c: '#f59e0b', i: '🚗'}, 'Rozrywka': {c: '#a855f7', i: '🎉'}, 'Jedzenie na mieście': {c: '#ef4444', i: '🍔'}, 'Ubrania': {c: '#ec4899', i: '👗'}, 'Zdrowie': {c: '#10b981', i: '💊'}, 'Oszczędności / Skarbonka': {c: '#10b981', i: '🐷'}, 'Inne Wydatki': {c: '#64748b', i: '📦'} };
@@ -8,6 +8,8 @@ const C_INC = { 'Wypłata z Etatu': {c: '#22c55e', i: '💼'}, 'Utarg z Taxi': {
 window.hHistFilter = window.hHistFilter || 'all';
 window.hCalMode = window.hCalMode || 'history';
 window.hViewDate = window.hViewDate || new Date();
+window.hSearchQuery = window.hSearchQuery || ''; // Szukajka
+
 if(!db.home.goals) db.home.goals = [];
 if(!db.home.loans) db.home.loans = []; 
 if(!db.home.piggy) db.home.piggy = []; 
@@ -48,7 +50,6 @@ window.hSyncSchedule = function() {
             let curD = new Date(y, m+i, 1);
             let curMStr = curD.getFullYear() + '-' + String(curD.getMonth()+1).padStart(2,'0');
             
-            // Jeśli włączono Wakacje Kredytowe na ten miesiąc, pomiń generowanie raty
             if(l.holidayMonth === curMStr) continue;
 
             let dObj = new Date(curD.getFullYear(), curD.getMonth(), l.day || 10, 12, 0, 0);
@@ -165,7 +166,6 @@ window.hShowIconPicker = function(accId) {
 window.hApplyIcon = function(id, ico, col) { let ac = db.home.accs.find(x => x.id === id); if(ac) { ac.i = ico; ac.c = col; window.save(); window.render(); } document.getElementById('m-icon-picker').remove(); }
 window.hDelAcc = function(id) { if(db.home.accs.length <= 1) return window.sysAlert("Błąd", "Musisz mieć min. 1 konto!"); window.sysConfirm("Usuwanie konta", "Na pewno? Znikną przypisane środki.", () => { db.home.accs = db.home.accs.filter(a => a.id !== id); window.save(); window.render(); }); }
 
-
 // --- MODUŁ KREDYTÓW I WYBÓR KONTA ---
 window.hOpenLoanModal = function(id = null) {
     let ln = id ? db.home.loans.find(x => x.id == id) : null;
@@ -184,9 +184,7 @@ window.hOpenLoanModal = function(id = null) {
     let html = `<div id="m-loan" class="modal-overlay"><div class="panel" style="width:100%; max-width:380px; background:#18181b; border:1px solid #27272a;">
         <h3 style="margin-top:0; color:#fff; display:flex; align-items:center; gap:10px;">${ln ? '✏️ Edytuj' : '🏦 Nowy'} Kredyt / Pożyczkę</h3>
         <div class="inp-group" style="margin-bottom:12px;"><label>Nazwa (np. Kredyt Santander)</label><input type="text" id="ml-n" value="${n}"></div>
-        
         <div class="inp-group" style="margin-bottom:12px;"><label>Domyślne konto spłaty (Dla Kalendarza)</label><select id="ml-acc" style="background:#09090b;">${accOpts}</select></div>
-
         <div class="inp-row" style="margin-bottom:12px;">
             <div class="inp-group"><label>KAPITAŁ do spłaty na dziś (zł)</label><input type="number" step="0.01" id="ml-kapital" value="${leftKapital}" placeholder="np. 6980.55"></div>
             <div class="inp-group"><label>Oprocentowanie (%)</label><input type="number" step="0.01" id="ml-pct" value="${p}" placeholder="np. 14.5"></div>
@@ -231,7 +229,6 @@ window.hSaveLoan = function(id) {
 
 window.hDelLoan = function(id) { window.sysConfirm("Usuwanie", "Na pewno usunąć ten kredyt?", () => { db.home.loans = db.home.loans.filter(x => x.id != id); db.home.trans = db.home.trans.filter(x => !(x.isPlanned && x.loanId == id)); window.hSyncSchedule(); window.save(); window.render(); }); }
 
-// --- WAKACJE KREDYTOWE ---
 window.hCreditHoliday = function(loanId) {
     let ln = db.home.loans.find(x => x.id == loanId);
     if(!ln) return;
@@ -244,41 +241,32 @@ window.hCreditHoliday = function(loanId) {
     });
 }
 
-// --- ZAMKNIĘCIE KREDYTU (CAŁKOWITA SPŁATA) ---
 window.hPayOffCompletely = function(loanId) {
     let ln = db.home.loans.find(x => x.id == loanId);
     if(!ln) return;
-    let savedInterest = (ln.rata * ln.installmentsLeft) - ln.kapital;
-    window.sysConfirm("Całkowita Spłata 🏆", `Chcesz spłacić cały kapitał (${ln.kapital.toFixed(2)} zł) z głównego konta dzisiaj? Unikniesz ${savedInterest.toFixed(2)} zł odsetek!`, () => {
-        db.home.trans.unshift({ id: Date.now(), type: 'exp', cat: 'Kredyt / Leasing', v: ln.kapital, d: 'Całkowita spłata: ' + ln.n, dt: new Date().toLocaleDateString('pl-PL'), rD: new Date().toISOString(), isPlanned: false, acc: ln.accId || db.home.accs[0].id });
+    let kap = parseFloat(ln.kapital)||0; let rat = parseFloat(ln.rata)||0; let instL = parseInt(ln.installmentsLeft)||0;
+    let savedInterest = (rat * instL) - kap;
+    window.sysConfirm("Całkowita Spłata 🏆", `Chcesz spłacić cały kapitał (${kap.toFixed(2)} zł) dzisiaj? Unikniesz ${savedInterest.toFixed(2)} zł odsetek!`, () => {
+        db.home.trans.unshift({ id: Date.now(), type: 'exp', cat: 'Kredyt / Leasing', v: kap, d: 'Całkowita spłata: ' + ln.n, dt: new Date().toLocaleDateString('pl-PL'), rD: new Date().toISOString(), isPlanned: false, acc: ln.accId || db.home.accs[0].id });
         db.home.loans = db.home.loans.filter(x => x.id != loanId); // Usuń kredyt
         window.hSyncSchedule(); window.save(); window.render();
         window.sysAlert("Kredyt Zamknięty! 🎉", `Jesteś wolny od tego długu! Zaoszczędzono ${savedInterest.toFixed(2)} zł odsetek.`, "success");
     });
 }
 
-// MODAL POTWIERDZENIA SPŁATY (WYBÓR KONTA I KWOTY)
 window.hOpenPayLoanModal = function(loanId, transId = null) {
     let ln = db.home.loans.find(x => x.id == loanId);
     if(!ln) return;
     let accOpts = db.home.accs.map(a => `<option value="${a.id}" ${a.id==(ln.accId||db.home.accs[0].id)?'selected':''}>${a.n}</option>`).join('');
     
-    let html = `<div id="m-pay-loan" class="modal-overlay">
-        <div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--danger);">
+    let html = `<div id="m-pay-loan" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--danger);">
             <h3 style="margin-top:0; color:var(--danger);">💸 Spłata Raty</h3>
             <p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px;">Kredyt: <strong>${ln.n}</strong></p>
-            <div class="inp-group" style="margin-bottom:15px;">
-                <label>Kwota wpłaty (zł)</label>
-                <input type="number" step="0.01" id="mpl-val" value="${ln.rata}" class="big-inp" style="color:var(--danger); border:none; background:rgba(0,0,0,0.5);">
-            </div>
-            <div class="inp-group" style="margin-bottom:20px;">
-                <label>Z którego konta opłacasz?</label>
-                <select id="mpl-acc" style="background:#18181b;">${accOpts}</select>
-            </div>
+            <div class="inp-group" style="margin-bottom:15px;"><label>Kwota wpłaty (zł)</label><input type="number" step="0.01" id="mpl-val" value="${ln.rata}" class="big-inp" style="color:var(--danger); border:none; background:rgba(0,0,0,0.5);"></div>
+            <div class="inp-group" style="margin-bottom:20px;"><label>Z którego konta opłacasz?</label><select id="mpl-acc" style="background:#18181b;">${accOpts}</select></div>
             <button class="btn btn-danger" onclick="window.hExecPayLoan(${loanId}, '${transId||''}')">POTWIERDŹ SPŁATĘ</button>
             <button class="btn" style="background:transparent; color:var(--muted); box-shadow:none; margin-top:5px;" onclick="document.getElementById('m-pay-loan').remove()">ANULUJ</button>
-        </div>
-    </div>`;
+        </div></div>`;
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
@@ -318,18 +306,13 @@ window.hOverpayLoan = function(loanId) {
     let html = `<div id="m-overpay" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--info);">
         <h3 style="margin-top:0; color:var(--info);">💰 Nadpłata Kapitału</h3>
         <p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px;">Nadpłata kredytu: <strong>${ln.n}</strong></p>
-        <div class="inp-group" style="margin-bottom:15px;">
-            <label>Dodatkowa gotówka (zł)</label>
-            <input type="number" id="mo-val" placeholder="np. 1000" class="big-inp" style="color:var(--info); border:none; background:rgba(0,0,0,0.5);">
-        </div>
-        <div class="inp-group" style="margin-bottom:20px;">
-            <label>Z którego konta pobrać?</label>
-            <select id="mo-acc" style="background:#18181b;">${accOpts}</select>
-        </div>
+        <div class="inp-group" style="margin-bottom:15px;"><label>Dodatkowa gotówka (zł)</label><input type="number" id="mo-val" placeholder="np. 1000" class="big-inp" style="color:var(--info); border:none; background:rgba(0,0,0,0.5);"></div>
+        <div class="inp-group" style="margin-bottom:20px;"><label>Z którego konta pobrać?</label><select id="mo-acc" style="background:#18181b;">${accOpts}</select></div>
         <button class="btn" style="background:var(--info); color:#fff;" onclick="window.hSaveOverpay(${loanId})">ZAPISZ NADPŁATĘ</button>
         <button class="btn" style="background:transparent; color:var(--muted); box-shadow:none; margin-top:5px;" onclick="document.getElementById('m-overpay').remove()">ANULUJ</button>
     </div></div>`; document.body.insertAdjacentHTML('beforeend', html);
 }
+
 window.hSaveOverpay = function(loanId) {
     let val = parseFloat(document.getElementById('mo-val').value);
     let accId = document.getElementById('mo-acc').value;
@@ -344,8 +327,8 @@ window.hSaveOverpay = function(loanId) {
 }
 
 window.hPayLoanInstallment = function(transId) {
-    let tr = db.home.trans.find(x => x.id === transId);
-    if(tr && tr.loanId) { window.hOpenPayLoanModal(tr.loanId, tr.id); } // Poprawa: Odpalamy wywołanie wyboru konta z kalendarza!
+    let tr = db.home.trans.find(x => x.id == transId);
+    if(tr && tr.loanId) { window.hOpenPayLoanModal(tr.loanId, tr.id); } 
 }
 
 // --- CELE OSZCZĘDNOŚCIOWE ---
@@ -380,13 +363,8 @@ window.hAddFundsPiggy = function(id) {
     let html = `<div id="m-add-funds" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--success);">
             <h3 style="margin-top:0; color:var(--success);">🐷 Zasil Skarbonkę</h3>
             <p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px;">Ile odkładasz na cel: <strong>${pg.n}</strong>?</p>
-            <div class="inp-group" style="margin-bottom:15px;">
-                <input type="number" id="maf-val" placeholder="np. 100" class="big-inp" style="color:var(--success); border:none; background:rgba(0,0,0,0.5);">
-            </div>
-            <div class="inp-group" style="margin-bottom:20px;">
-                <label>Z którego konta pobrać?</label>
-                <select id="maf-acc" style="background:#18181b;">${accOpts}</select>
-            </div>
+            <div class="inp-group" style="margin-bottom:15px;"><input type="number" id="maf-val" placeholder="np. 100" class="big-inp" style="color:var(--success); border:none; background:rgba(0,0,0,0.5);"></div>
+            <div class="inp-group" style="margin-bottom:20px;"><label>Z którego konta pobrać?</label><select id="maf-acc" style="background:#18181b;">${accOpts}</select></div>
             <button class="btn btn-success" onclick="window.hSaveFundsPiggy(${id})">WPŁAĆ ŚRODKI</button>
             <button class="btn" style="background:transparent; color:var(--muted); box-shadow:none; margin-top:5px;" onclick="document.getElementById('m-add-funds').remove()">ANULUJ</button>
         </div></div>`;
@@ -744,8 +722,17 @@ window.rHome = function() {
         if(window.hHistFilter === 'inc') filteredTrans = filteredTrans.filter(x => x.type === 'inc');
         if(window.hHistFilter === 'exp') filteredTrans = filteredTrans.filter(x => x.type === 'exp');
         
+        if(window.hSearchQuery) {
+            let q = window.hSearchQuery.toLowerCase();
+            filteredTrans = filteredTrans.filter(x => 
+                (x.d || '').toLowerCase().includes(q) || 
+                (x.cat || '').toLowerCase().includes(q) || 
+                (x.v || '').toString().includes(q)
+            );
+        }
+        
         let monthlySummaryHtml = '';
-        if(isPlannedMode && filteredTrans.length > 0) {
+        if(isPlannedMode && filteredTrans.length > 0 && !window.hSearchQuery) {
             let mExp = 0; let mInc = 0;
             filteredTrans.forEach(x => { let v = parseFloat(x.v)||0; if(x.type === 'exp') mExp += v; if(x.type === 'inc') mInc += v; });
             monthlySummaryHtml = `<div style="padding:0 15px;">
@@ -782,8 +769,10 @@ window.rHome = function() {
             <strong style="text-transform:uppercase; color:var(--warning); font-size:1.1rem; letter-spacing:1px;">${mName}</strong>
             <button style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:8px 15px; border-radius:8px; font-weight:bold;" onclick="window.hChangeMonth(1)">></button>
         </div>`;
+        
+        let searchHtml = `<input type="text" placeholder="Szukaj transakcji (np. Biedronka, 150)..." style="background:#000; border:1px solid rgba(255,255,255,0.1); width:calc(100% - 30px); margin:0 15px 15px; padding:12px; border-radius:12px; color:#fff;" oninput="window.hSearchQuery=this.value; window.render();" value="${window.hSearchQuery}">`;
 
-        APP.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:0;"><p>HISTORIA I KALENDARZ</p></div>${switchHtml}${monthNavHtml}${filterButtons}${monthlySummaryHtml}<div style="padding:0 15px 30px;">${calHtml || '<div style="text-align:center; color:var(--muted); padding:30px;">Brak operacji w tym miesiącu.</div>'}</div>` + nav; 
+        APP.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:0;"><p>HISTORIA I KALENDARZ</p></div>${switchHtml}${monthNavHtml}${searchHtml}${filterButtons}${monthlySummaryHtml}<div style="padding:0 15px 30px;">${calHtml || '<div style="text-align:center; color:var(--muted); padding:30px;">Brak operacji w tym miesiącu.</div>'}</div>` + nav; 
     }
     
     if(t === 'set') { let catSrcSet = window.hRecType === 'exp' ? C_EXP : C_INC; if(!catSrcSet[window.hRecCat]) window.hRecCat = Object.keys(catSrcSet)[0]; let accOptionsSet = h.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join(''); APP.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:10px;"><p>USTAWIENIA BUDŻETU</p></div><div class="section-lbl" style="color:var(--info); border-color:var(--info);">⚙️ Automatyzacja (Stałe Koszty i Wpływy)</div><div class="panel" style="border-color:var(--info);"><p style="font-size:0.75rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">Dodaj tu rachunki lub wpływy, a system sam doda je wybranego dnia każdego miesiąca!</p><div class="mode-switch" style="background:rgba(0,0,0,0.5); margin-bottom:15px;"><div class="m-btn ${window.hRecType==='exp'?'active':''}" style="${window.hRecType==='exp'?'background:var(--danger);color:#fff;':''}" onclick="window.hRecType='exp';window.render()">WYDATEK</div><div class="m-btn ${window.hRecType==='inc'?'active':''}" style="${window.hRecType==='inc'?'background:var(--success);color:#fff;':''}" onclick="window.hRecType='inc';window.render()">WPŁYW</div></div><div class="inp-row"><div class="inp-group"><label>Nazwa</label><input type="text" id="hr-name" placeholder="np. Czynsz" style="background:#000;"></div><div class="inp-group"><label>Kwota</label><input type="number" id="hr-val" placeholder="np. 2000" style="background:#000;"></div></div><div class="inp-row" style="margin-bottom:10px;"><div class="inp-group" style="flex:2;"><label>Kategoria</label><select onchange="window.hRecCat=this.value" style="background:#000;">${Object.keys(catSrcSet).map(k => `<option value="${k}" ${window.hRecCat===k?'selected':''}>${k}</option>`).join('')}</select></div><div class="inp-group" style="flex:1;"><label>Dzień m-ca</label><input type="number" id="hr-day" value="1" min="1" max="31" placeholder="1-31" style="background:#000;"></div></div><div class="inp-group" style="margin-bottom:15px;"><label>Konto docelowe</label><select id="hr-acc" onchange="window.hRecAcc=this.value" style="background:#000;">${accOptionsSet}</select></div><button class="btn" style="background:var(--info); color:#fff; padding:15px; margin-bottom:20px;" onclick="window.hAddRecurring()">DODAJ DO AUTOMATU</button><div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;"><span style="font-size:0.75rem; color:var(--muted); font-weight:bold; text-transform:uppercase; margin-bottom:10px; display:block;">Twoje automaty (${h.recurring.length}):</span>${h.recurring.map(r => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px 15px; border-radius:12px; margin-bottom:10px; border-left:4px solid ${r.t === 'exp' ? 'var(--danger)' : 'var(--success)'};"><div><strong style="color:#fff; font-size:1rem;">${r.n}</strong><span style="font-size:0.7rem; color:var(--muted); display:block;">${r.c} <strong style="color:#fff;">(Dzień: ${r.day||1})</strong></span></div><div style="display:flex; align-items:center; gap:15px;"><strong style="color:${r.t === 'exp' ? 'var(--danger)' : 'var(--success)'};">${(parseFloat(r.v)||0).toFixed(0)} zł</strong><button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; padding:6px 10px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="window.hDelRecurring(${r.id})">USUŃ</button></div></div>`).join('') || '<div style="color:var(--muted); font-size:0.8rem;">Brak skonfigurowanych automatów.</div>'}</div></div><div class="section-lbl" style="color:var(--life); border-color:var(--life);">👥 Członkowie Rodziny</div><div class="panel" style="border-color:rgba(20,184,166,0.3);"><div class="inp-row"><div class="inp-group"><input type="text" id="h-new-mem" placeholder="Nowy domownik"></div><button class="btn btn-home" style="width:auto; margin-top:0; padding: 0 20px;" onclick="window.hAddMem()">DODAJ</button></div><div style="margin-top:15px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">${h.members.map(m => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:12px 15px; border-radius:12px; margin-bottom:10px; border-left:4px solid var(--life);"><strong style="color:#fff; font-size:1.1rem;">${m}</strong>${h.members.length > 1 ? `<button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="window.hDelMem('${m}')">USUŃ</button>` : `<span style="color:var(--muted); font-size:0.75rem;">(Główny)</span>`}</div>`).join('')}</div></div><div class="section-lbl" style="color:var(--plan); border-color:var(--plan);">🎯 Limity i Cele miesięczne</div><div class="panel" style="border-color:var(--plan);"><div class="inp-group" style="margin-bottom:12px;"><label>Wybierz Kategorię do limitu</label><select id="hb-cat">${Object.keys(C_EXP).map(k=>`<option value="${k}">${k}</option>`).join('')}</select></div><div class="inp-row"><div class="inp-group"><label>Miesięczny Limit (zł)</label><input type="number" id="hb-val" placeholder="np. 500"></div></div><button class="btn" style="background:var(--plan); color:#fff; padding:15px;" onclick="window.hSetBudget()">USTAW LIMIT KATEGORII</button><div style="margin-top:20px;">${Object.keys(h.budgets || {}).map(k => { let limit = h.budgets[k]; let spent = 0; let now = new Date(); h.trans.forEach(x => { if(!x.isPlanned && x.type==='exp' && x.cat===k && new Date(x.rD).getMonth()===now.getMonth()) spent += parseFloat(x.v)||0; }); let pct = Math.min((spent / limit) * 100, 100); let color = pct > 90 ? 'var(--danger)' : (pct > 70 ? 'var(--warning)' : 'var(--success)'); return `<div style="margin-bottom:15px;"><div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:5px;"><span>${k}</span><span style="color:${color}">Wydano: ${spent.toFixed(0)} / ${limit} zł</span></div><div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;"><div style="width:${pct}%; background:${color}; height:100%;"></div></div></div>`; }).join('')}</div></div>
