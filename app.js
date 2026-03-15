@@ -33,6 +33,7 @@ window.rWiz = function() {
                 </button>
                 <p style="text-align:center; font-size:0.65rem; color:var(--muted); margin-top:8px; text-transform:uppercase; letter-spacing:0.5px;">Zabezpiecz swoje dane w chmurze ☁️</p>
             </div>
+
             <div style="text-align:center; font-size:0.7rem; color:var(--muted); margin-bottom:10px; text-transform:uppercase; font-weight:800;">lub kontynuuj offline</div>
 
             <input type="text" id="w-name" placeholder="Twoje Imię" class="premium-input" value="${db.userName||''}">
@@ -46,7 +47,23 @@ window.rWiz = function() {
                 <div class="opt-icon">🏠</div>
                 <div class="opt-text"><h3>Budżet Domowy</h3><p>Wydatki, portfele, automaty.</p></div>
             </div>
-        </div>
+
+            <div class="opt-card" style="border-color:rgba(255,255,255,0.05); opacity: 0.6; cursor: pointer; background: rgba(0,0,0,0.3);" onclick="window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca z zarządzaniem rewirami i stawkami za paczkę pojawi się w kolejnych aktualizacjach!', 'info')">
+                <div class="opt-icon" style="filter: grayscale(1);">📦</div>
+                <div class="opt-text">
+                    <h3 style="display:flex; align-items:center; gap:8px;">Kurier / Dostawa <span style="font-size:0.6rem; background:var(--info); color:#fff; padding:2px 6px; border-radius:4px;">WKRÓTCE</span></h3>
+                    <p>Paczki, rewirowanie, trasy.</p>
+                </div>
+            </div>
+
+            <div class="opt-card" style="border-color:rgba(255,255,255,0.05); opacity: 0.6; cursor: pointer; background: rgba(0,0,0,0.3);" onclick="window.sysAlert('Funkcja PRO', 'Pełny moduł Firma/Spedycja (z KSeF, fakturami i zarządzaniem flotą) będzie dostępny w wersji StyreOS PRO!', 'info')">
+                <div class="opt-icon" style="filter: grayscale(1);">🚛</div>
+                <div class="opt-text">
+                    <h3 style="display:flex; align-items:center; gap:8px;">Firma / Spedycja <span style="font-size:0.6rem; background:#a855f7; color:#fff; padding:2px 6px; border-radius:4px;">PRO</span></h3>
+                    <p>Zarządzanie flotą, KSeF, faktury.</p>
+                </div>
+            </div>
+            </div>
     </div>
     <div id="w-home" class="wiz-screen"><div class="w-title">Budżet Rodzinny</div><div class="w-sub">Gotowy do akcji</div><button class="btn btn-home" onclick="window.hFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-main')">Wróć</button></div><div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button></div><div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div><div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px;" onclick="window.dFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>`;
 }
@@ -74,9 +91,6 @@ window.dFin = function() {
 }
 window.hFin = function() { db.mainProfile = 'home'; let nameEl = document.getElementById('w-name'); db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; db.home.members = [db.userName]; db.role = 'home'; db.tab = 'dash'; db.init = true; window.save(); window.render(); }
 
-// ==========================================
-// SYSTEM LOGOWANIA I ODZYSKIWANIA (GOOGLE AUTH)
-// ==========================================
 window.loginWithGoogle = function() {
     const provider = new firebase.auth.GoogleAuthProvider();
     
@@ -85,11 +99,9 @@ window.loginWithGoogle = function() {
             const user = result.user;
             console.log("Zalogowano pomyślnie. UID:", user.uid);
             
-            // POBIERANIE DANYCH Z CHMURY
             firestore.collection('users').doc(user.uid).get()
                 .then((doc) => {
                     if (doc.exists) {
-                        // KIEROWCA MA JUŻ DANE W CHMURZE! (Odzyskujemy)
                         db = doc.data();     
                         db.init = true;      
                         window.save();       
@@ -98,7 +110,6 @@ window.loginWithGoogle = function() {
                         
                         window.render(); 
                     } else {
-                        // NOWY KIEROWCA
                         let loginBox = document.getElementById('google-login-box');
                         if(loginBox) loginBox.style.display = 'none';
 
