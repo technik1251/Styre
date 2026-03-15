@@ -41,7 +41,6 @@ window.dInputMode = window.dInputMode || 'single'; window.dOtherSrc = window.dOt
 
 let dTSrc = null; let dTPay = null; let dQM = 'taxi'; let dQN = false; let dQV=0; let dQK=0; let dQM_T=0;
 
-window.save = function() { localStorage.setItem('styre_v101_db', JSON.stringify(db)); }
 window.safeVal = function(id, fallback = 0) { let el = document.getElementById(id); if(el && el.value) { let v = parseFloat(el.value); return isNaN(v) ? fallback : v; } return fallback; }
 window.getLocalYMD = function(dObj = new Date()) { let tzOffset = dObj.getTimezoneOffset() * 60000; return new Date(dObj.getTime() - tzOffset).toISOString().split('T')[0]; }
 
@@ -55,3 +54,50 @@ window.hardReset = function() { window.sysConfirm("TWARDE RESETOWANIE", "Trwałe
 window.dSessionInit = function() { if(!db || !db.drv) return; if(db.drv.plat === 'apps') { if(!['Uber', 'Bolt', 'FreeNow', 'Inna'].includes(dTSrc)) dTSrc = 'Uber'; if(!['Aplikacja', 'Gotówka'].includes(dTPay)) dTPay = 'Aplikacja'; } else { if(!['Centrala', 'Postój', 'Prywatny', 'Inna'].includes(dTSrc)) dTSrc = 'Centrala'; if(!['Gotówka', 'Karta'].includes(dTPay)) dTPay = 'Gotówka'; } }
 window.openSwitcher = function() { let s = document.getElementById('m-switcher'); let sBtns = document.getElementById('switcher-btns'); let html = ''; if (db.mainProfile === 'driver') { html += `<button class="btn btn-driver" style="margin:0;" onclick="window.switchApp('drv')">🚕 Panel Taxi</button><button class="btn btn-home" style="margin:0;" onclick="window.switchApp('home')">🏠 Budżet Domowy</button>`; } else { html += `<button class="btn btn-home" style="margin:0;" onclick="window.switchApp('home')">🏠 Budżet Domowy</button><button class="btn btn-driver" style="margin:0;" onclick="window.switchApp('drv')">🚕 Panel Taxi</button>`; } sBtns.innerHTML = html; s.classList.remove('hidden'); }
 window.switchApp = function(newRole) { db.role = newRole; db.tab = (newRole==='drv') ? 'term' : 'dash'; window.save(); document.getElementById('m-switcher').classList.add('hidden'); window.render(); }
+
+// ==========================================
+// INTEGRACJA Z CHMURĄ FIREBASE (STYRE OS PRO)
+// ==========================================
+const firebaseConfig = {
+    apiKey: "AIzaSyADA7FPv6xEZNg0_WI_Nl8iZLpYYv-g61o",
+    authDomain: "styreos.firebaseapp.com",
+    projectId: "styreos",
+    storageBucket: "styreos.firebasestorage.app",
+    messagingSenderId: "72578059548",
+    appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
+};
+
+// Inicjalizacja usług
+firebase.initializeApp(firebaseConfig);
+const firestore = firebase.firestore();
+const auth = firebase.auth();
+
+let currentUserUID = null;
+
+// Nasłuchiwanie stanu logowania
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUserUID = user.uid;
+        console.log("Kierowca zalogowany! ID:", currentUserUID);
+    } else {
+        currentUserUID = null;
+        console.log("Tryb offline / Niezalogowany.");
+    }
+});
+
+// ZASTĄPIONA FUNKCJA ZAPISU (Lokalnie + Chmura)
+window.save = function() { 
+    // 1. Zapis lokalny (dla bezpieczeństwa i działania offline)
+    localStorage.setItem('styre_v101_db', JSON.stringify(db)); 
+    
+    // 2. Zapis w chmurze (tylko jeśli użytkownik jest zalogowany)
+    if (currentUserUID) {
+        firestore.collection('users').doc(currentUserUID).set(db)
+            .then(() => {
+                console.log("✅ Kopia zapasowa wysłana do chmury");
+            })
+            .catch((error) => {
+                console.error("❌ Błąd zapisu do chmury:", error);
+            });
+    }
+}
