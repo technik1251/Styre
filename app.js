@@ -1,6 +1,23 @@
 const APP = document.getElementById('app');
-window.onerror = function(msg, url, lineNo, columnNo, error) { let fileName = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger); margin-bottom:5px;">Błąd Kodu!</h2><p style="color:var(--muted); font-size:0.8rem; margin-bottom:20px;">Aplikacja zatrzymana przez błąd w JavaScript.</p><div style="background:#000; border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:12px; text-align:left;"><strong style="color:var(--danger); font-size:0.85rem;">Treść:</strong><br><span style="color:#fff; font-family:monospace; font-size:0.8rem; word-break:break-all;">${msg}</span><br><br><strong style="color:var(--info); font-size:0.85rem;">Gdzie:</strong><br><span style="color:#fff; font-family:monospace; font-size:0.8rem;">Plik: ${fileName}<br>Linia: ${lineNo}</span></div><button class="btn" style="background:rgba(255,255,255,0.1); color:#fff; margin-top:20px;" onclick="location.reload()">ODŚWIEŻ STRONĘ</button></div>`; return false; };
-window.render = function() { try { if(!db || !db.init) return window.rWiz(); window.dSessionInit(); if(db.role === 'drv') return window.rDrv(); if(db.role === 'home') { window.hCheckAuto(); return window.rHome(); } return window.rWiz(); } catch(err) { if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🚨</div><h2 style="color:var(--danger)">Krytyczny Błąd Renderowania</h2><p style="color:var(--muted);font-size:0.85rem;line-height:1.4;">${err.message}</p><button class="btn btn-danger" style="margin-top:30px;padding:20px;" onclick="localStorage.clear();location.reload();">NAPRAW (TWARDY RESET)</button></div>`; console.error(err); } }
+
+window.onerror = function(msg, url, lineNo, columnNo, error) { 
+    let fileName = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; 
+    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger); margin-bottom:5px;">Błąd Kodu!</h2><p style="color:var(--muted); font-size:0.8rem; margin-bottom:20px;">Aplikacja zatrzymana przez błąd w JavaScript.</p><div style="background:#000; border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:12px; text-align:left;"><strong style="color:var(--danger); font-size:0.85rem;">Treść:</strong><br><span style="color:#fff; font-family:monospace; font-size:0.8rem; word-break:break-all;">${msg}</span><br><br><strong style="color:var(--info); font-size:0.85rem;">Gdzie:</strong><br><span style="color:#fff; font-family:monospace; font-size:0.8rem;">Plik: ${fileName}<br>Linia: ${lineNo}</span></div><button class="btn" style="background:rgba(255,255,255,0.1); color:#fff; margin-top:20px;" onclick="location.reload()">ODŚWIEŻ STRONĘ</button></div>`; 
+    return false; 
+};
+
+window.render = function() { 
+    try { 
+        if(!db || !db.init) return window.rWiz(); 
+        window.dSessionInit(); 
+        if(db.role === 'drv') return window.rDrv(); 
+        if(db.role === 'home') { window.hCheckAuto(); return window.rHome(); } 
+        return window.rWiz(); 
+    } catch(err) { 
+        if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🚨</div><h2 style="color:var(--danger)">Krytyczny Błąd Renderowania</h2><p style="color:var(--muted);font-size:0.85rem;line-height:1.4;">${err.message}</p><button class="btn btn-danger" style="margin-top:30px;padding:20px;" onclick="localStorage.clear();location.reload();">NAPRAW (TWARDY RESET)</button></div>`; 
+        console.error(err); 
+    } 
+}
 
 window.rWiz = function() {
     APP.innerHTML = `<div id="w-main" class="wiz-screen active" style="align-items:center;">
@@ -58,7 +75,7 @@ window.dFin = function() {
 window.hFin = function() { db.mainProfile = 'home'; let nameEl = document.getElementById('w-name'); db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; db.home.members = [db.userName]; db.role = 'home'; db.tab = 'dash'; db.init = true; window.save(); window.render(); }
 
 // ==========================================
-// SYSTEM LOGOWANIA (GOOGLE AUTH)
+// SYSTEM LOGOWANIA I ODZYSKIWANIA (GOOGLE AUTH)
 // ==========================================
 window.loginWithGoogle = function() {
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -66,19 +83,37 @@ window.loginWithGoogle = function() {
     firebase.auth().signInWithPopup(provider)
         .then((result) => {
             const user = result.user;
-            
-            // Ukrywamy przycisk logowania
-            let loginBox = document.getElementById('google-login-box');
-            if(loginBox) loginBox.style.display = 'none';
-
-            // Automatyczne wpisanie imienia do pola tekstowego
-            let nameInput = document.getElementById('w-name');
-            if(nameInput && user.displayName) {
-                nameInput.value = user.displayName.split(' ')[0]; 
-            }
-            
-            window.sysAlert('Zalogowano!', `Cześć ${user.displayName.split(' ')[0]}! Twoje dane będą bezpiecznie zapisywane w chmurze.`, 'success');
             console.log("Zalogowano pomyślnie. UID:", user.uid);
+            
+            // POBIERANIE DANYCH Z CHMURY
+            firestore.collection('users').doc(user.uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        // KIEROWCA MA JUŻ DANE W CHMURZE! (Odzyskujemy)
+                        db = doc.data();     
+                        db.init = true;      
+                        window.save();       
+                        
+                        window.sysAlert('Witaj ponownie!', `Przywrócono Twoją pełną historię z chmury, ${user.displayName.split(' ')[0]}! ☁️🚕`, 'success');
+                        
+                        window.render(); 
+                    } else {
+                        // NOWY KIEROWCA
+                        let loginBox = document.getElementById('google-login-box');
+                        if(loginBox) loginBox.style.display = 'none';
+
+                        let nameInput = document.getElementById('w-name');
+                        if(nameInput && user.displayName) {
+                            nameInput.value = user.displayName.split(' ')[0]; 
+                        }
+                        
+                        window.sysAlert('Konto utworzone!', `Cześć ${user.displayName.split(' ')[0]}! Dokończ konfigurację, a potem zapiszemy ją w chmurze.`, 'success');
+                    }
+                })
+                .catch((error) => {
+                    console.error("Błąd sprawdzania bazy danych:", error);
+                    window.sysAlert('Ostrzeżenie', 'Zalogowano, ale nie udało się sprawdzić kopii zapasowej.', 'warning');
+                });
         })
         .catch((error) => {
             console.error("Błąd logowania:", error);
