@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK 2: home.js - StyreOS 14.1 PRO (Inteligentny Wygląd Kredytów z Koszem i Pełną Edycją)
+// PLIK 2: home.js - StyreOS 14.2 PRO (Tryb kompaktowy od 2 kredytów + Dashboard)
 // ==========================================
 const FIXED_EXP_CATS = ['Stałe opłaty / Czynsz', 'Prąd / Gaz / Woda', 'Internet i Telefon', 'Kredyt / Leasing', 'Dom i Rachunki'];
 const C_EXP = { 'Stałe opłaty / Czynsz': {c: '#f59e0b', i: '🏢'}, 'Prąd / Gaz / Woda': {c: '#0ea5e9', i: '⚡'}, 'Internet i Telefon': {c: '#8b5cf6', i: '🌐'}, 'Kredyt / Leasing': {c: '#ef4444', i: '🏦'}, 'Zakupy Spożywcze': {c: '#22c55e', i: '🛒'}, 'Dom i Rachunki': {c: '#14b8a6', i: '🏠'}, 'Auto i Transport': {c: '#f59e0b', i: '🚗'}, 'Rozrywka': {c: '#a855f7', i: '🎉'}, 'Jedzenie na mieście': {c: '#ef4444', i: '🍔'}, 'Ubrania': {c: '#ec4899', i: '👗'}, 'Zdrowie': {c: '#10b981', i: '💊'}, 'Oszczędności / Skarbonka': {c: '#10b981', i: '🐷'}, 'Inne Wydatki': {c: '#64748b', i: '📦'} };
@@ -209,8 +209,7 @@ window.hShowIconPicker = function(accId) {
 window.hApplyIcon = function(id, ico, col) { let ac = db.home.accs.find(x => x.id === id); if(ac) { ac.i = ico; ac.c = col; window.save(); window.render(); } document.getElementById('m-icon-picker').remove(); }
 window.hDelAcc = function(id) { if(db.home.accs.length <= 1) return window.sysAlert("Błąd", "Musisz mieć min. 1 konto!"); window.sysConfirm("Usuwanie konta", "Na pewno? Znikną przypisane środki.", () => { db.home.accs = db.home.accs.filter(a => a.id !== id); window.save(); window.render(); }); }
 
-
-// --- MODUŁ KREDYTÓW I WYBÓR KONTA ---
+// --- MODUŁ KREDYTÓW ---
 window.hOpenLoanModal = function(id = null) {
     let ln = id ? db.home.loans.find(x => x.id == id) : null;
     let n = ln ? ln.n : '';
@@ -526,7 +525,7 @@ window.rHome = function() {
         if (activeLoans.length === 0) {
             loansHtml = '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:10px 0 30px;">Brak kredytów. Ciesz się wolnością finansową! 🕊️</div>';
         } else {
-            let isCompact = activeLoans.length > 3;
+            let isCompact = activeLoans.length > 1; // <--- OTO FIX (Tryb kompaktowy już od 2 kredytów!)
             if(isCompact) {
                 loansHtml += `<div style="margin-bottom:15px; text-align:center; font-size:0.75rem; color:var(--info); font-weight:bold; background:rgba(14,165,233,0.1); padding:8px; border-radius:8px; border:1px solid rgba(14,165,233,0.3);">Włączono widok kompaktowy (${activeLoans.length} aktywne zobowiązania)</div>`;
             }
@@ -593,6 +592,7 @@ window.rHome = function() {
                 `;
 
                 if(!isCompact) {
+                    // DUŻY WIDOK
                     let savingsHtml = (!isError && savings > 0) ? `<div style="font-size:0.75rem; color:var(--success); margin-top:5px; font-weight:bold; text-align:center;">Spłacając dziś, unikasz ${savings.toFixed(2)} zł odsetek! 💸</div>` : '';
                     return `
                     <div class="panel" style="padding:0; border:1px solid #27272a; border-radius:24px; overflow:hidden; margin-bottom:20px; background:#18181b;">
@@ -622,6 +622,7 @@ window.rHome = function() {
                         </div>
                     </div>`;
                 } else {
+                    // WIDOK KOMPAKTOWY
                     let savingsHtml = (!isError && savings > 0) ? `<div style="font-size:0.65rem; color:var(--success); margin-bottom:8px; font-weight:bold; text-align:center;">Spłacając dziś, unikasz ${savings.toFixed(2)} zł odsetek! 💸</div>` : '';
                     return `
                     <div class="panel" style="padding:15px; border-left:4px solid var(--danger); border-radius:16px; margin-bottom:12px; background:linear-gradient(145deg, #18181b, #09090b); position:relative;">
