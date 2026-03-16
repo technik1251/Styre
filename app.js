@@ -4,25 +4,6 @@
 
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
-window.db = window.db || {};
-var db = window.db; // Zapewnia widoczność bazy dla wszystkich plików!
-
-// 🛠️ NARZĘDZIA RATUNKOWE (Naprawiają martwe przyciski "Zakończ")
-window.safeVal = window.safeVal || function(id, def=0) {
-    let el = document.getElementById(id);
-    if(!el) return def;
-    let v = parseFloat(el.value);
-    return isNaN(v) ? def : v;
-};
-
-window.save = window.save || function() {
-    localStorage.setItem('styre_v101_db', JSON.stringify(window.db));
-    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser && window.db.init) {
-        if(firebase.firestore) {
-            firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).set(window.db).catch(e => console.log('Chmura w tle: ', e));
-        }
-    }
-};
 
 // 🛡️ KULOODPORNY BEZPIECZNIK BAZY DANYCH
 window.patchDb = function(data) {
@@ -38,33 +19,142 @@ window.patchDb = function(data) {
     return d;
 };
 
-window.onerror = function(msg, url, lineNo, columnNo, error) { 
-    let fileName = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; 
-    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger); margin-bottom:5px;">Błąd Kodu!</h2><p style="color:var(--muted); font-size:0.8rem; margin-bottom:20px;">Aplikacja zatrzymana.</p><div style="background:#000; border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:12px; text-align:left;"><strong style="color:var(--danger); font-size:0.85rem;">Treść:</strong><br><span style="color:#fff; font-family:monospace; font-size:0.8rem;">${msg}</span></div><button class="btn" style="background:rgba(255,255,255,0.1); color:#fff; margin-top:20px;" onclick="localStorage.clear();location.reload()">RESTART (CZYŚĆ PAMIĘĆ)</button></div>`; 
+// 🛠️ NARZĘDZIA RATUNKOWE (Naprawiają martwe przyciski "Zakończ")
+window.safeVal = function(id, def=0) {
+    let el = document.getElementById(id);
+    if(!el) return def;
+    let v = parseFloat(el.value);
+    return isNaN(v) ? def : v;
+};
+
+window.save = window.save || function() {
+    if(typeof db !== 'undefined') {
+        localStorage.setItem('styre_v101_db', JSON.stringify(db));
+        if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser && db.init) {
+            if(firebase.firestore) {
+                firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).set(db).catch(e => console.log('Chmura: ', e));
+            }
+        }
+    }
+};
+
+window.onerror = function(msg, url, lineNo) { 
+    let fn = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; 
+    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger);">Błąd Kodu!</h2><div style="background:#000; padding:15px; border-radius:12px; text-align:left; font-family:monospace; font-size:0.8rem; color:#fff;">${msg}<br>Plik: ${fn}<br>Linia: ${lineNo}</div><button class="btn" style="background:rgba(255,255,255,0.1); margin-top:20px;" onclick="localStorage.clear();location.reload()">RESTART</button></div>`; 
     return false; 
 };
 
 window.render = function() { 
     try { 
-        if(!window.db || !window.db.init) return window.rWiz(); 
+        if(typeof db === 'undefined') { window.db = {}; }
+        db = window.patchDb(db);
         
-        window.db = window.patchDb(window.db); // Łatamy bazę przed odpaleniem
+        if(!db.init) return window.rWiz(); 
         
-        if(window.dSessionInit) window.dSessionInit(); 
-        if(window.db.role === 'drv' && window.rDrv) return window.rDrv(); 
-        if(window.db.role === 'home' && window.rHome) { 
+        if(db.role === 'drv' && window.rDrv) return window.rDrv(); 
+        if(db.role === 'home' && window.rHome) { 
             if(window.hCheckAuto) window.hCheckAuto(); 
             return window.rHome(); 
         } 
         return window.rWiz(); 
     } catch(err) { 
         console.error(err);
-        if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🚨</div><h2 style="color:var(--danger)">Krytyczny Błąd Interfejsu</h2><p style="color:var(--muted);font-size:0.85rem;">${err.message}</p><button class="btn btn-danger" style="margin-top:30px;padding:20px;" onclick="localStorage.clear();location.reload();">TWARDY RESET APLIKACJI</button></div>`; 
+        if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><h2>🚨 Błąd Interfejsu</h2><p>${err.message}</p><button class="btn btn-danger" onclick="localStorage.clear();location.reload();">RESET</button></div>`; 
     } 
+}
+
+window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e.classList.remove('active')); let t = document.getElementById(id); if(t) t.classList.add('active'); window.scrollTo(0,0); }
+
+window.wMainProfile = function(prof) { 
+    window.wData.mainProfile = prof; 
+    db = window.patchDb(db);
+    
+    // 🔥 Jeśli masz gotowy profil -> WCHODŹ BEZ PYTANIA
+    if(db.init || db.userName) {
+        db.mainProfile = prof;
+        db.role = prof === 'driver' ? 'drv' : 'home';
+        db.tab = prof === 'driver' ? 'term' : 'dash';
+        db.init = true;
+        window.save();
+        return window.render();
+    }
+    
+    if(prof==='driver') window.wS('w-d1'); else window.wS('w-home'); 
+}
+
+window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.querySelectorAll('.opt-card').forEach(c=>{ c.style.borderColor='rgba(255,255,255,0.05)'; c.classList.remove('selected'); }); el.style.borderColor='var(--driver)'; el.classList.add('selected'); if(cat==='p') { let elB = document.getElementById('wd-b'); if(elB) elB.style.display = (val === 'corp') ? 'block' : 'none'; } if(cat==='c') { let elC = document.getElementById('wd-c'); if(elC) elC.style.display = (val === 'own') ? 'none' : 'block'; } if(cat==='e') { let ep = document.getElementById('wd-e-p'); let ej = document.getElementById('wd-e-j'); if(ep) ep.style.display = (val === 'partner') ? 'block' : 'none'; if(ej) ej.style.display = (val === 'jdg') ? 'block' : 'none'; } }
+window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
+
+window.dFin = function() { 
+    db = window.patchDb(db); 
+    db.mainProfile = window.wData.mainProfile || 'driver'; let nameEl = document.getElementById('w-name-drv'); db.userName = nameEl ? (nameEl.value || 'Kierowca') : 'Kierowca';
+    db.drv.plat = window.wData.p; db.drv.carType = window.wData.c; db.drv.emp = window.wData.e; 
+    let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
+    let c = window.wData.c === 'own' ? 0 : window.safeVal('wd-c-v'); let cType = window.wData.c === 'own' ? 'month' : (document.getElementById('wd-c-type') ? document.getElementById('wd-c-type').value : 'month');
+    let e = 0, eTy = 'flat', ePct = 0, ePer = 'month'; 
+    if(window.wData.e === 'partner') { eTy = document.getElementById('wd-p-type') ? document.getElementById('wd-p-type').value : 'flat'; if(eTy === 'flat') { e = window.safeVal('wd-p-v'); ePer = document.getElementById('wd-p-period') ? document.getElementById('wd-p-period').value : 'week'; } else { ePct = window.safeVal('wd-p-pct') / 100; } } else { e = window.safeVal('wd-j-v'); ePer = document.getElementById('wd-j-period') ? document.getElementById('wd-j-period').value : 'month'; } 
+    db.drv.cfg.bC = b; db.drv.cfg.bPeriod = bPer; db.drv.cfg.cC = c; db.drv.cfg.cType = cType; 
+    db.drv.cfg.eC = e; db.drv.cfg.eType = eTy; db.drv.cfg.ePct = ePct; db.drv.cfg.ePeriod = ePer; db.drv.cfg.iC = 0; db.drv.cfg.iPeriod = 'month';
+    db.drv.cfg.fix = 0; db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100; db.drv.cfg.cardF = 0.015; db.drv.cfg.goal = 350;
+    db.role = 'drv'; db.tab = 'term'; db.init = true; window.save(); if(window.dSessionInit) window.dSessionInit(); window.render(); 
+}
+
+window.hFin = function() { 
+    db = window.patchDb(db); 
+    db.mainProfile = 'home'; let nameEl = document.getElementById('w-name-home'); db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; 
+    if(!db.home.members.includes(db.userName)) db.home.members.unshift(db.userName);
+    db.role = 'home'; db.tab = 'dash'; db.init = true; window.save(); window.render(); 
+}
+
+window.loginWithGoogle = function() {
+    if (typeof firebase === 'undefined') {
+        if(window.sysAlert) return window.sysAlert('Brak połączenia', 'Zaczekaj sekundę na biblioteki Google.', 'warning');
+        return alert("Poczekaj...");
+    }
+    if (!firebase.apps.length) {
+        firebase.initializeApp({
+            apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o",
+            authDomain: "styreos.firebaseapp.com",
+            projectId: "styreos",
+            storageBucket: "styreos.firebasestorage.app",
+            messagingSenderId: "72578059548",
+            appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
+        });
+    }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+            const user = result.user;
+            if (typeof firebase.firestore !== 'undefined') {
+                firebase.firestore().collection('users').doc(user.uid).get()
+                    .then((doc) => {
+                        if (doc.exists) {
+                            db = window.patchDb(doc.data()); 
+                            db.init = true;      
+                            window.save();       
+                            if(window.sysAlert) window.sysAlert('Witaj ponownie!', `Przywrócono profil: ${user.displayName.split(' ')[0]}`, 'success');
+                            window.render(); 
+                        } else {
+                            if(typeof db === 'undefined') db = {};
+                            db = window.patchDb(db); 
+                            db.userName = user.displayName.split(' ')[0];
+                            if(window.sysAlert) window.sysAlert('Połączono!', `Teraz wybierz profil, by zakończyć konfigurację.`, 'success');
+                            window.render(); 
+                        }
+                    })
+                    .catch((error) => {
+                        if(window.sysAlert) window.sysAlert('Błąd Bazy', `Nie udało się pobrać danych: ${error.message}`, 'error');
+                    });
+            }
+        })
+        .catch((error) => {
+            if(window.sysAlert) window.sysAlert('Błąd Logowania', error.message, 'error');
+        });
 }
 
 window.rWiz = function() {
     let isLogged = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser);
+    let uName = (typeof db !== 'undefined' && db.userName) ? db.userName : '';
     let userBox = isLogged ? 
         `<div style="background:rgba(34,197,94,0.1); border:1px solid var(--success); padding:15px; border-radius:12px; text-align:center; margin-bottom:25px;">
             <strong style="color:var(--success); font-size:1.1rem;">☁️ Połączono z chmurą</strong><br>
@@ -98,7 +188,7 @@ window.rWiz = function() {
                 <div class="opt-text"><h3>Budżet Domowy</h3><p>Wydatki, portfele, automaty.</p></div>
             </div>
 
-            <div class="opt-card" style="border-color:rgba(255,255,255,0.05); opacity: 0.6; cursor: pointer; background: rgba(0,0,0,0.3);" onclick="window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca pojawi się w kolejnych aktualizacjach!', 'info')">
+            <div class="opt-card" style="border-color:rgba(255,255,255,0.05); opacity: 0.6; cursor: pointer; background: rgba(0,0,0,0.3);" onclick="if(window.sysAlert) window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca pojawi się w kolejnych aktualizacjach!', 'info')">
                 <div class="opt-icon" style="filter: grayscale(1);">📦</div>
                 <div class="opt-text">
                     <h3 style="display:flex; align-items:center; gap:8px;">Kurier / Dostawa <span style="font-size:0.6rem; background:var(--info); color:#fff; padding:2px 6px; border-radius:4px;">WKRÓTCE</span></h3>
@@ -106,7 +196,7 @@ window.rWiz = function() {
                 </div>
             </div>
 
-            <div class="opt-card" style="border-color:rgba(255,255,255,0.05); opacity: 0.6; cursor: pointer; background: rgba(0,0,0,0.3);" onclick="window.sysAlert('Funkcja PRO', 'Pełny moduł Firma/Spedycja (z KSeF, fakturami i flotą) będzie dostępny w wersji StyreOS PRO!', 'info')">
+            <div class="opt-card" style="border-color:rgba(255,255,255,0.05); opacity: 0.6; cursor: pointer; background: rgba(0,0,0,0.3);" onclick="if(window.sysAlert) window.sysAlert('Funkcja PRO', 'Pełny moduł Firma/Spedycja (z KSeF, fakturami i flotą) będzie dostępny w wersji StyreOS PRO!', 'info')">
                 <div class="opt-icon" style="filter: grayscale(1);">🚛</div>
                 <div class="opt-text">
                     <h3 style="display:flex; align-items:center; gap:8px;">Firma / Spedycja <span style="font-size:0.6rem; background:#a855f7; color:#fff; padding:2px 6px; border-radius:4px;">PRO</span></h3>
@@ -121,113 +211,19 @@ window.rWiz = function() {
         <div class="w-sub">Konfiguracja</div>
         <p style="color:var(--muted); text-align:center; margin-bottom:20px; font-size:0.9rem;">Jak mamy się do Ciebie zwracać?</p>
         <div class="inp-group">
-            <input type="text" id="w-name-home" placeholder="Twoje Imię" class="premium-input" value="${window.db.userName||''}">
+            <input type="text" id="w-name-home" placeholder="Twoje Imię" class="premium-input" value="${uName}">
         </div>
         <button class="btn btn-home" style="margin-top:20px; padding:15px;" onclick="window.hFin()">ZAKOŃCZ I WEJDŹ</button>
         <button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-main')">Wróć</button>
     </div>
     
-    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><p style="color:var(--muted); text-align:center; margin-bottom:15px; font-size:0.9rem;">Jak mamy się do Ciebie zwracać?</p><div class="inp-group" style="margin-bottom:20px;"><input type="text" id="w-name-drv" placeholder="Twoje Imię" class="premium-input" value="${window.db.userName||''}"></div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-main')">Wróć</button></div>
+    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><p style="color:var(--muted); text-align:center; margin-bottom:15px; font-size:0.9rem;">Jak mamy się do Ciebie zwracać?</p><div class="inp-group" style="margin-bottom:20px;"><input type="text" id="w-name-drv" placeholder="Twoje Imię" class="premium-input" value="${uName}"></div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-main')">Wróć</button></div>
     
     <div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div>
     
     <div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px;" onclick="window.dFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>`;
 }
 
-window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e.classList.remove('active')); let t = document.getElementById(id); if(t) t.classList.add('active'); window.scrollTo(0,0); }
-
-window.wMainProfile = function(prof) { 
-    window.wData.mainProfile = prof; 
-    window.db = window.patchDb(window.db);
-    
-    // 🔥 Jeśli masz już wpisane imię ALBO masz gotowy profil -> WCHODŹ BEZ PYTANIA
-    if(window.db.init || window.db.userName) {
-        window.db.mainProfile = prof;
-        window.db.role = prof === 'driver' ? 'drv' : 'home';
-        window.db.tab = prof === 'driver' ? 'term' : 'dash';
-        window.db.init = true;
-        window.save();
-        return window.render();
-    }
-    
-    if(prof==='driver') window.wS('w-d1'); else window.wS('w-home'); 
-}
-
-window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.querySelectorAll('.opt-card').forEach(c=>{ c.style.borderColor='rgba(255,255,255,0.05)'; c.classList.remove('selected'); }); el.style.borderColor='var(--driver)'; el.classList.add('selected'); if(cat==='p') { let elB = document.getElementById('wd-b'); if(elB) elB.style.display = (val === 'corp') ? 'block' : 'none'; } if(cat==='c') { let elC = document.getElementById('wd-c'); if(elC) elC.style.display = (val === 'own') ? 'none' : 'block'; } if(cat==='e') { let ep = document.getElementById('wd-e-p'); let ej = document.getElementById('wd-e-j'); if(ep) ep.style.display = (val === 'partner') ? 'block' : 'none'; if(ej) ej.style.display = (val === 'jdg') ? 'block' : 'none'; } }
-window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
-
-window.dFin = function() { 
-    window.db = window.patchDb(window.db); 
-    window.db.mainProfile = window.wData.mainProfile || 'driver'; let nameEl = document.getElementById('w-name-drv'); window.db.userName = nameEl ? (nameEl.value || 'Kierowca') : 'Kierowca';
-    window.db.drv.plat = window.wData.p; window.db.drv.carType = window.wData.c; window.db.drv.emp = window.wData.e; 
-    let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
-    let c = window.wData.c === 'own' ? 0 : window.safeVal('wd-c-v'); let cType = window.wData.c === 'own' ? 'month' : (document.getElementById('wd-c-type') ? document.getElementById('wd-c-type').value : 'month');
-    let e = 0, eTy = 'flat', ePct = 0, ePer = 'month'; 
-    if(window.wData.e === 'partner') { eTy = document.getElementById('wd-p-type') ? document.getElementById('wd-p-type').value : 'flat'; if(eTy === 'flat') { e = window.safeVal('wd-p-v'); ePer = document.getElementById('wd-p-period') ? document.getElementById('wd-p-period').value : 'week'; } else { ePct = window.safeVal('wd-p-pct') / 100; } } else { e = window.safeVal('wd-j-v'); ePer = document.getElementById('wd-j-period') ? document.getElementById('wd-j-period').value : 'month'; } 
-    window.db.drv.cfg.bC = b; window.db.drv.cfg.bPeriod = bPer; window.db.drv.cfg.cC = c; window.db.drv.cfg.cType = cType; 
-    window.db.drv.cfg.eC = e; window.db.drv.cfg.eType = eTy; window.db.drv.cfg.ePct = ePct; window.db.drv.cfg.ePeriod = ePer; window.db.drv.cfg.iC = 0; window.db.drv.cfg.iPeriod = 'month';
-    window.db.drv.cfg.fix = 0; window.db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100; window.db.drv.cfg.cardF = 0.015; window.db.drv.cfg.goal = 350;
-    window.db.role = 'drv'; window.db.tab = 'term'; window.db.init = true; window.save(); if(window.dSessionInit) window.dSessionInit(); window.render(); 
-}
-
-window.hFin = function() { 
-    window.db = window.patchDb(window.db); 
-    window.db.mainProfile = 'home'; let nameEl = document.getElementById('w-name-home'); window.db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; 
-    if(!window.db.home.members.includes(window.db.userName)) window.db.home.members.unshift(window.db.userName);
-    window.db.role = 'home'; window.db.tab = 'dash'; window.db.init = true; window.save(); window.render(); 
-}
-
-// --- LOGOWANIE GOOGLE ---
-window.loginWithGoogle = function() {
-    if (typeof firebase === 'undefined') {
-        if(window.sysAlert) return window.sysAlert('Brak połączenia', 'Zaczekaj sekundę na biblioteki Google.', 'warning');
-        return alert("Poczekaj...");
-    }
-    
-    if (!firebase.apps.length) {
-        firebase.initializeApp({
-            apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o",
-            authDomain: "styreos.firebaseapp.com",
-            projectId: "styreos",
-            storageBucket: "styreos.firebasestorage.app",
-            messagingSenderId: "72578059548",
-            appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
-        });
-    }
-
-    const provider = new firebase.auth.GoogleAuthProvider();
-    
-    firebase.auth().signInWithPopup(provider)
-        .then((result) => {
-            const user = result.user;
-            if (typeof firebase.firestore !== 'undefined') {
-                firebase.firestore().collection('users').doc(user.uid).get()
-                    .then((doc) => {
-                        if (doc.exists) {
-                            window.db = window.patchDb(doc.data()); 
-                            window.db.init = true;      
-                            window.save();       
-                            if(window.sysAlert) window.sysAlert('Witaj ponownie!', `Przywrócono profil: ${user.displayName.split(' ')[0]}`, 'success');
-                            window.render(); 
-                        } else {
-                            window.db = window.patchDb({}); 
-                            window.db.userName = user.displayName.split(' ')[0];
-                            if(window.sysAlert) window.sysAlert('Połączono!', `Teraz wybierz profil, by zakończyć konfigurację.`, 'success');
-                            window.render(); 
-                        }
-                    })
-                    .catch((error) => {
-                        console.error(error);
-                        if(window.sysAlert) window.sysAlert('Błąd Bazy', `Nie udało się pobrać danych: ${error.message}`, 'error');
-                    });
-            }
-        })
-        .catch((error) => {
-            if(window.sysAlert) window.sysAlert('Błąd Logowania', error.message, 'error');
-        });
-}
-
-// Nasłuchiwanie autologowania po odświeżeniu
 if (typeof firebase !== 'undefined') {
     setTimeout(() => {
         if (!firebase.apps.length) {
