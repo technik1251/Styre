@@ -3,7 +3,6 @@
 // ==========================================
 
 const APP = document.getElementById('app');
-window.wData = window.wData || {};
 
 window.onerror = function(msg, url, lineNo, columnNo, error) { 
     let fileName = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; 
@@ -74,11 +73,12 @@ window.rWiz = function() {
 }
 
 window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e.classList.remove('active')); let t = document.getElementById(id); if(t) t.classList.add('active'); window.scrollTo(0,0); }
-window.wMainProfile = function(prof) { window.wData.mainProfile = prof; if(prof==='driver') window.wS('w-d1'); else window.wS('w-home'); }
-window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.querySelectorAll('.opt-card').forEach(c=>{ c.style.borderColor='rgba(255,255,255,0.05)'; c.classList.remove('selected'); }); el.style.borderColor='var(--driver)'; el.classList.add('selected'); if(cat==='p') { let elB = document.getElementById('wd-b'); if(elB) elB.style.display = (val === 'corp') ? 'block' : 'none'; } if(cat==='c') { let elC = document.getElementById('wd-c'); if(elC) elC.style.display = (val === 'own') ? 'none' : 'block'; } if(cat==='e') { let ep = document.getElementById('wd-e-p'); let ej = document.getElementById('wd-e-j'); if(ep) ep.style.display = (val === 'partner') ? 'block' : 'none'; if(ej) ej.style.display = (val === 'jdg') ? 'block' : 'none'; } }
+window.wMainProfile = function(prof) { window.wData = window.wData || {}; window.wData.mainProfile = prof; if(prof==='driver') window.wS('w-d1'); else window.wS('w-home'); }
+window.dW = function(cat, val, el) { window.wData = window.wData || {}; window.wData[cat] = val; el.parentElement.querySelectorAll('.opt-card').forEach(c=>{ c.style.borderColor='rgba(255,255,255,0.05)'; c.classList.remove('selected'); }); el.style.borderColor='var(--driver)'; el.classList.add('selected'); if(cat==='p') { let elB = document.getElementById('wd-b'); if(elB) elB.style.display = (val === 'corp') ? 'block' : 'none'; } if(cat==='c') { let elC = document.getElementById('wd-c'); if(elC) elC.style.display = (val === 'own') ? 'none' : 'block'; } if(cat==='e') { let ep = document.getElementById('wd-e-p'); let ej = document.getElementById('wd-e-j'); if(ep) ep.style.display = (val === 'partner') ? 'block' : 'none'; if(ej) ej.style.display = (val === 'jdg') ? 'block' : 'none'; } }
 window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
 
 window.dFin = function() { 
+    window.wData = window.wData || {};
     db.mainProfile = window.wData.mainProfile || 'driver'; let nameEl = document.getElementById('w-name'); db.userName = nameEl ? (nameEl.value || 'Kierowca') : 'Kierowca';
     db.drv.plat = window.wData.p; db.drv.carType = window.wData.c; db.drv.emp = window.wData.e; 
     let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
@@ -99,19 +99,32 @@ window.hFin = function() {
     db.mainProfile = 'home'; let nameEl = document.getElementById('w-name'); db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; db.home.members = [db.userName]; db.role = 'home'; db.tab = 'dash'; db.init = true; window.save(); window.render(); 
 }
 
-// --- LOGOWANIE GOOGLE ---
+// --- LOGOWANIE GOOGLE (Inteligentna inicjalizacja) ---
 window.loginWithGoogle = function() {
-    if (typeof firebase === 'undefined' || !firebase.auth) {
+    if (typeof firebase === 'undefined') {
         return window.sysAlert('Błąd systemu', 'Biblioteka Firebase nie została załadowana. Odśwież stronę.', 'error');
     }
     
+    // Inicjalizacja konfiguracji dopiero przy kliknięciu (żeby nie blokować renderowania ekranu)
+    if (!firebase.apps.length) {
+        firebase.initializeApp({
+            apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o",
+            authDomain: "styreos.firebaseapp.com",
+            projectId: "styreos",
+            storageBucket: "styreos.firebasestorage.app",
+            messagingSenderId: "72578059548",
+            appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
+        });
+    }
+    
+    const firestoreRef = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
     
     firebase.auth().signInWithPopup(provider)
         .then((result) => {
             const user = result.user;
-            if(typeof firestore !== 'undefined' && firestore) {
-                firestore.collection('users').doc(user.uid).get()
+            if(firestoreRef) {
+                firestoreRef.collection('users').doc(user.uid).get()
                     .then((doc) => {
                         if (doc.exists) {
                             db = doc.data();     
@@ -138,4 +151,5 @@ window.loginWithGoogle = function() {
         });
 }
 
+// GŁÓWNY START APLIKACJI
 window.render();
