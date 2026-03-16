@@ -2,7 +2,7 @@
 // PLIK: app.js - GŁÓWNY SILNIK I LOGOWANIE GOOGLE
 // ==========================================
 
-// --- 1. KONFIGURACJA FIREBASE (Z Twojego konta StyreOS) ---
+// --- 1. KONFIGURACJA FIREBASE ---
 const firebaseConfig = {
     apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o",
     authDomain: "styreos.firebaseapp.com",
@@ -20,6 +20,7 @@ const firestore = (typeof firebase !== 'undefined') ? firebase.firestore() : nul
 
 // --- 3. GŁÓWNY RDZEŃ APLIKACJI ---
 const APP = document.getElementById('app');
+window.wData = window.wData || {};
 
 window.onerror = function(msg, url, lineNo, columnNo, error) { 
     let fileName = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; 
@@ -84,9 +85,12 @@ window.rWiz = function() {
                     <p>Zarządzanie flotą, KSeF, faktury.</p>
                 </div>
             </div>
-            </div>
+        </div>
     </div>
-    <div id="w-home" class="wiz-screen"><div class="w-title">Budżet Rodzinny</div><div class="w-sub">Gotowy do akcji</div><button class="btn btn-home" onclick="window.hFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-main')">Wróć</button></div><div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button></div><div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div><div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px;" onclick="window.dFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>`;
+    <div id="w-home" class="wiz-screen"><div class="w-title">Budżet Rodzinny</div><div class="w-sub">Gotowy do akcji</div><button class="btn btn-home" onclick="window.hFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-main')">Wróć</button></div>
+    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button></div>
+    <div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div>
+    <div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px;" onclick="window.dFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>`;
 }
 
 window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e.classList.remove('active')); let t = document.getElementById(id); if(t) t.classList.add('active'); window.scrollTo(0,0); }
@@ -112,9 +116,10 @@ window.dFin = function() {
 }
 window.hFin = function() { db.mainProfile = 'home'; let nameEl = document.getElementById('w-name'); db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; db.home.members = [db.userName]; db.role = 'home'; db.tab = 'dash'; db.init = true; window.save(); window.render(); }
 
+// --- LOGOWANIE GOOGLE ---
 window.loginWithGoogle = function() {
     if (typeof firebase === 'undefined' || !firebase.auth) {
-        return window.sysAlert('Błąd', 'Brak połączenia z systemem Google. Odśwież stronę i poczekaj na załadowanie bibliotek.', 'error');
+        return window.sysAlert('Błąd systemu', 'Biblioteka Firebase nie została załadowana. Sprawdź połączenie z internetem.', 'error');
     }
     
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -122,39 +127,33 @@ window.loginWithGoogle = function() {
     firebase.auth().signInWithPopup(provider)
         .then((result) => {
             const user = result.user;
-            console.log("Zalogowano pomyślnie. UID:", user.uid);
             
-            firestore.collection('users').doc(user.uid).get()
-                .then((doc) => {
-                    if (doc.exists) {
-                        db = doc.data();     
-                        db.init = true;      
-                        window.save();       
-                        
-                        window.sysAlert('Witaj ponownie!', `Przywrócono Twoją pełną historię z chmury, ${user.displayName.split(' ')[0]}! ☁️`, 'success');
-                        
-                        window.render(); 
-                    } else {
-                        let loginBox = document.getElementById('google-login-box');
-                        if(loginBox) loginBox.style.display = 'none';
-
-                        let nameInput = document.getElementById('w-name');
-                        if(nameInput && user.displayName) {
-                            nameInput.value = user.displayName.split(' ')[0]; 
+            if(firestore) {
+                firestore.collection('users').doc(user.uid).get()
+                    .then((doc) => {
+                        if (doc.exists) {
+                            db = doc.data();     
+                            db.init = true;      
+                            window.save();       
+                            window.sysAlert('Witaj ponownie!', `Przywrócono Twoją pełną historię z chmury! ☁️`, 'success');
+                            window.render(); 
+                        } else {
+                            let loginBox = document.getElementById('google-login-box');
+                            if(loginBox) loginBox.style.display = 'none';
+                            let nameInput = document.getElementById('w-name');
+                            if(nameInput && user.displayName) nameInput.value = user.displayName.split(' ')[0]; 
+                            window.sysAlert('Konto połączone!', `Witaj ${user.displayName.split(' ')[0]}! Dokończ konfigurację, a system sam zadba o kopię zapasową.`, 'success');
                         }
-                        
-                        window.sysAlert('Konto połączone!', `Cześć ${user.displayName.split(' ')[0]}! Dokończ konfigurację. Aplikacja będzie od teraz automatycznie synchronizować się z chmurą.`, 'success');
-                    }
-                })
-                .catch((error) => {
-                    console.error("Błąd sprawdzania bazy danych:", error);
-                    window.sysAlert('Ostrzeżenie', 'Zalogowano, ale nie udało się sprawdzić kopii zapasowej.', 'warning');
-                });
+                    })
+                    .catch((error) => {
+                        window.sysAlert('Ostrzeżenie', 'Zalogowano pomyślnie, ale wystąpił błąd odczytu chmury: ' + error.message, 'warning');
+                    });
+            }
         })
         .catch((error) => {
-            console.error("Błąd logowania:", error);
-            window.sysAlert('Błąd Logowania', `Sprawdź połączenie z internetem. Szczegóły techniczne: ${error.message}`, 'error');
+            window.sysAlert('Błąd Logowania', `Spróbuj ponownie. Błąd: ${error.message}`, 'error');
         });
-}
+};
 
+// --- START APLIKACJI (Kluczowe!) ---
 window.render();
