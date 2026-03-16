@@ -2,28 +2,34 @@
 // PLIK: app.js - GŁÓWNY SILNIK, LOGOWANIE I KREATOR
 // ==========================================
 
-const APP = document.getElementById('app');
-window.wData = window.wData || {};
-
-// 🔥 NAPRAWA #1: ŁADOWANIE BAZY Z PAMIĘCI URZĄDZENIA NA STARCIE (KONIEC Z RESETAMI!)
-let savedDb = localStorage.getItem('styre_v101_db');
-if (savedDb) {
-    try { window.db = JSON.parse(savedDb); } catch(e) { window.db = {}; }
-} else {
+if (typeof window.db === 'undefined') {
     window.db = {};
 }
 
-// 🛡️ KULOODPORNY BEZPIECZNIK BAZY DANYCH
+const APP = document.getElementById('app');
+window.wData = window.wData || {};
+
+// 🛡️ KULOODPORNY BEZPIECZNIK BAZY DANYCH (Łata stare profile)
 window.patchDb = function(data) {
     let d = data || {};
-    if(!d.home) d.home = { trans: [], accs: [{id:'acc_1', n:'Portfel Głów.', c:'#22c55e', i:'💵', startBal:0}], budgets: {}, recurring: [], piggy: [], loans: [], debts: [], members: [d.userName || 'Domownik'] };
+    if(!d.home) d.home = {};
     if(!d.home.trans) d.home.trans = [];
     if(!d.home.accs) d.home.accs = [{id:'acc_1', n:'Portfel Głów.', c:'#22c55e', i:'💵', startBal:0}];
     if(!d.home.loans) d.home.loans = [];
     if(!d.home.piggy) d.home.piggy = [];
     if(!d.home.debts) d.home.debts = [];
     if(!d.home.recurring) d.home.recurring = [];
-    if(!d.drv) d.drv = { trans: [], shifts: [], clients: [], fuel: [], exp: [], h: [], cfg: { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 }, q: {s: 8, w: 60, t1: 3.5, t2: 4.5, t3: 6, t4: 8} };
+    if(!d.home.members) d.home.members = [d.userName || 'Domownik']; // <-- TO BYŁO PRZYCZYNĄ BŁĘDU!
+    
+    if(!d.drv) d.drv = {};
+    if(!d.drv.trans) d.drv.trans = [];
+    if(!d.drv.shifts) d.drv.shifts = [];
+    if(!d.drv.clients) d.drv.clients = [];
+    if(!d.drv.fuel) d.drv.fuel = [];
+    if(!d.drv.exp) d.drv.exp = [];
+    if(!d.drv.h) d.drv.h = [];
+    if(!d.drv.cfg) d.drv.cfg = { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 };
+    if(!d.drv.q) d.drv.q = {s: 8, w: 60, t1: 3.5, t2: 4.5, t3: 6, t4: 8};
     return d;
 };
 
@@ -52,6 +58,12 @@ window.onerror = function(msg, url, lineNo) {
     return false; 
 };
 
+// Odtworzenie stanu z pamięci lokalnej (wymuszone przy starcie)
+let savedLocal = localStorage.getItem('styre_v101_db');
+if(savedLocal) {
+    try { window.db = JSON.parse(savedLocal); } catch(e) {}
+}
+
 window.render = function() { 
     try { 
         window.db = window.patchDb(window.db);
@@ -59,20 +71,11 @@ window.render = function() {
         if(!window.db.init) return window.rWiz(); 
         
         if(window.dSessionInit) window.dSessionInit(); 
-        
-        if(window.db.role === 'drv') {
-            if(window.rDrv) return window.rDrv(); 
-            else { alert("Błąd: Plik taxi.js nie wczytał się poprawnie."); return window.rWiz(); }
-        }
-        if(window.db.role === 'home') {
-            if(window.rHome) {
-                if(window.hCheckAuto) window.hCheckAuto(); 
-                return window.rHome(); 
-            } else {
-                alert("Błąd: Moduł Budżetu (home_ui.js) nie załadował się. Pamiętaj o wyczyszczeniu plików cookie!");
-                return window.rWiz(); 
-            }
-        }
+        if(window.db.role === 'drv' && window.rDrv) return window.rDrv(); 
+        if(window.db.role === 'home' && window.rHome) { 
+            if(window.hCheckAuto) window.hCheckAuto(); 
+            return window.rHome(); 
+        } 
         return window.rWiz(); 
     } catch(err) { 
         console.error(err);
@@ -93,7 +96,6 @@ window.wMainProfile = function(prof) {
     window.wData.mainProfile = prof; 
     window.db = window.patchDb(window.db);
     
-    // Sprawdzamy czy profil jest gotowy na wejście bez pytania
     let isTaxiReady = window.db.drv && window.db.drv.plat;
     let isHomeReady = window.db.home && window.db.home.members && window.db.home.members.length > 0;
     
@@ -129,7 +131,7 @@ window.dFin = function() {
     window.db = window.patchDb(window.db); 
     window.db.mainProfile = window.wData.mainProfile || 'driver'; 
     let nameEl = document.getElementById('w-name-drv'); 
-    window.db.userName = (nameEl && nameEl.value) ? nameEl.value : window.db.userName;
+    if (nameEl && nameEl.value) window.db.userName = nameEl.value;
     
     window.db.drv.plat = window.wData.p; window.db.drv.carType = window.wData.c; window.db.drv.emp = window.wData.e; 
     let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
@@ -139,20 +141,29 @@ window.dFin = function() {
     window.db.drv.cfg.bC = b; window.db.drv.cfg.bPeriod = bPer; window.db.drv.cfg.cC = c; window.db.drv.cfg.cType = cType; 
     window.db.drv.cfg.eC = e; window.db.drv.cfg.eType = eTy; window.db.drv.cfg.ePct = ePct; window.db.drv.cfg.ePeriod = ePer; window.db.drv.cfg.iC = 0; window.db.drv.cfg.iPeriod = 'month';
     window.db.drv.cfg.fix = 0; window.db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100; window.db.drv.cfg.cardF = 0.015; window.db.drv.cfg.goal = 350;
-    window.db.role = 'drv'; window.db.tab = 'term'; window.db.init = true; window.save(); if(window.dSessionInit) window.dSessionInit(); window.render(); 
+    
+    window.db.role = 'drv'; window.db.tab = 'term'; window.db.init = true; 
+    window.save(); 
+    if(window.dSessionInit) window.dSessionInit(); 
+    window.render(); 
 }
 
 window.hFin = function() { 
     window.db = window.patchDb(window.db); 
     window.db.mainProfile = 'home'; 
     let nameEl = document.getElementById('w-name-home'); 
-    window.db.userName = (nameEl && nameEl.value) ? nameEl.value : window.db.userName; 
+    if (nameEl && nameEl.value) window.db.userName = nameEl.value; 
     
-    if(!window.db.home.members.includes(window.db.userName)) window.db.home.members.unshift(window.db.userName);
-    window.db.role = 'home'; window.db.tab = 'dash'; window.db.init = true; window.save(); window.render(); 
+    if(!window.db.home.members) window.db.home.members = [window.db.userName || 'Domownik'];
+    if(!window.db.home.members.includes(window.db.userName)) {
+        window.db.home.members.unshift(window.db.userName);
+    }
+    
+    window.db.role = 'home'; window.db.tab = 'dash'; window.db.init = true; 
+    window.save(); 
+    window.render(); 
 }
 
-// --- INTELIGENTNE LOGOWANIE GOOGLE ---
 window.loginWithGoogle = function() {
     if (typeof firebase === 'undefined') {
         if(window.sysAlert) return window.sysAlert('Brak połączenia', 'Zaczekaj sekundę na biblioteki Google.', 'warning');
@@ -182,7 +193,7 @@ window.loginWithGoogle = function() {
                             let cloudData = window.patchDb(doc.data()); 
                             
                             let hasLocalData = false;
-                            if (window.db) {
+                            if (window.db && window.db.init) {
                                 if (window.db.drv && window.db.drv.h && window.db.drv.h.length > 0) hasLocalData = true;
                                 if (window.db.home && window.db.home.trans && window.db.home.trans.length > 0) hasLocalData = true;
                             }
@@ -341,11 +352,8 @@ window.rWiz = function() {
     </div>
 
     <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><p style="color:var(--muted); text-align:center; margin-bottom:15px; font-size:0.9rem;">Sprawdź swoje imię</p><div class="inp-group" style="margin-bottom:20px;"><input type="text" id="w-name-drv" placeholder="Twoje Imię" class="premium-input" value="${uName}"></div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-profile')">Wróć</button></div>
-    
     <div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div>
-    
-    <div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px; padding:15px;" onclick="window.dFin()">ZAKOŃCZ I WEJDŹ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>
-    `;
+    <div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px; padding:15px;" onclick="window.dFin()">ZAKOŃCZ I WEJDŹ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>`;
 }
 
 if (typeof firebase !== 'undefined') {
