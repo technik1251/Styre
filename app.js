@@ -5,7 +5,6 @@
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
 window.db = window.db || {};
-var db = window.db; 
 
 // 🛠️ NARZĘDZIA RATUNKOWE
 window.safeVal = window.safeVal || function(id, def=0) {
@@ -65,12 +64,12 @@ window.render = function() {
 
 window.rWiz = function() {
     let isLogged = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser);
-    let uName = db.userName || '';
+    let uName = window.db.userName || '';
 
     APP.innerHTML = `
     <div id="w-main" class="wiz-screen active" style="align-items:center; text-align:center;">
         <div style="width:90px;height:90px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
-            <img src="icon-512.png" style="width:100%;height:100%;border-radius:22px;box-shadow:0 10px 25px rgba(0,0,0,0.5);" alt="Logo" onerror="this.outerHTML='<div style=\\'font-size:3rem;\\'>🚀</div>'">
+            <img src="icon-512.png" style="width:100%;height:100%;border-radius:22px;box-shadow:0 10px 25px rgba(0,0,0,0.5);" alt="Logo" onerror="this.style.display='none'">
         </div>
         <h1 style="color:#fff; font-size:3.5rem; margin:0; font-weight:900; letter-spacing:-2.5px;">STYRE OS</h1>
         <p style="color:var(--muted); font-size:1.1rem; font-weight:600; margin-top:5px; margin-bottom:40px;">Twój Asystent Finansowy</p>
@@ -168,19 +167,19 @@ window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e
 
 window.saveNameAndNext = function() {
     let nameInp = document.getElementById('w-guest-name');
-    db.userName = nameInp ? (nameInp.value.trim() || 'Gość') : 'Gość';
+    window.db.userName = nameInp ? (nameInp.value.trim() || 'Gość') : 'Gość';
     window.save();
     window.wS('w-profile');
 };
 
 window.wMainProfile = function(prof) { 
     window.wData.mainProfile = prof; 
-    db = window.patchDb(db);
+    window.db = window.patchDb(window.db);
     
-    if(db.init) {
-        db.mainProfile = prof;
-        db.role = prof === 'driver' ? 'drv' : 'home';
-        db.tab = prof === 'driver' ? 'term' : 'dash';
+    if(window.db.init) {
+        window.db.mainProfile = prof;
+        window.db.role = prof === 'driver' ? 'drv' : 'home';
+        window.db.tab = prof === 'driver' ? 'term' : 'dash';
         window.save();
         return window.render();
     }
@@ -192,24 +191,24 @@ window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.q
 window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
 
 window.dFin = function() { 
-    db = window.patchDb(db); 
-    db.mainProfile = window.wData.mainProfile || 'driver'; 
-    db.drv.plat = window.wData.p; db.drv.carType = window.wData.c; db.drv.emp = window.wData.e; 
+    window.db = window.patchDb(window.db); 
+    window.db.mainProfile = window.wData.mainProfile || 'driver'; 
+    window.db.drv.plat = window.wData.p; window.db.drv.carType = window.wData.c; window.db.drv.emp = window.wData.e; 
     let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
     let c = window.wData.c === 'own' ? 0 : window.safeVal('wd-c-v'); let cType = window.wData.c === 'own' ? 'month' : (document.getElementById('wd-c-type') ? document.getElementById('wd-c-type').value : 'month');
     let e = 0, eTy = 'flat', ePct = 0, ePer = 'month'; 
     if(window.wData.e === 'partner') { eTy = document.getElementById('wd-p-type') ? document.getElementById('wd-p-type').value : 'flat'; if(eTy === 'flat') { e = window.safeVal('wd-p-v'); ePer = document.getElementById('wd-p-period') ? document.getElementById('wd-p-period').value : 'week'; } else { ePct = window.safeVal('wd-p-pct') / 100; } } else { e = window.safeVal('wd-j-v'); ePer = document.getElementById('wd-j-period') ? document.getElementById('wd-j-period').value : 'month'; } 
-    db.drv.cfg.bC = b; db.drv.cfg.bPeriod = bPer; db.drv.cfg.cC = c; db.drv.cfg.cType = cType; 
-    db.drv.cfg.eC = e; db.drv.cfg.eType = eTy; db.drv.cfg.ePct = ePct; db.drv.cfg.ePeriod = ePer; db.drv.cfg.iC = 0; db.drv.cfg.iPeriod = 'month';
-    db.drv.cfg.fix = 0; db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100; db.drv.cfg.cardF = 0.015; db.drv.cfg.goal = 350;
-    db.role = 'drv'; db.tab = 'term'; db.init = true; window.save(); if(window.dSessionInit) window.dSessionInit(); window.render(); 
+    window.db.drv.cfg.bC = b; window.db.drv.cfg.bPeriod = bPer; window.db.drv.cfg.cC = c; window.db.drv.cfg.cType = cType; 
+    window.db.drv.cfg.eC = e; window.db.drv.cfg.eType = eTy; window.db.drv.cfg.ePct = ePct; window.db.drv.cfg.ePeriod = ePer; window.db.drv.cfg.iC = 0; window.db.drv.cfg.iPeriod = 'month';
+    window.db.drv.cfg.fix = 0; window.db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100; window.db.drv.cfg.cardF = 0.015; window.db.drv.cfg.goal = 350;
+    window.db.role = 'drv'; window.db.tab = 'term'; window.db.init = true; window.save(); if(window.dSessionInit) window.dSessionInit(); window.render(); 
 }
 
 window.hFin = function() { 
-    db = window.patchDb(db); 
-    db.mainProfile = 'home';
-    if(!db.home.members.includes(db.userName)) db.home.members.unshift(db.userName);
-    db.role = 'home'; db.tab = 'dash'; db.init = true; window.save(); window.render(); 
+    window.db = window.patchDb(window.db); 
+    window.db.mainProfile = 'home';
+    if(!window.db.home.members.includes(window.db.userName)) window.db.home.members.unshift(window.db.userName);
+    window.db.role = 'home'; window.db.tab = 'dash'; window.db.init = true; window.save(); window.render(); 
 }
 
 window.loginWithGoogle = function() {
@@ -235,11 +234,10 @@ window.loginWithGoogle = function() {
                     if (doc.exists) {
                         let cloudData = window.patchDb(doc.data());
                         
-                        // Czy gość natrzepał już jakieś dane lokalnie?
                         let hasLocalData = false;
-                        if (db && db.init) {
-                            if (db.drv && db.drv.h && db.drv.h.length > 0) hasLocalData = true;
-                            if (db.home && db.home.trans && db.home.trans.length > 0) hasLocalData = true;
+                        if (window.db && window.db.init) {
+                            if (window.db.drv && window.db.drv.h && window.db.drv.h.length > 0) hasLocalData = true;
+                            if (window.db.home && window.db.home.trans && window.db.home.trans.length > 0) hasLocalData = true;
                         }
 
                         if (hasLocalData) {
@@ -262,15 +260,15 @@ window.loginWithGoogle = function() {
                             </div>`;
                             document.body.insertAdjacentHTML('beforeend', modalHtml);
                         } else {
-                            db = cloudData;
-                            db.init = true;
+                            window.db = cloudData;
+                            window.db.init = true;
                             window.save();
                             window.render();
                         }
                     } else {
-                        db = window.patchDb(db);
-                        db.userName = db.userName || user.displayName.split(' ')[0];
-                        db.init = true;
+                        window.db = window.patchDb(window.db);
+                        window.db.userName = window.db.userName || user.displayName.split(' ')[0];
+                        window.db.init = true;
                         window.save();
                         window.wS('w-profile');
                     }
@@ -283,9 +281,9 @@ window.loginWithGoogle = function() {
 
 window.resolveConflict = function(choice) {
     if (choice === 'cloud') {
-        db = window.tempCloudData;
+        window.db = window.tempCloudData;
     }
-    db.init = true;
+    window.db.init = true;
     window.save();
     document.getElementById('m-conflict').remove();
     window.render();
