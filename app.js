@@ -5,6 +5,24 @@
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
 window.db = window.db || {};
+var db = window.db; // Zapewnia widoczność bazy dla wszystkich plików!
+
+// 🛠️ NARZĘDZIA RATUNKOWE (Naprawiają martwe przyciski "Zakończ")
+window.safeVal = window.safeVal || function(id, def=0) {
+    let el = document.getElementById(id);
+    if(!el) return def;
+    let v = parseFloat(el.value);
+    return isNaN(v) ? def : v;
+};
+
+window.save = window.save || function() {
+    localStorage.setItem('styre_v101_db', JSON.stringify(window.db));
+    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser && window.db.init) {
+        if(firebase.firestore) {
+            firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).set(window.db).catch(e => console.log('Chmura w tle: ', e));
+        }
+    }
+};
 
 // 🛡️ KULOODPORNY BEZPIECZNIK BAZY DANYCH
 window.patchDb = function(data) {
@@ -30,7 +48,7 @@ window.render = function() {
     try { 
         if(!window.db || !window.db.init) return window.rWiz(); 
         
-        window.db = window.patchDb(window.db); // Łatamy bazę przed odpaleniem interfejsu
+        window.db = window.patchDb(window.db); // Łatamy bazę przed odpaleniem
         
         if(window.dSessionInit) window.dSessionInit(); 
         if(window.db.role === 'drv' && window.rDrv) return window.rDrv(); 
@@ -120,13 +138,15 @@ window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e
 
 window.wMainProfile = function(prof) { 
     window.wData.mainProfile = prof; 
-    window.db = window.patchDb(window.db); // Szybkie łatanie
+    window.db = window.patchDb(window.db);
     
-    if(window.db && window.db.init) {
+    // 🔥 Jeśli masz już wpisane imię ALBO masz gotowy profil -> WCHODŹ BEZ PYTANIA
+    if(window.db.init || window.db.userName) {
         window.db.mainProfile = prof;
         window.db.role = prof === 'driver' ? 'drv' : 'home';
         window.db.tab = prof === 'driver' ? 'term' : 'dash';
-        if(window.save) window.save();
+        window.db.init = true;
+        window.save();
         return window.render();
     }
     
@@ -137,7 +157,7 @@ window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.q
 window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
 
 window.dFin = function() { 
-    window.db = window.patchDb(window.db); // Szybkie łatanie
+    window.db = window.patchDb(window.db); 
     window.db.mainProfile = window.wData.mainProfile || 'driver'; let nameEl = document.getElementById('w-name-drv'); window.db.userName = nameEl ? (nameEl.value || 'Kierowca') : 'Kierowca';
     window.db.drv.plat = window.wData.p; window.db.drv.carType = window.wData.c; window.db.drv.emp = window.wData.e; 
     let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
@@ -147,14 +167,14 @@ window.dFin = function() {
     window.db.drv.cfg.bC = b; window.db.drv.cfg.bPeriod = bPer; window.db.drv.cfg.cC = c; window.db.drv.cfg.cType = cType; 
     window.db.drv.cfg.eC = e; window.db.drv.cfg.eType = eTy; window.db.drv.cfg.ePct = ePct; window.db.drv.cfg.ePeriod = ePer; window.db.drv.cfg.iC = 0; window.db.drv.cfg.iPeriod = 'month';
     window.db.drv.cfg.fix = 0; window.db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100; window.db.drv.cfg.cardF = 0.015; window.db.drv.cfg.goal = 350;
-    window.db.role = 'drv'; window.db.tab = 'term'; window.db.init = true; if(window.save) window.save(); if(window.dSessionInit) window.dSessionInit(); window.render(); 
+    window.db.role = 'drv'; window.db.tab = 'term'; window.db.init = true; window.save(); if(window.dSessionInit) window.dSessionInit(); window.render(); 
 }
 
 window.hFin = function() { 
-    window.db = window.patchDb(window.db); // Szybkie łatanie
+    window.db = window.patchDb(window.db); 
     window.db.mainProfile = 'home'; let nameEl = document.getElementById('w-name-home'); window.db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; 
     if(!window.db.home.members.includes(window.db.userName)) window.db.home.members.unshift(window.db.userName);
-    window.db.role = 'home'; window.db.tab = 'dash'; window.db.init = true; if(window.save) window.save(); window.render(); 
+    window.db.role = 'home'; window.db.tab = 'dash'; window.db.init = true; window.save(); window.render(); 
 }
 
 // --- LOGOWANIE GOOGLE ---
@@ -184,13 +204,13 @@ window.loginWithGoogle = function() {
                 firebase.firestore().collection('users').doc(user.uid).get()
                     .then((doc) => {
                         if (doc.exists) {
-                            window.db = window.patchDb(doc.data()); // Bezpieczne łatanie danych z chmury
+                            window.db = window.patchDb(doc.data()); 
                             window.db.init = true;      
-                            if(window.save) window.save();       
+                            window.save();       
                             if(window.sysAlert) window.sysAlert('Witaj ponownie!', `Przywrócono profil: ${user.displayName.split(' ')[0]}`, 'success');
                             window.render(); 
                         } else {
-                            window.db = window.patchDb({}); // Pusty szkielet
+                            window.db = window.patchDb({}); 
                             window.db.userName = user.displayName.split(' ')[0];
                             if(window.sysAlert) window.sysAlert('Połączono!', `Teraz wybierz profil, by zakończyć konfigurację.`, 'success');
                             window.render(); 
@@ -224,7 +244,7 @@ if (typeof firebase !== 'undefined') {
             firebase.auth().onAuthStateChanged((user) => {
                 let wiz = document.getElementById('w-main');
                 if (user && wiz && wiz.classList.contains('active')) {
-                    window.render(); // Zaktualizuj ekran startowy (pokaż zieloną chmurkę)
+                    window.render(); 
                 }
             });
         }
