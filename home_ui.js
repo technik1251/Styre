@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: home_ui.js - "Twarz" Finansów Domowych (Wersja 4.2 - Deep Linking & UX)
+// PLIK: home_ui.js - "Twarz" Finansów Domowych (Wersja 5.0 - Cloud & Switcher)
 // ==========================================
 
 // --- Inteligentna nawigacja ---
@@ -22,6 +22,9 @@ window.openSwitcher = function() {
             <p style="color:var(--muted); font-size:0.7rem; text-transform:uppercase; margin-bottom:10px; font-weight:bold;">Zarządzaj innymi profilami</p>
             <button class="btn" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); color:var(--muted); padding:15px; margin-bottom:10px;" onclick="window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca z zarządzaniem rewirami i stawkami za paczkę pojawi się w kolejnych aktualizacjach!', 'info')">📦 KURIER / DOSTAWA (Wkrótce)</button>
             <button class="btn" style="background:rgba(168, 85, 247, 0.1); border:1px dashed rgba(168, 85, 247, 0.4); color:#a855f7; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="window.sysAlert('Funkcja PRO', 'Pełny moduł Firma/Spedycja (z KSeF, fakturami i flotą) będzie dostępny w wersji StyreOS PRO!', 'info')">🚛 FIRMA / SPEDYCJA (PRO)</button>
+            <div style="height:1px; background:rgba(255,255,255,0.1); margin: 15px 0;"></div>
+            <button class="btn" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:12px; font-size:0.85rem; font-weight:bold;" onclick="db.init=false; window.save(); location.reload();">⚙️ WRÓĆ DO EKRANU STARTOWEGO</button>
+            <button class="btn" style="background:transparent; color:var(--muted); margin-top:10px;" onclick="document.getElementById('m-switcher').classList.add('hidden')">ZAMKNIJ</button>
         `;
         el.classList.remove('hidden');
     }
@@ -178,7 +181,7 @@ window.rHome = function() {
     </div>`;
 
     let hdr = `<header>
-        <button class="logo" onclick="window.openSwitcher()">${STYRE_LOGO}</button>
+        <button class="logo" onclick="window.openSwitcher()">S</button>
         <div class="header-actions" style="display:flex; gap:10px;">
             <div class="settings-btn" style="background:transparent; border:none; padding:0; display:flex; flex-direction:column; align-items:center;" onclick="window.switchTab('acc')"><span style="font-size:1.3rem; line-height:1;">💳</span><span style="font-size:0.5rem; font-weight:900; color:var(--muted); text-transform:uppercase;">Konta</span></div>
             <div class="settings-btn" style="background:transparent; border:none; padding:0; display:flex; flex-direction:column; align-items:center;" onclick="window.switchTab('set')"><span style="font-size:1.3rem; line-height:1;">⚙️</span><span style="font-size:0.5rem; font-weight:900; color:var(--muted); text-transform:uppercase;">Opcje</span></div>
@@ -497,8 +500,15 @@ window.rHome = function() {
     if(t === 'set') { 
         let catSrcSet = window.hRecType === 'exp' ? C_EXP : C_INC; if(!catSrcSet[window.hRecCat]) window.hRecCat = Object.keys(catSrcSet)[0]; let accOptionsSet = h.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join(''); 
         
+        let cloudStatusHtml = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) ? 
+            `<div style="background:rgba(34,197,94,0.1); border:1px solid var(--success); padding:15px; border-radius:12px; margin-bottom:20px; text-align:center;"><strong style="color:var(--success); font-size:1.1rem;">☁️ Połączono z chmurą Google</strong><br><span style="font-size:0.8rem; color:var(--success); opacity:0.8;">Zalogowano jako: ${firebase.auth().currentUser.displayName || db.userName}</span></div>` : 
+            `<div style="background:rgba(239,68,68,0.1); border:1px solid var(--danger); padding:15px; border-radius:12px; margin-bottom:20px; text-align:center;"><strong style="color:var(--danger); font-size:1.1rem;">🚫 Tryb Offline</strong><br><span style="font-size:0.8rem; color:var(--muted);">Dane zapisywane tylko na telefonie</span></div>`;
+
         let dataSecurityHtml = `
-        <div class="section-lbl" style="color:var(--info); border-color:var(--info); margin-top:30px;">💾 Bezpieczeństwo Danych</div>
+        <div class="section-lbl" style="color:var(--info); border-color:var(--info); margin-top:10px;">💾 Status Konta i Bezpieczeństwo</div>
+        ${cloudStatusHtml}
+        <button class="btn" style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:15px; width:100%; margin-bottom:20px; font-weight:bold;" onclick="db.init=false; window.save(); location.reload();">⚙️ WRÓĆ DO EKRANU STARTOWEGO</button>
+        
         <div class="panel" style="border-color:var(--info);">
             <p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">Twoje dane są zapisane tylko w tym telefonie (100% Prywatności). Zrób kopię zapasową, aby przenieść profil na inne urządzenie lub zabezpieczyć się przed wyczyszczeniem przeglądarki!</p>
             <div style="display:flex; gap:10px;">
