@@ -2,7 +2,7 @@
 // PLIK: app.js - GŁÓWNY SILNIK, LOGOWANIE I KREATOR
 // ==========================================
 
-if (typeof db === 'undefined') {
+if (typeof window.db === 'undefined') {
     window.db = {};
 }
 
@@ -32,10 +32,12 @@ window.safeVal = function(id, def=0) {
 };
 
 window.save = function() {
-    localStorage.setItem('styre_v101_db', JSON.stringify(db));
-    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser && db.init) {
-        if(firebase.firestore) {
-            firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).set(db).catch(e => console.log('Chmura w tle: ', e));
+    if (typeof window.db !== 'undefined') {
+        localStorage.setItem('styre_v101_db', JSON.stringify(window.db));
+        if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser && window.db.init) {
+            if(firebase.firestore) {
+                firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).set(window.db).catch(e => console.log('Chmura w tle: ', e));
+            }
         }
     }
 };
@@ -48,13 +50,13 @@ window.onerror = function(msg, url, lineNo) {
 
 window.render = function() { 
     try { 
-        db = window.patchDb(db);
+        window.db = window.patchDb(window.db);
         
-        if(!db.init) return window.rWiz(); 
+        if(!window.db.init) return window.rWiz(); 
         
         if(window.dSessionInit) window.dSessionInit(); 
-        if(db.role === 'drv' && window.rDrv) return window.rDrv(); 
-        if(db.role === 'home' && window.rHome) { 
+        if(window.db.role === 'drv' && window.rDrv) return window.rDrv(); 
+        if(window.db.role === 'home' && window.rHome) { 
             if(window.hCheckAuto) window.hCheckAuto(); 
             return window.rHome(); 
         } 
@@ -69,25 +71,38 @@ window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e
 
 window.saveNameAndNext = function() {
     let nameInp = document.getElementById('w-guest-name');
-    db.userName = nameInp ? (nameInp.value.trim() || 'Gość') : 'Gość';
+    window.db.userName = nameInp ? (nameInp.value.trim() || 'Gość') : 'Gość';
     window.save();
     window.wS('w-profile');
 };
 
 window.wMainProfile = function(prof) { 
     window.wData.mainProfile = prof; 
-    db = window.patchDb(db);
+    window.db = window.patchDb(window.db);
     
-    // 🔥 Jeśli masz gotowy profil -> WCHODŹ BEZ PYTANIA
-    if(db.init || db.userName) {
-        db.mainProfile = prof;
-        db.role = prof === 'driver' ? 'drv' : 'home';
-        db.tab = prof === 'driver' ? 'term' : 'dash';
-        db.init = true;
+    // Sprawdzamy, czy dany profil był już skonfigurowany w 100%
+    let taxiReady = (window.db.drv && window.db.drv.plat);
+    let homeReady = (window.db.userName);
+
+    if (prof === 'driver' && taxiReady) {
+        window.db.mainProfile = prof;
+        window.db.role = 'drv';
+        window.db.tab = 'term';
+        window.db.init = true;
+        window.save();
+        return window.render();
+    }
+
+    if (prof === 'home' && homeReady && window.db.home && window.db.home.members && window.db.home.members.length > 0) {
+        window.db.mainProfile = prof;
+        window.db.role = 'home';
+        window.db.tab = 'dash';
+        window.db.init = true;
         window.save();
         return window.render();
     }
     
+    // Jeśli nie są gotowe, wymuś konfigurację:
     if(prof==='driver') window.wS('w-d1'); else window.wS('w-home'); 
 }
 
@@ -95,24 +110,24 @@ window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.q
 window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
 
 window.dFin = function() { 
-    db = window.patchDb(db); 
-    db.mainProfile = window.wData.mainProfile || 'driver'; let nameEl = document.getElementById('w-name-drv'); db.userName = nameEl ? (nameEl.value || 'Kierowca') : 'Kierowca';
-    db.drv.plat = window.wData.p; db.drv.carType = window.wData.c; db.drv.emp = window.wData.e; 
+    window.db = window.patchDb(window.db); 
+    window.db.mainProfile = window.wData.mainProfile || 'driver'; 
+    window.db.drv.plat = window.wData.p; window.db.drv.carType = window.wData.c; window.db.drv.emp = window.wData.e; 
     let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
     let c = window.wData.c === 'own' ? 0 : window.safeVal('wd-c-v'); let cType = window.wData.c === 'own' ? 'month' : (document.getElementById('wd-c-type') ? document.getElementById('wd-c-type').value : 'month');
     let e = 0, eTy = 'flat', ePct = 0, ePer = 'month'; 
     if(window.wData.e === 'partner') { eTy = document.getElementById('wd-p-type') ? document.getElementById('wd-p-type').value : 'flat'; if(eTy === 'flat') { e = window.safeVal('wd-p-v'); ePer = document.getElementById('wd-p-period') ? document.getElementById('wd-p-period').value : 'week'; } else { ePct = window.safeVal('wd-p-pct') / 100; } } else { e = window.safeVal('wd-j-v'); ePer = document.getElementById('wd-j-period') ? document.getElementById('wd-j-period').value : 'month'; } 
-    db.drv.cfg.bC = b; db.drv.cfg.bPeriod = bPer; db.drv.cfg.cC = c; db.drv.cfg.cType = cType; 
-    db.drv.cfg.eC = e; db.drv.cfg.eType = eTy; db.drv.cfg.ePct = ePct; db.drv.cfg.ePeriod = ePer; db.drv.cfg.iC = 0; db.drv.cfg.iPeriod = 'month';
-    db.drv.cfg.fix = 0; db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100; db.drv.cfg.cardF = 0.015; db.drv.cfg.goal = 350;
-    db.role = 'drv'; db.tab = 'term'; db.init = true; window.save(); if(window.dSessionInit) window.dSessionInit(); window.render(); 
+    window.db.drv.cfg.bC = b; window.db.drv.cfg.bPeriod = bPer; window.db.drv.cfg.cC = c; window.db.drv.cfg.cType = cType; 
+    window.db.drv.cfg.eC = e; window.db.drv.cfg.eType = eTy; window.db.drv.cfg.ePct = ePct; window.db.drv.cfg.ePeriod = ePer; window.db.drv.cfg.iC = 0; window.db.drv.cfg.iPeriod = 'month';
+    window.db.drv.cfg.fix = 0; window.db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100; window.db.drv.cfg.cardF = 0.015; window.db.drv.cfg.goal = 350;
+    window.db.role = 'drv'; window.db.tab = 'term'; window.db.init = true; window.save(); if(window.dSessionInit) window.dSessionInit(); window.render(); 
 }
 
 window.hFin = function() { 
-    db = window.patchDb(db); 
-    db.mainProfile = 'home'; let nameEl = document.getElementById('w-name-home'); db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; 
-    if(!db.home.members.includes(db.userName)) db.home.members.unshift(db.userName);
-    db.role = 'home'; db.tab = 'dash'; db.init = true; window.save(); window.render(); 
+    window.db = window.patchDb(window.db); 
+    window.db.mainProfile = 'home'; let nameEl = document.getElementById('w-name-home'); window.db.userName = nameEl ? (nameEl.value || 'Domownik') : window.db.userName; 
+    if(!window.db.home.members.includes(window.db.userName)) window.db.home.members.unshift(window.db.userName);
+    window.db.role = 'home'; window.db.tab = 'dash'; window.db.init = true; window.save(); window.render(); 
 }
 
 // --- INTELIGENTNE LOGOWANIE GOOGLE ---
@@ -144,11 +159,10 @@ window.loginWithGoogle = function() {
                         if (doc.exists) {
                             let cloudData = window.patchDb(doc.data()); 
                             
-                            // Czy gość natrzepał już jakieś dane lokalnie?
                             let hasLocalData = false;
-                            if (db && db.init) {
-                                if (db.drv && db.drv.h && db.drv.h.length > 0) hasLocalData = true;
-                                if (db.home && db.home.trans && db.home.trans.length > 0) hasLocalData = true;
+                            if (window.db) {
+                                if (window.db.drv && window.db.drv.h && window.db.drv.h.length > 0) hasLocalData = true;
+                                if (window.db.home && window.db.home.trans && window.db.home.trans.length > 0) hasLocalData = true;
                             }
 
                             if (hasLocalData) {
@@ -171,18 +185,17 @@ window.loginWithGoogle = function() {
                                 </div>`;
                                 document.body.insertAdjacentHTML('beforeend', modalHtml);
                             } else {
-                                db = cloudData;
-                                db.init = true;
+                                window.db = cloudData;
+                                window.db.init = true;
                                 window.save();
                                 window.render();
                             }
                         } else {
-                            // Nowy użytkownik w chmurze
-                            db = window.patchDb(db); 
-                            db.userName = db.userName || user.displayName.split(' ')[0];
+                            window.db = window.patchDb(window.db); 
+                            window.db.userName = window.db.userName || user.displayName.split(' ')[0];
                             window.save(); 
-                            if(window.sysAlert) window.sysAlert('Połączono z chmurą!', `Gotowe, ${db.userName}. Wybierz profil.`, 'success');
-                            window.wS('w-profile');
+                            if(window.sysAlert) window.sysAlert('Połączono z chmurą!', `Gotowe, ${window.db.userName}. Wybierz profil.`, 'success');
+                            window.render(); 
                         }
                     })
                     .catch((error) => {
@@ -192,7 +205,6 @@ window.loginWithGoogle = function() {
             }
         })
         .catch((error) => {
-            // Ciche ignorowanie błędu zamknięcia okienka
             if(error.code !== 'auth/popup-closed-by-user') {
                 if(window.sysAlert) window.sysAlert('Błąd Logowania', error.message, 'error');
             }
@@ -201,9 +213,9 @@ window.loginWithGoogle = function() {
 
 window.resolveConflict = function(choice) {
     if (choice === 'cloud') {
-        db = window.tempCloudData;
+        window.db = window.tempCloudData;
     }
-    db.init = true;
+    window.db.init = true;
     window.save();
     document.getElementById('m-conflict').remove();
     window.render();
@@ -211,7 +223,7 @@ window.resolveConflict = function(choice) {
 
 window.rWiz = function() {
     let isLogged = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser);
-    let uName = db.userName || '';
+    let uName = window.db.userName || '';
 
     APP.innerHTML = `
     <div id="w-main" class="wiz-screen active" style="align-items:center; text-align:center;">
@@ -240,8 +252,8 @@ window.rWiz = function() {
                 <div style="flex:1; height:1px; background:rgba(255,255,255,0.1);"></div>
             </div>
 
-            <button class="btn" style="background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.2); padding:15px;" onclick="window.wS('w-name')">
-                Kontynuuj jako Gość (Offline)
+            <button class="btn" style="background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.2); padding:15px;" onclick="${uName ? `window.wS('w-profile')` : `window.wS('w-name')`}">
+                Kontynuuj (Offline)
             </button>
             `}
         </div>
@@ -302,7 +314,7 @@ window.rWiz = function() {
         </div>
     </div>
 
-    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-profile')">Wróć</button></div>
+    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><p style="color:var(--muted); text-align:center; margin-bottom:15px; font-size:0.9rem;">Jak mamy się do Ciebie zwracać?</p><div class="inp-group" style="margin-bottom:20px;"><input type="text" id="w-name-drv" placeholder="Twoje Imię" class="premium-input" value="${uName}"></div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-profile')">Wróć</button></div>
     
     <div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div>
     
