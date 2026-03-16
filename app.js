@@ -2,26 +2,12 @@
 // PLIK: app.js - GŁÓWNY SILNIK, LOGOWANIE I KREATOR
 // ==========================================
 
+if (typeof db === 'undefined') {
+    window.db = {};
+}
+
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
-window.db = window.db || {};
-
-// 🛠️ NARZĘDZIA RATUNKOWE
-window.safeVal = window.safeVal || function(id, def=0) {
-    let el = document.getElementById(id);
-    if(!el) return def;
-    let v = parseFloat(el.value);
-    return isNaN(v) ? def : v;
-};
-
-window.save = window.save || function() {
-    localStorage.setItem('styre_v101_db', JSON.stringify(window.db));
-    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser && window.db.init) {
-        if(firebase.firestore) {
-            firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).set(window.db).catch(e => console.log('Chmura w tle: ', e));
-        }
-    }
-};
 
 // 🛡️ KULOODPORNY BEZPIECZNIK BAZY DANYCH
 window.patchDb = function(data) {
@@ -37,21 +23,38 @@ window.patchDb = function(data) {
     return d;
 };
 
-window.onerror = function(msg, url, lineNo, columnNo, error) { 
-    let fileName = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; 
-    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger); margin-bottom:5px;">Błąd Kodu!</h2><p style="color:var(--muted); font-size:0.8rem; margin-bottom:20px;">Aplikacja zatrzymana.</p><div style="background:#000; border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:12px; text-align:left;"><strong style="color:var(--danger); font-size:0.85rem;">Treść:</strong><br><span style="color:#fff; font-family:monospace; font-size:0.8rem;">${msg}</span></div><button class="btn" style="background:rgba(255,255,255,0.1); color:#fff; margin-top:20px;" onclick="localStorage.clear();location.reload()">RESTART (CZYŚĆ PAMIĘĆ)</button></div>`; 
+// 🛠️ NARZĘDZIA RATUNKOWE
+window.safeVal = function(id, def=0) {
+    let el = document.getElementById(id);
+    if(!el) return def;
+    let v = parseFloat(el.value);
+    return isNaN(v) ? def : v;
+};
+
+window.save = function() {
+    localStorage.setItem('styre_v101_db', JSON.stringify(db));
+    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser && db.init) {
+        if(firebase.firestore) {
+            firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).set(db).catch(e => console.log('Chmura w tle: ', e));
+        }
+    }
+};
+
+window.onerror = function(msg, url, lineNo) { 
+    let fn = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; 
+    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger);">Błąd Kodu!</h2><div style="background:#000; padding:15px; border-radius:12px; text-align:left; font-family:monospace; font-size:0.8rem; color:#fff;">${msg}<br>Plik: ${fn}<br>Linia: ${lineNo}</div><button class="btn" style="background:rgba(255,255,255,0.1); margin-top:20px;" onclick="localStorage.clear();location.reload()">RESTART (CZYŚĆ PAMIĘĆ)</button></div>`; 
     return false; 
 };
 
 window.render = function() { 
     try { 
-        if(!window.db || !window.db.init) return window.rWiz(); 
+        db = window.patchDb(db);
         
-        window.db = window.patchDb(window.db);
+        if(!db.init) return window.rWiz(); 
         
         if(window.dSessionInit) window.dSessionInit(); 
-        if(window.db.role === 'drv' && window.rDrv) return window.rDrv(); 
-        if(window.db.role === 'home' && window.rHome) { 
+        if(db.role === 'drv' && window.rDrv) return window.rDrv(); 
+        if(db.role === 'home' && window.rHome) { 
             if(window.hCheckAuto) window.hCheckAuto(); 
             return window.rHome(); 
         } 
@@ -62,14 +65,158 @@ window.render = function() {
     } 
 }
 
+window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e.classList.remove('active')); let t = document.getElementById(id); if(t) t.classList.add('active'); window.scrollTo(0,0); }
+
+window.saveNameAndNext = function() {
+    let nameInp = document.getElementById('w-guest-name');
+    db.userName = nameInp ? (nameInp.value.trim() || 'Gość') : 'Gość';
+    window.save();
+    window.wS('w-profile');
+};
+
+window.wMainProfile = function(prof) { 
+    window.wData.mainProfile = prof; 
+    db = window.patchDb(db);
+    
+    // 🔥 Jeśli masz gotowy profil -> WCHODŹ BEZ PYTANIA
+    if(db.init || db.userName) {
+        db.mainProfile = prof;
+        db.role = prof === 'driver' ? 'drv' : 'home';
+        db.tab = prof === 'driver' ? 'term' : 'dash';
+        db.init = true;
+        window.save();
+        return window.render();
+    }
+    
+    if(prof==='driver') window.wS('w-d1'); else window.wS('w-home'); 
+}
+
+window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.querySelectorAll('.opt-card').forEach(c=>{ c.style.borderColor='rgba(255,255,255,0.05)'; c.classList.remove('selected'); }); el.style.borderColor='var(--driver)'; el.classList.add('selected'); if(cat==='p') { let elB = document.getElementById('wd-b'); if(elB) elB.style.display = (val === 'corp') ? 'block' : 'none'; } if(cat==='c') { let elC = document.getElementById('wd-c'); if(elC) elC.style.display = (val === 'own') ? 'none' : 'block'; } if(cat==='e') { let ep = document.getElementById('wd-e-p'); let ej = document.getElementById('wd-e-j'); if(ep) ep.style.display = (val === 'partner') ? 'block' : 'none'; if(ej) ej.style.display = (val === 'jdg') ? 'block' : 'none'; } }
+window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
+
+window.dFin = function() { 
+    db = window.patchDb(db); 
+    db.mainProfile = window.wData.mainProfile || 'driver'; let nameEl = document.getElementById('w-name-drv'); db.userName = nameEl ? (nameEl.value || 'Kierowca') : 'Kierowca';
+    db.drv.plat = window.wData.p; db.drv.carType = window.wData.c; db.drv.emp = window.wData.e; 
+    let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
+    let c = window.wData.c === 'own' ? 0 : window.safeVal('wd-c-v'); let cType = window.wData.c === 'own' ? 'month' : (document.getElementById('wd-c-type') ? document.getElementById('wd-c-type').value : 'month');
+    let e = 0, eTy = 'flat', ePct = 0, ePer = 'month'; 
+    if(window.wData.e === 'partner') { eTy = document.getElementById('wd-p-type') ? document.getElementById('wd-p-type').value : 'flat'; if(eTy === 'flat') { e = window.safeVal('wd-p-v'); ePer = document.getElementById('wd-p-period') ? document.getElementById('wd-p-period').value : 'week'; } else { ePct = window.safeVal('wd-p-pct') / 100; } } else { e = window.safeVal('wd-j-v'); ePer = document.getElementById('wd-j-period') ? document.getElementById('wd-j-period').value : 'month'; } 
+    db.drv.cfg.bC = b; db.drv.cfg.bPeriod = bPer; db.drv.cfg.cC = c; db.drv.cfg.cType = cType; 
+    db.drv.cfg.eC = e; db.drv.cfg.eType = eTy; db.drv.cfg.ePct = ePct; db.drv.cfg.ePeriod = ePer; db.drv.cfg.iC = 0; db.drv.cfg.iPeriod = 'month';
+    db.drv.cfg.fix = 0; db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100; db.drv.cfg.cardF = 0.015; db.drv.cfg.goal = 350;
+    db.role = 'drv'; db.tab = 'term'; db.init = true; window.save(); if(window.dSessionInit) window.dSessionInit(); window.render(); 
+}
+
+window.hFin = function() { 
+    db = window.patchDb(db); 
+    db.mainProfile = 'home'; let nameEl = document.getElementById('w-name-home'); db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; 
+    if(!db.home.members.includes(db.userName)) db.home.members.unshift(db.userName);
+    db.role = 'home'; db.tab = 'dash'; db.init = true; window.save(); window.render(); 
+}
+
+// --- INTELIGENTNE LOGOWANIE GOOGLE ---
+window.loginWithGoogle = function() {
+    if (typeof firebase === 'undefined') {
+        if(window.sysAlert) return window.sysAlert('Brak połączenia', 'Zaczekaj sekundę na biblioteki Google.', 'warning');
+        return alert("Poczekaj...");
+    }
+    
+    if (!firebase.apps.length) {
+        firebase.initializeApp({
+            apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o",
+            authDomain: "styreos.firebaseapp.com",
+            projectId: "styreos",
+            storageBucket: "styreos.firebasestorage.app",
+            messagingSenderId: "72578059548",
+            appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
+        });
+    }
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+    
+    firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+            const user = result.user;
+            if (typeof firebase.firestore !== 'undefined') {
+                firebase.firestore().collection('users').doc(user.uid).get()
+                    .then((doc) => {
+                        if (doc.exists) {
+                            let cloudData = window.patchDb(doc.data()); 
+                            
+                            // Czy gość natrzepał już jakieś dane lokalnie?
+                            let hasLocalData = false;
+                            if (db && db.init) {
+                                if (db.drv && db.drv.h && db.drv.h.length > 0) hasLocalData = true;
+                                if (db.home && db.home.trans && db.home.trans.length > 0) hasLocalData = true;
+                            }
+
+                            if (hasLocalData) {
+                                window.tempCloudData = cloudData;
+                                let modalHtml = `
+                                <div id="m-conflict" class="modal-overlay" style="z-index:99999;">
+                                    <div class="panel" style="width:100%; max-width:350px; text-align:center;">
+                                        <div style="font-size:3rem; margin-bottom:10px;">☁️</div>
+                                        <h3 style="color:var(--warning); margin-bottom:10px;">Konto odnalezione!</h3>
+                                        <p style="font-size:0.85rem; color:var(--muted); margin-bottom:20px; line-height:1.4;">Masz już dane w chmurze, ale pracowałeś też jako Gość na tym telefonie. Co chcesz zachować?</p>
+                                        
+                                        <button class="btn" style="background:var(--success); color:#000; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="window.resolveConflict('cloud')">
+                                            📥 POBIERZ Z CHMURY<br><small style="font-weight:normal;">(Skasuje dane Gościa)</small>
+                                        </button>
+                                        
+                                        <button class="btn" style="background:var(--info); color:#fff; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="window.resolveConflict('local')">
+                                            📤 WYŚLIJ DO CHMURY<br><small style="font-weight:normal;">(Zachowa dane Gościa)</small>
+                                        </button>
+                                    </div>
+                                </div>`;
+                                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                            } else {
+                                db = cloudData;
+                                db.init = true;
+                                window.save();
+                                window.render();
+                            }
+                        } else {
+                            // Nowy użytkownik w chmurze
+                            db = window.patchDb(db); 
+                            db.userName = db.userName || user.displayName.split(' ')[0];
+                            window.save(); 
+                            if(window.sysAlert) window.sysAlert('Połączono z chmurą!', `Gotowe, ${db.userName}. Wybierz profil.`, 'success');
+                            window.wS('w-profile');
+                        }
+                    })
+                    .catch((error) => {
+                        console.error(error);
+                        if(window.sysAlert) window.sysAlert('Błąd Bazy', `Nie udało się pobrać danych: ${error.message}`, 'error');
+                    });
+            }
+        })
+        .catch((error) => {
+            // Ciche ignorowanie błędu zamknięcia okienka
+            if(error.code !== 'auth/popup-closed-by-user') {
+                if(window.sysAlert) window.sysAlert('Błąd Logowania', error.message, 'error');
+            }
+        });
+}
+
+window.resolveConflict = function(choice) {
+    if (choice === 'cloud') {
+        db = window.tempCloudData;
+    }
+    db.init = true;
+    window.save();
+    document.getElementById('m-conflict').remove();
+    window.render();
+}
+
 window.rWiz = function() {
     let isLogged = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser);
-    let uName = window.db.userName || '';
+    let uName = db.userName || '';
 
     APP.innerHTML = `
     <div id="w-main" class="wiz-screen active" style="align-items:center; text-align:center;">
         <div style="width:90px;height:90px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
-            <img src="icon-512.png" style="width:100%;height:100%;border-radius:22px;box-shadow:0 10px 25px rgba(0,0,0,0.5);" alt="Logo" onerror="this.style.display='none'">
+            <img src="icon-512.png" style="width:100%;height:100%;border-radius:22px;box-shadow:0 10px 25px rgba(0,0,0,0.5);" alt="Logo" onerror="this.outerHTML='<div style=\\'font-size:3rem;\\'>🚀</div>'">
         </div>
         <h1 style="color:#fff; font-size:3.5rem; margin:0; font-weight:900; letter-spacing:-2.5px;">STYRE OS</h1>
         <p style="color:var(--muted); font-size:1.1rem; font-weight:600; margin-top:5px; margin-bottom:40px;">Twój Asystent Finansowy</p>
@@ -161,132 +308,6 @@ window.rWiz = function() {
     
     <div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px; padding:15px;" onclick="window.dFin()">ZAKOŃCZ I WEJDŹ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>
     `;
-}
-
-window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e.classList.remove('active')); let t = document.getElementById(id); if(t) t.classList.add('active'); window.scrollTo(0,0); }
-
-window.saveNameAndNext = function() {
-    let nameInp = document.getElementById('w-guest-name');
-    window.db.userName = nameInp ? (nameInp.value.trim() || 'Gość') : 'Gość';
-    window.save();
-    window.wS('w-profile');
-};
-
-window.wMainProfile = function(prof) { 
-    window.wData.mainProfile = prof; 
-    window.db = window.patchDb(window.db);
-    
-    if(window.db.init) {
-        window.db.mainProfile = prof;
-        window.db.role = prof === 'driver' ? 'drv' : 'home';
-        window.db.tab = prof === 'driver' ? 'term' : 'dash';
-        window.save();
-        return window.render();
-    }
-    
-    if(prof==='driver') window.wS('w-d1'); else window.wS('w-home'); 
-}
-
-window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.querySelectorAll('.opt-card').forEach(c=>{ c.style.borderColor='rgba(255,255,255,0.05)'; c.classList.remove('selected'); }); el.style.borderColor='var(--driver)'; el.classList.add('selected'); if(cat==='p') { let elB = document.getElementById('wd-b'); if(elB) elB.style.display = (val === 'corp') ? 'block' : 'none'; } if(cat==='c') { let elC = document.getElementById('wd-c'); if(elC) elC.style.display = (val === 'own') ? 'none' : 'block'; } if(cat==='e') { let ep = document.getElementById('wd-e-p'); let ej = document.getElementById('wd-e-j'); if(ep) ep.style.display = (val === 'partner') ? 'block' : 'none'; if(ej) ej.style.display = (val === 'jdg') ? 'block' : 'none'; } }
-window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
-
-window.dFin = function() { 
-    window.db = window.patchDb(window.db); 
-    window.db.mainProfile = window.wData.mainProfile || 'driver'; 
-    window.db.drv.plat = window.wData.p; window.db.drv.carType = window.wData.c; window.db.drv.emp = window.wData.e; 
-    let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
-    let c = window.wData.c === 'own' ? 0 : window.safeVal('wd-c-v'); let cType = window.wData.c === 'own' ? 'month' : (document.getElementById('wd-c-type') ? document.getElementById('wd-c-type').value : 'month');
-    let e = 0, eTy = 'flat', ePct = 0, ePer = 'month'; 
-    if(window.wData.e === 'partner') { eTy = document.getElementById('wd-p-type') ? document.getElementById('wd-p-type').value : 'flat'; if(eTy === 'flat') { e = window.safeVal('wd-p-v'); ePer = document.getElementById('wd-p-period') ? document.getElementById('wd-p-period').value : 'week'; } else { ePct = window.safeVal('wd-p-pct') / 100; } } else { e = window.safeVal('wd-j-v'); ePer = document.getElementById('wd-j-period') ? document.getElementById('wd-j-period').value : 'month'; } 
-    window.db.drv.cfg.bC = b; window.db.drv.cfg.bPeriod = bPer; window.db.drv.cfg.cC = c; window.db.drv.cfg.cType = cType; 
-    window.db.drv.cfg.eC = e; window.db.drv.cfg.eType = eTy; window.db.drv.cfg.ePct = ePct; window.db.drv.cfg.ePeriod = ePer; window.db.drv.cfg.iC = 0; window.db.drv.cfg.iPeriod = 'month';
-    window.db.drv.cfg.fix = 0; window.db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100; window.db.drv.cfg.cardF = 0.015; window.db.drv.cfg.goal = 350;
-    window.db.role = 'drv'; window.db.tab = 'term'; window.db.init = true; window.save(); if(window.dSessionInit) window.dSessionInit(); window.render(); 
-}
-
-window.hFin = function() { 
-    window.db = window.patchDb(window.db); 
-    window.db.mainProfile = 'home';
-    if(!window.db.home.members.includes(window.db.userName)) window.db.home.members.unshift(window.db.userName);
-    window.db.role = 'home'; window.db.tab = 'dash'; window.db.init = true; window.save(); window.render(); 
-}
-
-window.loginWithGoogle = function() {
-    if (typeof firebase === 'undefined') return alert("Poczekaj na połączenie...");
-    
-    if (!firebase.apps.length) {
-        firebase.initializeApp({
-            apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o",
-            authDomain: "styreos.firebaseapp.com",
-            projectId: "styreos",
-            storageBucket: "styreos.firebasestorage.app",
-            messagingSenderId: "72578059548",
-            appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
-        });
-    }
-
-    const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-        .then((result) => {
-            const user = result.user;
-            firebase.firestore().collection('users').doc(user.uid).get()
-                .then((doc) => {
-                    if (doc.exists) {
-                        let cloudData = window.patchDb(doc.data());
-                        
-                        let hasLocalData = false;
-                        if (window.db && window.db.init) {
-                            if (window.db.drv && window.db.drv.h && window.db.drv.h.length > 0) hasLocalData = true;
-                            if (window.db.home && window.db.home.trans && window.db.home.trans.length > 0) hasLocalData = true;
-                        }
-
-                        if (hasLocalData) {
-                            window.tempCloudData = cloudData;
-                            let modalHtml = `
-                            <div id="m-conflict" class="modal-overlay" style="z-index:99999;">
-                                <div class="panel" style="width:100%; max-width:350px; text-align:center;">
-                                    <div style="font-size:3rem; margin-bottom:10px;">☁️</div>
-                                    <h3 style="color:var(--warning); margin-bottom:10px;">Konto odnalezione!</h3>
-                                    <p style="font-size:0.85rem; color:var(--muted); margin-bottom:20px; line-height:1.4;">Masz już dane w chmurze, ale pracowałeś też jako Gość na tym telefonie. Co chcesz zachować?</p>
-                                    
-                                    <button class="btn" style="background:var(--success); color:#000; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="window.resolveConflict('cloud')">
-                                        📥 POBIERZ Z CHMURY<br><small style="font-weight:normal;">(Skasuje dane Gościa)</small>
-                                    </button>
-                                    
-                                    <button class="btn" style="background:var(--info); color:#fff; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="window.resolveConflict('local')">
-                                        📤 WYŚLIJ DO CHMURY<br><small style="font-weight:normal;">(Zachowa dane Gościa)</small>
-                                    </button>
-                                </div>
-                            </div>`;
-                            document.body.insertAdjacentHTML('beforeend', modalHtml);
-                        } else {
-                            window.db = cloudData;
-                            window.db.init = true;
-                            window.save();
-                            window.render();
-                        }
-                    } else {
-                        window.db = window.patchDb(window.db);
-                        window.db.userName = window.db.userName || user.displayName.split(' ')[0];
-                        window.db.init = true;
-                        window.save();
-                        window.wS('w-profile');
-                    }
-                });
-        })
-        .catch((error) => {
-            if(error.code !== 'auth/popup-closed-by-user') alert(error.message);
-        });
-}
-
-window.resolveConflict = function(choice) {
-    if (choice === 'cloud') {
-        window.db = window.tempCloudData;
-    }
-    window.db.init = true;
-    window.save();
-    document.getElementById('m-conflict').remove();
-    window.render();
 }
 
 if (typeof firebase !== 'undefined') {
