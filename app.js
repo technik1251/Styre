@@ -64,6 +64,14 @@ window.onerror = function(msg, url, lineNo) {
     return false; 
 };
 
+// --- GLOBALNA FUNKCJA PRZEŁĄCZANIA ZAKŁADEK ---
+window.switchTab = function(t) { 
+    if (window.db) window.db.tab = t; 
+    window.save(); 
+    window.render(); 
+    window.scrollTo(0,0); 
+};
+
 // --- FUNKCJA POWROTU DO EKRANU STARTOWEGO ---
 window.logoutToLauncher = function() {
     if (window.db) {
@@ -71,7 +79,6 @@ window.logoutToLauncher = function() {
         window.db.tab = null;
         window.save();
     }
-    // Ukrywamy ewentualny modal
     let switcher = document.getElementById('m-switcher');
     if (switcher) switcher.classList.add('hidden');
     window.render();
@@ -308,13 +315,6 @@ window.rWiz = function() {
         <p style="color:var(--muted); font-size:1.1rem; font-weight:600; margin-top:5px; margin-bottom:40px;">Twój Asystent Finansowy</p>
 
         <div style="width:100%; max-width:350px;">
-            ${isLogged ? `
-            <div style="background:rgba(34,197,94,0.1); border:1px solid var(--success); padding:15px; border-radius:12px; margin-bottom:20px;">
-                <strong style="color:var(--success); font-size:1.1rem;">☁️ Zalogowano pomyślnie</strong><br>
-                <span style="font-size:0.8rem; color:var(--muted);">${firebase.auth().currentUser.displayName}</span>
-            </div>
-            <button class="btn btn-success" style="padding:15px; font-size:1rem;" onclick="window.wS('w-profile')">DALEJ ➔</button>
-            ` : `
             <button class="btn" style="background:#fff; color:#000; box-shadow: 0 4px 15px rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; gap:10px; font-weight:800; padding:15px;" onclick="window.loginWithGoogle()">
                 <span style="font-size:1.3rem;">G</span> Zaloguj przez Google
             </button>
@@ -329,7 +329,6 @@ window.rWiz = function() {
             <button class="btn" style="background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.2); padding:15px;" onclick="window.wS('w-name')">
                 Rozpocznij (Konto Offline)
             </button>
-            `}
         </div>
     </div>
 
