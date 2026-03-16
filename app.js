@@ -13,7 +13,6 @@ if (savedLocal) {
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
 
-// 🛡️ KULOODPORNY BEZPIECZNIK BAZY
 window.patchDb = function(data) {
     let d = data || {};
     if(!d.home) d.home = { trans: [], accs: [{id:'acc_1', n:'Portfel Głów.', c:'#22c55e', i:'💵', startBal:0}], budgets: {}, recurring: [], piggy: [], loans: [], debts: [], members: [] };
@@ -30,13 +29,11 @@ window.patchDb = function(data) {
     if(!d.drv) d.drv = { trans: [], shifts: [], clients: [], fuel: [], exp: [], h: [], cfg: { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 }, q: {s: 8, w: 60, t1: 3.5, t2: 4.5, t3: 6, t4: 8} };
     if(!d.drv.cfg) d.drv.cfg = { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 };
     
-    // Twarde wartości zamiast undefined, żeby chmura nie wywalała błędu!
     if(d.drv.emp === undefined) d.drv.emp = 'partner';
     if(d.drv.plat === undefined) d.drv.plat = 'apps';
     if(d.drv.carType === undefined) d.drv.carType = 'rent';
     if(!d.userName) d.userName = "Użytkownik";
 
-    // Automatyczna migracja starych kont do nowego systemu Launchera
     if (d.init && d.setupDone === undefined) d.setupDone = true;
 
     return d;
@@ -51,7 +48,7 @@ window.safeVal = function(id, def=0) {
 
 window.save = function() {
     if (typeof window.db !== 'undefined') {
-        window.db = window.patchDb(window.db); // Filtruj przed zapisem
+        window.db = window.patchDb(window.db); 
         localStorage.setItem('styre_v101_db', JSON.stringify(window.db));
         if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser && window.db.setupDone) {
             if(firebase.firestore) {
@@ -67,19 +64,29 @@ window.onerror = function(msg, url, lineNo) {
     return false; 
 };
 
-// 🧭 GŁÓWNY ROUTER APLIKACJI
+// --- FUNKCJA POWROTU DO EKRANU STARTOWEGO ---
+window.logoutToLauncher = function() {
+    if (window.db) {
+        window.db.role = null; 
+        window.db.tab = null;
+        window.save();
+    }
+    // Ukrywamy ewentualny modal
+    let switcher = document.getElementById('m-switcher');
+    if (switcher) switcher.classList.add('hidden');
+    window.render();
+};
+
 window.render = function() { 
     try { 
         window.db = window.patchDb(window.db);
         
-        // 1. Jeśli kreator nie został ukończony -> WIZARD
         if(!window.db.setupDone) {
             return window.rWiz(); 
         }
         
         if(window.dSessionInit) window.dSessionInit(); 
         
-        // 2. Jeśli jest w wybranym module -> URUCHOM MODUŁ
         if(window.db.role === 'drv') {
             if(window.rDrv) return window.rDrv(); 
             else return window.rLauncher(); 
@@ -93,7 +100,6 @@ window.render = function() {
             }
         }
         
-        // 3. W przeciwnym razie -> EKRAN STARTOWY (PULPIT)
         return window.rLauncher(); 
     } catch(err) { 
         console.error(err);
@@ -101,7 +107,6 @@ window.render = function() {
     } 
 }
 
-// 📱 EKRAN STARTOWY (LAUNCHER) - WYBÓR MODUŁÓW PO ZALOGOWANIU
 window.rLauncher = function() {
     APP.innerHTML = `
     <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; background:var(--bg);">
@@ -137,7 +142,6 @@ window.enterApp = function(role) {
     window.render();
 }
 
-// --- LOGIKA KREATORA ---
 window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e.classList.remove('active')); let t = document.getElementById(id); if(t) t.classList.add('active'); window.scrollTo(0,0); }
 
 window.saveNameAndNext = function() {
@@ -150,12 +154,10 @@ window.saveNameAndNext = function() {
     window.wS('w-modules');
 };
 
-// Mechanizm wyboru w kreatorze (Wybiera ścieżkę taxi lub omija)
 window.wSetupChoice = function(choice) {
     if (choice === 'taxi') {
-        window.wS('w-d1'); // Startujemy konfigurację Taxi
+        window.wS('w-d1'); 
     } else {
-        // Użytkownik chce tylko budżet, pomijamy taksówkę
         window.finishSetup(false);
     }
 }
@@ -163,12 +165,10 @@ window.wSetupChoice = function(choice) {
 window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.querySelectorAll('.opt-card').forEach(c=>{ c.style.borderColor='rgba(255,255,255,0.05)'; c.classList.remove('selected'); }); el.style.borderColor='var(--driver)'; el.classList.add('selected'); if(cat==='p') { let elB = document.getElementById('wd-b'); if(elB) elB.style.display = (val === 'corp') ? 'block' : 'none'; } if(cat==='c') { let elC = document.getElementById('wd-c'); if(elC) elC.style.display = (val === 'own') ? 'none' : 'block'; } if(cat==='e') { let ep = document.getElementById('wd-e-p'); let ej = document.getElementById('wd-e-j'); if(ep) ep.style.display = (val === 'partner') ? 'block' : 'none'; if(ej) ej.style.display = (val === 'jdg') ? 'block' : 'none'; } }
 window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
 
-// Zakończenie całego kreatora - ostateczny zapis do bazy
 window.finishSetup = function(fromTaxi = true) { 
     try {
         window.db = window.patchDb(window.db); 
         
-        // Zapisujemy konfigurację Taxi, jeśli przez nią przeszedł
         if (fromTaxi) {
             window.db.drv.plat = window.wData.p || 'apps'; 
             window.db.drv.carType = window.wData.c || 'rent'; 
@@ -193,10 +193,9 @@ window.finishSetup = function(fromTaxi = true) {
             window.db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100;
         }
 
-        // FINAŁ: Flaga ukończenia konfiguracji!
         window.db.setupDone = true; 
         window.db.init = true; 
-        window.db.role = null; // Usuwamy role, żeby pokazać Launcher
+        window.db.role = null; 
         
         window.save(); 
         window.render(); 
@@ -205,7 +204,6 @@ window.finishSetup = function(fromTaxi = true) {
     }
 }
 
-// --- LOGOWANIE GOOGLE ---
 window.loginWithGoogle = function() {
     if (typeof firebase === 'undefined') {
         if(window.sysAlert) return window.sysAlert('Brak połączenia', 'Zaczekaj sekundę na biblioteki Google.', 'warning');
@@ -270,7 +268,7 @@ window.loginWithGoogle = function() {
                             window.db = window.patchDb(window.db); 
                             window.db.userName = window.db.userName || user.displayName.split(' ')[0];
                             window.save(); 
-                            window.wS('w-modules'); // Nowy użytkownik Google -> Idzie do wyboru modułów
+                            window.wS('w-modules');
                         }
                     })
                     .catch((error) => {
@@ -291,14 +289,14 @@ window.resolveConflict = function(choice) {
         window.db = window.tempCloudData;
     }
     window.db.setupDone = true;
-    window.db.role = null; // Pokazuje Launcher
+    window.db.role = null; 
     window.save();
     document.getElementById('m-conflict').remove();
     window.render();
 }
 
-// 🎨 WIDOKI KREATORA (WIZARD)
 window.rWiz = function() {
+    let isLogged = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser);
     let uName = window.db.userName || '';
 
     APP.innerHTML = `
@@ -310,6 +308,13 @@ window.rWiz = function() {
         <p style="color:var(--muted); font-size:1.1rem; font-weight:600; margin-top:5px; margin-bottom:40px;">Twój Asystent Finansowy</p>
 
         <div style="width:100%; max-width:350px;">
+            ${isLogged ? `
+            <div style="background:rgba(34,197,94,0.1); border:1px solid var(--success); padding:15px; border-radius:12px; margin-bottom:20px;">
+                <strong style="color:var(--success); font-size:1.1rem;">☁️ Zalogowano pomyślnie</strong><br>
+                <span style="font-size:0.8rem; color:var(--muted);">${firebase.auth().currentUser.displayName}</span>
+            </div>
+            <button class="btn btn-success" style="padding:15px; font-size:1rem;" onclick="window.wS('w-profile')">DALEJ ➔</button>
+            ` : `
             <button class="btn" style="background:#fff; color:#000; box-shadow: 0 4px 15px rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; gap:10px; font-weight:800; padding:15px;" onclick="window.loginWithGoogle()">
                 <span style="font-size:1.3rem;">G</span> Zaloguj przez Google
             </button>
@@ -324,6 +329,7 @@ window.rWiz = function() {
             <button class="btn" style="background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.2); padding:15px;" onclick="window.wS('w-name')">
                 Rozpocznij (Konto Offline)
             </button>
+            `}
         </div>
     </div>
 
