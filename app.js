@@ -4,7 +4,7 @@
 
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
-window.db = window.db || {}; // 🛡️ Ochrona przed undefined
+window.db = window.db || {};
 
 // 🛡️ KULOODPORNY BEZPIECZNIK BAZY DANYCH
 window.patchDb = function(data) {
@@ -16,7 +16,7 @@ window.patchDb = function(data) {
     if(!d.home.piggy) d.home.piggy = [];
     if(!d.home.debts) d.home.debts = [];
     if(!d.home.recurring) d.home.recurring = [];
-    if(!d.drv) d.drv = { trans: [], shifts: [], cfg: { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 } };
+    if(!d.drv) d.drv = { trans: [], shifts: [], clients: [], fuel: [], exp: [], h: [], cfg: { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 }, q: {s: 8, w: 60, t1: 3.5, t2: 4.5, t3: 6, t4: 8} };
     return d;
 };
 
@@ -69,7 +69,6 @@ window.rWiz = function() {
         <div style="width: 100%; max-width: 400px;">
             ${userBox}
             <div style="text-align:center; font-size:0.7rem; color:var(--muted); margin-bottom:10px; text-transform:uppercase; font-weight:800;">Wybierz profil do pracy</div>
-            <input type="text" id="w-name" placeholder="Twoje Imię" class="premium-input" value="${window.db.userName||''}">
             
             <div class="opt-card" style="border-color:rgba(59,130,246,0.3);" onclick="window.wMainProfile('driver')">
                 <div class="opt-icon">🚕</div>
@@ -88,11 +87,32 @@ window.rWiz = function() {
                     <p>Paczki, rewirowanie, trasy.</p>
                 </div>
             </div>
+
+            <div class="opt-card" style="border-color:rgba(255,255,255,0.05); opacity: 0.6; cursor: pointer; background: rgba(0,0,0,0.3);" onclick="window.sysAlert('Funkcja PRO', 'Pełny moduł Firma/Spedycja (z KSeF, fakturami i flotą) będzie dostępny w wersji StyreOS PRO!', 'info')">
+                <div class="opt-icon" style="filter: grayscale(1);">🚛</div>
+                <div class="opt-text">
+                    <h3 style="display:flex; align-items:center; gap:8px;">Firma / Spedycja <span style="font-size:0.6rem; background:#a855f7; color:#fff; padding:2px 6px; border-radius:4px;">PRO</span></h3>
+                    <p>Zarządzanie flotą, KSeF, faktury.</p>
+                </div>
+            </div>
         </div>
     </div>
-    <div id="w-home" class="wiz-screen"><div class="w-title">Budżet Rodzinny</div><div class="w-sub">Gotowy do akcji</div><button class="btn btn-home" onclick="window.hFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-main')">Wróć</button></div>
-    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button></div>
+    
+    <div id="w-home" class="wiz-screen">
+        <div class="w-title">Budżet Rodzinny</div>
+        <div class="w-sub">Konfiguracja</div>
+        <p style="color:var(--muted); text-align:center; margin-bottom:20px; font-size:0.9rem;">Jak mamy się do Ciebie zwracać?</p>
+        <div class="inp-group">
+            <input type="text" id="w-name-home" placeholder="Twoje Imię" class="premium-input" value="${window.db.userName||''}">
+        </div>
+        <button class="btn btn-home" style="margin-top:20px; padding:15px;" onclick="window.hFin()">ZAKOŃCZ I WEJDŹ</button>
+        <button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-main')">Wróć</button>
+    </div>
+    
+    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><p style="color:var(--muted); text-align:center; margin-bottom:15px; font-size:0.9rem;">Jak mamy się do Ciebie zwracać?</p><div class="inp-group" style="margin-bottom:20px;"><input type="text" id="w-name-drv" placeholder="Twoje Imię" class="premium-input" value="${window.db.userName||''}"></div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-main')">Wróć</button></div>
+    
     <div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div>
+    
     <div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px;" onclick="window.dFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>`;
 }
 
@@ -118,7 +138,7 @@ window.dTogglePType = function(prefix) { let elT = document.getElementById(`${pr
 
 window.dFin = function() { 
     window.db = window.patchDb(window.db); // Szybkie łatanie
-    window.db.mainProfile = window.wData.mainProfile || 'driver'; let nameEl = document.getElementById('w-name'); window.db.userName = nameEl ? (nameEl.value || 'Kierowca') : 'Kierowca';
+    window.db.mainProfile = window.wData.mainProfile || 'driver'; let nameEl = document.getElementById('w-name-drv'); window.db.userName = nameEl ? (nameEl.value || 'Kierowca') : 'Kierowca';
     window.db.drv.plat = window.wData.p; window.db.drv.carType = window.wData.c; window.db.drv.emp = window.wData.e; 
     let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
     let c = window.wData.c === 'own' ? 0 : window.safeVal('wd-c-v'); let cType = window.wData.c === 'own' ? 'month' : (document.getElementById('wd-c-type') ? document.getElementById('wd-c-type').value : 'month');
@@ -132,8 +152,9 @@ window.dFin = function() {
 
 window.hFin = function() { 
     window.db = window.patchDb(window.db); // Szybkie łatanie
-    window.db.mainProfile = 'home'; let nameEl = document.getElementById('w-name'); window.db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; 
-    window.db.home.members = [window.db.userName]; window.db.role = 'home'; window.db.tab = 'dash'; window.db.init = true; if(window.save) window.save(); window.render(); 
+    window.db.mainProfile = 'home'; let nameEl = document.getElementById('w-name-home'); window.db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; 
+    if(!window.db.home.members.includes(window.db.userName)) window.db.home.members.unshift(window.db.userName);
+    window.db.role = 'home'; window.db.tab = 'dash'; window.db.init = true; if(window.save) window.save(); window.render(); 
 }
 
 // --- LOGOWANIE GOOGLE ---
@@ -170,8 +191,6 @@ window.loginWithGoogle = function() {
                             window.render(); 
                         } else {
                             window.db = window.patchDb({}); // Pusty szkielet
-                            let nameInput = document.getElementById('w-name');
-                            if(nameInput && user.displayName) nameInput.value = user.displayName.split(' ')[0]; 
                             window.db.userName = user.displayName.split(' ')[0];
                             if(window.sysAlert) window.sysAlert('Połączono!', `Teraz wybierz profil, by zakończyć konfigurację.`, 'success');
                             window.render(); 
