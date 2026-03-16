@@ -1,3 +1,24 @@
+// ==========================================
+// PLIK: app.js - GŁÓWNY SILNIK I LOGOWANIE GOOGLE
+// ==========================================
+
+// --- 1. KONFIGURACJA FIREBASE (Z Twojego konta StyreOS) ---
+const firebaseConfig = {
+    apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o",
+    authDomain: "styreos.firebaseapp.com",
+    projectId: "styreos",
+    storageBucket: "styreos.firebasestorage.app",
+    messagingSenderId: "72578059548",
+    appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
+};
+
+// --- 2. INICJALIZACJA BAZY DANYCH ---
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const firestore = (typeof firebase !== 'undefined') ? firebase.firestore() : null;
+
+// --- 3. GŁÓWNY RDZEŃ APLIKACJI ---
 const APP = document.getElementById('app');
 
 window.onerror = function(msg, url, lineNo, columnNo, error) { 
@@ -92,6 +113,10 @@ window.dFin = function() {
 window.hFin = function() { db.mainProfile = 'home'; let nameEl = document.getElementById('w-name'); db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; db.home.members = [db.userName]; db.role = 'home'; db.tab = 'dash'; db.init = true; window.save(); window.render(); }
 
 window.loginWithGoogle = function() {
+    if (typeof firebase === 'undefined' || !firebase.auth) {
+        return window.sysAlert('Błąd', 'Brak połączenia z systemem Google. Odśwież stronę i poczekaj na załadowanie bibliotek.', 'error');
+    }
+    
     const provider = new firebase.auth.GoogleAuthProvider();
     
     firebase.auth().signInWithPopup(provider)
@@ -106,7 +131,7 @@ window.loginWithGoogle = function() {
                         db.init = true;      
                         window.save();       
                         
-                        window.sysAlert('Witaj ponownie!', `Przywrócono Twoją pełną historię z chmury, ${user.displayName.split(' ')[0]}! ☁️🚕`, 'success');
+                        window.sysAlert('Witaj ponownie!', `Przywrócono Twoją pełną historię z chmury, ${user.displayName.split(' ')[0]}! ☁️`, 'success');
                         
                         window.render(); 
                     } else {
@@ -118,7 +143,7 @@ window.loginWithGoogle = function() {
                             nameInput.value = user.displayName.split(' ')[0]; 
                         }
                         
-                        window.sysAlert('Konto utworzone!', `Cześć ${user.displayName.split(' ')[0]}! Dokończ konfigurację, a potem zapiszemy ją w chmurze.`, 'success');
+                        window.sysAlert('Konto połączone!', `Cześć ${user.displayName.split(' ')[0]}! Dokończ konfigurację. Aplikacja będzie od teraz automatycznie synchronizować się z chmurą.`, 'success');
                     }
                 })
                 .catch((error) => {
@@ -128,7 +153,7 @@ window.loginWithGoogle = function() {
         })
         .catch((error) => {
             console.error("Błąd logowania:", error);
-            window.sysAlert('Błąd Logowania', 'Nie udało się połączyć z kontem Google. Spróbuj ponownie.', 'error');
+            window.sysAlert('Błąd Logowania', `Sprawdź połączenie z internetem. Szczegóły techniczne: ${error.message}`, 'error');
         });
 }
 
