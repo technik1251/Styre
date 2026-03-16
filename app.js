@@ -2,12 +2,16 @@
 // PLIK: app.js - GŁÓWNY SILNIK, LOGOWANIE I KREATOR
 // ==========================================
 
-if (typeof window.db === 'undefined') {
-    window.db = {};
-}
-
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
+
+// 🔥 NAPRAWA #1: ŁADOWANIE BAZY Z PAMIĘCI URZĄDZENIA NA STARCIE (KONIEC Z RESETAMI!)
+let savedDb = localStorage.getItem('styre_v101_db');
+if (savedDb) {
+    try { window.db = JSON.parse(savedDb); } catch(e) { window.db = {}; }
+} else {
+    window.db = {};
+}
 
 // 🛡️ KULOODPORNY BEZPIECZNIK BAZY DANYCH
 window.patchDb = function(data) {
@@ -55,11 +59,20 @@ window.render = function() {
         if(!window.db.init) return window.rWiz(); 
         
         if(window.dSessionInit) window.dSessionInit(); 
-        if(window.db.role === 'drv' && window.rDrv) return window.rDrv(); 
-        if(window.db.role === 'home' && window.rHome) { 
-            if(window.hCheckAuto) window.hCheckAuto(); 
-            return window.rHome(); 
-        } 
+        
+        if(window.db.role === 'drv') {
+            if(window.rDrv) return window.rDrv(); 
+            else { alert("Błąd: Plik taxi.js nie wczytał się poprawnie."); return window.rWiz(); }
+        }
+        if(window.db.role === 'home') {
+            if(window.rHome) {
+                if(window.hCheckAuto) window.hCheckAuto(); 
+                return window.rHome(); 
+            } else {
+                alert("Błąd: Moduł Budżetu (home_ui.js) nie załadował się. Pamiętaj o wyczyszczeniu plików cookie!");
+                return window.rWiz(); 
+            }
+        }
         return window.rWiz(); 
     } catch(err) { 
         console.error(err);
@@ -80,30 +93,33 @@ window.wMainProfile = function(prof) {
     window.wData.mainProfile = prof; 
     window.db = window.patchDb(window.db);
     
-    // Sprawdzamy, czy dany profil był już skonfigurowany w 100%
-    let taxiReady = (window.db.drv && window.db.drv.plat);
-    let homeReady = (window.db.userName);
-
-    if (prof === 'driver' && taxiReady) {
-        window.db.mainProfile = prof;
-        window.db.role = 'drv';
-        window.db.tab = 'term';
-        window.db.init = true;
-        window.save();
-        return window.render();
-    }
-
-    if (prof === 'home' && homeReady && window.db.home && window.db.home.members && window.db.home.members.length > 0) {
-        window.db.mainProfile = prof;
-        window.db.role = 'home';
-        window.db.tab = 'dash';
-        window.db.init = true;
-        window.save();
-        return window.render();
+    // Sprawdzamy czy profil jest gotowy na wejście bez pytania
+    let isTaxiReady = window.db.drv && window.db.drv.plat;
+    let isHomeReady = window.db.home && window.db.home.members && window.db.home.members.length > 0;
+    
+    if (prof === 'driver') {
+        if (isTaxiReady) {
+            window.db.role = 'drv';
+            window.db.tab = 'term';
+            window.db.init = true;
+            window.save();
+            return window.render();
+        } else {
+            window.wS('w-d1');
+        }
     }
     
-    // Jeśli nie są gotowe, wymuś konfigurację:
-    if(prof==='driver') window.wS('w-d1'); else window.wS('w-home'); 
+    if (prof === 'home') {
+        if (isHomeReady || window.db.init) {
+            window.db.role = 'home';
+            window.db.tab = 'dash';
+            window.db.init = true;
+            window.save();
+            return window.render();
+        } else {
+            window.wS('w-home');
+        }
+    }
 }
 
 window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.querySelectorAll('.opt-card').forEach(c=>{ c.style.borderColor='rgba(255,255,255,0.05)'; c.classList.remove('selected'); }); el.style.borderColor='var(--driver)'; el.classList.add('selected'); if(cat==='p') { let elB = document.getElementById('wd-b'); if(elB) elB.style.display = (val === 'corp') ? 'block' : 'none'; } if(cat==='c') { let elC = document.getElementById('wd-c'); if(elC) elC.style.display = (val === 'own') ? 'none' : 'block'; } if(cat==='e') { let ep = document.getElementById('wd-e-p'); let ej = document.getElementById('wd-e-j'); if(ep) ep.style.display = (val === 'partner') ? 'block' : 'none'; if(ej) ej.style.display = (val === 'jdg') ? 'block' : 'none'; } }
@@ -112,6 +128,9 @@ window.dTogglePType = function(prefix) { let elT = document.getElementById(`${pr
 window.dFin = function() { 
     window.db = window.patchDb(window.db); 
     window.db.mainProfile = window.wData.mainProfile || 'driver'; 
+    let nameEl = document.getElementById('w-name-drv'); 
+    window.db.userName = (nameEl && nameEl.value) ? nameEl.value : window.db.userName;
+    
     window.db.drv.plat = window.wData.p; window.db.drv.carType = window.wData.c; window.db.drv.emp = window.wData.e; 
     let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
     let c = window.wData.c === 'own' ? 0 : window.safeVal('wd-c-v'); let cType = window.wData.c === 'own' ? 'month' : (document.getElementById('wd-c-type') ? document.getElementById('wd-c-type').value : 'month');
@@ -125,7 +144,10 @@ window.dFin = function() {
 
 window.hFin = function() { 
     window.db = window.patchDb(window.db); 
-    window.db.mainProfile = 'home'; let nameEl = document.getElementById('w-name-home'); window.db.userName = nameEl ? (nameEl.value || 'Domownik') : window.db.userName; 
+    window.db.mainProfile = 'home'; 
+    let nameEl = document.getElementById('w-name-home'); 
+    window.db.userName = (nameEl && nameEl.value) ? nameEl.value : window.db.userName; 
+    
     if(!window.db.home.members.includes(window.db.userName)) window.db.home.members.unshift(window.db.userName);
     window.db.role = 'home'; window.db.tab = 'dash'; window.db.init = true; window.save(); window.render(); 
 }
@@ -193,9 +215,10 @@ window.loginWithGoogle = function() {
                         } else {
                             window.db = window.patchDb(window.db); 
                             window.db.userName = window.db.userName || user.displayName.split(' ')[0];
+                            window.db.init = true;
                             window.save(); 
                             if(window.sysAlert) window.sysAlert('Połączono z chmurą!', `Gotowe, ${window.db.userName}. Wybierz profil.`, 'success');
-                            window.render(); 
+                            window.wS('w-profile');
                         }
                     })
                     .catch((error) => {
@@ -309,12 +332,15 @@ window.rWiz = function() {
             <div style="font-size:4rem; margin-bottom:10px;">🏠</div>
             <h2 style="color:var(--life); margin-bottom:10px;">Budżet Gotowy!</h2>
             <p style="color:var(--muted); font-size:0.9rem; margin-bottom:30px;">Twoje finanse w jednym miejscu.</p>
+            <div class="inp-group" style="display:none;">
+                <input type="text" id="w-name-home" placeholder="Twoje Imię" class="premium-input" value="${uName}">
+            </div>
             <button class="btn btn-home" style="padding:15px; max-width:300px; margin:0 auto;" onclick="window.hFin()">WEJDŹ DO BUDŻETU</button>
             <button class="btn" style="background:transparent; color:var(--muted); margin-top:10px;" onclick="window.wS('w-profile')">Wróć</button>
         </div>
     </div>
 
-    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><p style="color:var(--muted); text-align:center; margin-bottom:15px; font-size:0.9rem;">Jak mamy się do Ciebie zwracać?</p><div class="inp-group" style="margin-bottom:20px;"><input type="text" id="w-name-drv" placeholder="Twoje Imię" class="premium-input" value="${uName}"></div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-profile')">Wróć</button></div>
+    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><p style="color:var(--muted); text-align:center; margin-bottom:15px; font-size:0.9rem;">Sprawdź swoje imię</p><div class="inp-group" style="margin-bottom:20px;"><input type="text" id="w-name-drv" placeholder="Twoje Imię" class="premium-input" value="${uName}"></div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-profile')">Wróć</button></div>
     
     <div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div>
     
