@@ -2,7 +2,7 @@
 // PLIK: app.js - GŁÓWNY SILNIK, LOGOWANIE I KREATOR
 // ==========================================
 
-// 1. ŁADOWANIE BAZY Z PAMIĘCI (Zapobiega amnezji po odświeżeniu)
+// Inicjalizacja bazy z pamięci (Zabezpieczenie przed amnezją)
 if (typeof window.db === 'undefined') {
     window.db = {};
 }
@@ -14,9 +14,10 @@ if (savedLocal) {
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
 
-// 🛡️ KULOODPORNY BEZPIECZNIK BAZY DANYCH
+// 🛡️ KULOODPORNY BEZPIECZNIK BAZY DANYCH (Teraz chroni przed 'undefined')
 window.patchDb = function(data) {
     let d = data || {};
+    // Bezpieczniki Budżetu
     if(!d.home) d.home = { trans: [], accs: [{id:'acc_1', n:'Portfel Głów.', c:'#22c55e', i:'💵', startBal:0}], budgets: {}, recurring: [], piggy: [], loans: [], debts: [], members: [] };
     if(!d.home.trans) d.home.trans = [];
     if(!d.home.accs) d.home.accs = [{id:'acc_1', n:'Portfel Głów.', c:'#22c55e', i:'💵', startBal:0}];
@@ -24,18 +25,24 @@ window.patchDb = function(data) {
     if(!d.home.piggy) d.home.piggy = [];
     if(!d.home.debts) d.home.debts = [];
     if(!d.home.recurring) d.home.recurring = [];
+    if (!Array.isArray(d.home.members)) d.home.members = [];
+    if (d.home.members.length === 0) d.home.members.push(d.userName || 'Domownik');
     
-    // 🔥 NAPRAWA BŁĘDU Z MARTWYM PRZYCISKIEM (Wymusza by members było poprawną listą)
-    if(!Array.isArray(d.home.members)) {
-        d.home.members = [d.userName || 'Domownik'];
-    }
-    
+    // Bezpieczniki Taxi
     if(!d.drv) d.drv = { trans: [], shifts: [], clients: [], fuel: [], exp: [], h: [], cfg: { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 }, q: {s: 8, w: 60, t1: 3.5, t2: 4.5, t3: 6, t4: 8} };
     if(!d.drv.cfg) d.drv.cfg = { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 };
+    if(d.drv.emp === undefined) d.drv.emp = 'partner';
+    if(d.drv.plat === undefined) d.drv.plat = 'apps';
+    if(d.drv.carType === undefined) d.drv.carType = 'rent';
+    
+    // Usunięcie null i undefined na wypadek błędów z kreatora
+    if(!d.userName) d.userName = "Kierowca";
+    if(!d.role) d.role = "drv";
+    if(!d.tab) d.tab = "term";
+
     return d;
 };
 
-// 🛠️ NARZĘDZIA RATUNKOWE
 window.safeVal = function(id, def=0) {
     let el = document.getElementById(id);
     if(!el) return def;
@@ -43,8 +50,11 @@ window.safeVal = function(id, def=0) {
     return isNaN(v) ? def : v;
 };
 
+// Funkcja Save - teraz z zabezpieczeniem, które "czyści" bazę przed wysłaniem do chmury
 window.save = function() {
     if (typeof window.db !== 'undefined') {
+        // Zawsze filtrujemy bazę przed zapisem, aby uniknąć błędów
+        window.db = window.patchDb(window.db);
         localStorage.setItem('styre_v101_db', JSON.stringify(window.db));
         if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser && window.db.init) {
             if(firebase.firestore) {
@@ -70,14 +80,13 @@ window.render = function() {
         
         if(window.db.role === 'drv') {
             if(window.rDrv) return window.rDrv(); 
-            else { alert("Błąd: Plik taxi.js nie wczytał się poprawnie."); return window.rWiz(); }
+            else return window.rWiz(); 
         }
         if(window.db.role === 'home') {
             if(window.rHome) {
                 if(window.hCheckAuto) window.hCheckAuto(); 
                 return window.rHome(); 
             } else {
-                alert("Błąd: Moduł Budżetu (home_ui.js) nie załadował się.");
                 return window.rWiz(); 
             }
         }
@@ -101,26 +110,28 @@ window.wMainProfile = function(prof) {
     window.wData.mainProfile = prof; 
     window.db = window.patchDb(window.db);
     
-    let isTaxiReady = window.db.drv && window.db.drv.plat;
-    let isHomeReady = window.db.home && window.db.home.members && window.db.home.members.length > 0;
+    let isTaxiReady = window.db.drv && window.db.drv.plat && window.db.drv.emp && window.db.init;
+    let isHomeReady = window.db.home && Array.isArray(window.db.home.members) && window.db.home.members.length > 0 && window.db.init;
 
     if (prof === 'driver') {
-        if (isTaxiReady && window.db.init) {
+        if (isTaxiReady) {
             window.db.role = 'drv';
             window.db.tab = 'term';
-            window.db.init = true;
             window.save();
             return window.render();
         } else {
+            // Bezpieczeństwo - ustawiamy wData na wypadek gdyby użytkownik coś pominął
+            window.wData.p = window.wData.p || 'apps';
+            window.wData.c = window.wData.c || 'rent';
+            window.wData.e = window.wData.e || 'partner';
             window.wS('w-d1');
         }
     }
     
     if (prof === 'home') {
-        if (isHomeReady && window.db.init) {
+        if (isHomeReady) {
             window.db.role = 'home';
             window.db.tab = 'dash';
-            window.db.init = true;
             window.save();
             return window.render();
         } else {
@@ -132,6 +143,7 @@ window.wMainProfile = function(prof) {
 window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.querySelectorAll('.opt-card').forEach(c=>{ c.style.borderColor='rgba(255,255,255,0.05)'; c.classList.remove('selected'); }); el.style.borderColor='var(--driver)'; el.classList.add('selected'); if(cat==='p') { let elB = document.getElementById('wd-b'); if(elB) elB.style.display = (val === 'corp') ? 'block' : 'none'; } if(cat==='c') { let elC = document.getElementById('wd-c'); if(elC) elC.style.display = (val === 'own') ? 'none' : 'block'; } if(cat==='e') { let ep = document.getElementById('wd-e-p'); let ej = document.getElementById('wd-e-j'); if(ep) ep.style.display = (val === 'partner') ? 'block' : 'none'; if(ej) ej.style.display = (val === 'jdg') ? 'block' : 'none'; } }
 window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
 
+// Zabezpieczony dFin przed 'undefined'
 window.dFin = function() { 
     try {
         window.db = window.patchDb(window.db); 
@@ -139,13 +151,25 @@ window.dFin = function() {
         let nameEl = document.getElementById('w-name-drv'); 
         if (nameEl && nameEl.value) window.db.userName = nameEl.value;
         
-        window.db.drv.plat = window.wData.p; window.db.drv.carType = window.wData.c; window.db.drv.emp = window.wData.e; 
-        let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
-        let c = window.wData.c === 'own' ? 0 : window.safeVal('wd-c-v'); let cType = window.wData.c === 'own' ? 'month' : (document.getElementById('wd-c-type') ? document.getElementById('wd-c-type').value : 'month');
+        // Zabezpieczenie przed brakiem kliknięcia w kreatorze!
+        window.db.drv.plat = window.wData.p || 'apps'; 
+        window.db.drv.carType = window.wData.c || 'rent'; 
+        window.db.drv.emp = window.wData.e || 'partner'; 
+        
+        let b = window.db.drv.plat === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
+        let c = window.db.drv.carType === 'own' ? 0 : window.safeVal('wd-c-v'); let cType = window.db.drv.carType === 'own' ? 'month' : (document.getElementById('wd-c-type') ? document.getElementById('wd-c-type').value : 'month');
         let e = 0, eTy = 'flat', ePct = 0, ePer = 'month'; 
-        if(window.wData.e === 'partner') { eTy = document.getElementById('wd-p-type') ? document.getElementById('wd-p-type').value : 'flat'; if(eTy === 'flat') { e = window.safeVal('wd-p-v'); ePer = document.getElementById('wd-p-period') ? document.getElementById('wd-p-period').value : 'week'; } else { ePct = window.safeVal('wd-p-pct') / 100; } } else { e = window.safeVal('wd-j-v'); ePer = document.getElementById('wd-j-period') ? document.getElementById('wd-j-period').value : 'month'; } 
+        
+        if(window.db.drv.emp === 'partner') { 
+            eTy = document.getElementById('wd-p-type') ? document.getElementById('wd-p-type').value : 'flat'; 
+            if(eTy === 'flat') { e = window.safeVal('wd-p-v'); ePer = document.getElementById('wd-p-period') ? document.getElementById('wd-p-period').value : 'week'; } 
+            else { ePct = window.safeVal('wd-p-pct') / 100; } 
+        } else { 
+            e = window.safeVal('wd-j-v'); ePer = document.getElementById('wd-j-period') ? document.getElementById('wd-j-period').value : 'month'; 
+        } 
+        
         window.db.drv.cfg.bC = b; window.db.drv.cfg.bPeriod = bPer; window.db.drv.cfg.cC = c; window.db.drv.cfg.cType = cType; 
-        window.db.drv.cfg.eC = e; window.db.drv.cfg.eType = eTy; window.db.drv.cfg.ePct = ePct; window.db.drv.cfg.ePeriod = ePer; window.db.drv.cfg.iC = 0; window.db.drv.cfg.iPeriod = 'month';
+        window.db.drv.cfg.eC = e; window.db.drv.cfg.eType = eTy; window.db.drv.cfg.ePct = ePct || 0; window.db.drv.cfg.ePeriod = ePer; window.db.drv.cfg.iC = 0; window.db.drv.cfg.iPeriod = 'month';
         window.db.drv.cfg.fix = 0; window.db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100; window.db.drv.cfg.cardF = 0.015; window.db.drv.cfg.goal = 350;
         
         window.db.role = 'drv'; window.db.tab = 'term'; window.db.init = true; 
@@ -164,8 +188,7 @@ window.hFin = function() {
         let nameEl = document.getElementById('w-name-home'); 
         if (nameEl && nameEl.value) window.db.userName = nameEl.value; 
         
-        if(!Array.isArray(window.db.home.members)) window.db.home.members = [];
-        if(!window.db.home.members.includes(window.db.userName)) {
+        if (!window.db.home.members.includes(window.db.userName)) {
             window.db.home.members.unshift(window.db.userName);
         }
         
