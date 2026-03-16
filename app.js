@@ -1,38 +1,9 @@
-// ==========================================
-// PLIK: app.js - GŁÓWNY SILNIK I KREATOR STARTOWY
-// ==========================================
-
-// --- 0. ZABÓJCA CACHE (Wymusza pobranie nowych plików) ---
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) { registration.unregister(); }
-    });
-}
-
-// --- 1. KONFIGURACJA FIREBASE ---
-const firebaseConfig = {
-    apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o",
-    authDomain: "styreos.firebaseapp.com",
-    projectId: "styreos",
-    storageBucket: "styreos.firebasestorage.app",
-    messagingSenderId: "72578059548",
-    appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
-};
-
-// --- 2. INICJALIZACJA BAZY DANYCH ---
-window.initFirebase = function() {
-    if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
-};
-
-// --- 3. RDZEŃ ---
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
 
 window.onerror = function(msg, url, lineNo, columnNo, error) { 
     let fileName = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; 
-    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger); margin-bottom:5px;">Błąd Kodu!</h2><p style="color:var(--muted); font-size:0.8rem; margin-bottom:20px;">Aplikacja zatrzymana przez błąd w JavaScript.</p><div style="background:#000; border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:12px; text-align:left;"><strong style="color:var(--danger); font-size:0.85rem;">Treść:</strong><br><span style="color:#fff; font-family:monospace; font-size:0.8rem; word-break:break-all;">${msg}</span><br><br><strong style="color:var(--info); font-size:0.85rem;">Gdzie:</strong><br><span style="color:#fff; font-family:monospace; font-size:0.8rem;">Plik: ${fileName}<br>Linia: ${lineNo}</span></div><button class="btn" style="background:rgba(255,255,255,0.1); color:#fff; margin-top:20px;" onclick="localStorage.clear();location.reload()">ODŚWIEŻ STRONĘ</button></div>`; 
+    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger); margin-bottom:5px;">Błąd Kodu!</h2><p style="color:var(--muted); font-size:0.8rem; margin-bottom:20px;">Aplikacja zatrzymana przez błąd w JavaScript.</p><div style="background:#000; border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:12px; text-align:left;"><strong style="color:var(--danger); font-size:0.85rem;">Treść:</strong><br><span style="color:#fff; font-family:monospace; font-size:0.8rem; word-break:break-all;">${msg}</span><br><br><strong style="color:var(--info); font-size:0.85rem;">Gdzie:</strong><br><span style="color:#fff; font-family:monospace; font-size:0.8rem;">Plik: ${fileName}<br>Linia: ${lineNo}</span></div><button class="btn" style="background:rgba(255,255,255,0.1); color:#fff; margin-top:20px;" onclick="location.reload()">ODŚWIEŻ STRONĘ</button></div>`; 
     return false; 
 };
 
@@ -52,7 +23,7 @@ window.render = function() {
 window.rWiz = function() {
     APP.innerHTML = `<div id="w-main" class="wiz-screen active" style="align-items:center;">
         <div style="width:90px;height:90px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
-            <img src="icon-512.png" style="width:100%;height:100%;border-radius:22px;box-shadow:0 10px 25px rgba(0,0,0,0.5);" alt="StyreOS Logo" onerror="this.outerHTML='<div style=\\'font-size:3rem;\\'>🚀</div>'">
+            <img src="icon-512.png" style="width:100%;height:100%;border-radius:22px;box-shadow:0 10px 25px rgba(0,0,0,0.5);" alt="StyreOS Logo">
         </div>
         <h1 style="color:#fff; font-size:3.5rem; margin:0; font-weight:900; letter-spacing:-2.5px;">STYRE OS</h1>
         <p style="color:var(--muted); font-size:1.1rem; font-weight:600; margin-top:5px; margin-bottom:30px;">Twój Asystent</p>
@@ -95,26 +66,17 @@ window.rWiz = function() {
                     <p>Zarządzanie flotą, KSeF, faktury.</p>
                 </div>
             </div>
-        </div>
+            </div>
     </div>
-    
-    <div id="w-home" class="wiz-screen"><div class="w-title">Budżet Rodzinny</div><div class="w-sub">Gotowy do akcji</div><button class="btn btn-home" onclick="window.hFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-main')">Wróć</button></div>
-    
-    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button></div>
-    
-    <div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div>
-    
-    <div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px;" onclick="window.dFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>`;
+    <div id="w-home" class="wiz-screen"><div class="w-title">Budżet Rodzinny</div><div class="w-sub">Gotowy do akcji</div><button class="btn btn-home" onclick="window.hFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-main')">Wróć</button></div><div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button></div><div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div><div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px;" onclick="window.dFin()">ZAKOŃCZ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>`;
 }
 
-// --- 6. LOGIKA WIZARDA ---
 window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e.classList.remove('active')); let t = document.getElementById(id); if(t) t.classList.add('active'); window.scrollTo(0,0); }
 window.wMainProfile = function(prof) { window.wData.mainProfile = prof; if(prof==='driver') window.wS('w-d1'); else window.wS('w-home'); }
 window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.querySelectorAll('.opt-card').forEach(c=>{ c.style.borderColor='rgba(255,255,255,0.05)'; c.classList.remove('selected'); }); el.style.borderColor='var(--driver)'; el.classList.add('selected'); if(cat==='p') { let elB = document.getElementById('wd-b'); if(elB) elB.style.display = (val === 'corp') ? 'block' : 'none'; } if(cat==='c') { let elC = document.getElementById('wd-c'); if(elC) elC.style.display = (val === 'own') ? 'none' : 'block'; } if(cat==='e') { let ep = document.getElementById('wd-e-p'); let ej = document.getElementById('wd-e-j'); if(ep) ep.style.display = (val === 'partner') ? 'block' : 'none'; if(ej) ej.style.display = (val === 'jdg') ? 'block' : 'none'; } }
 window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
 
 window.dFin = function() { 
-    window.wData = window.wData || {};
     db.mainProfile = window.wData.mainProfile || 'driver'; let nameEl = document.getElementById('w-name'); db.userName = nameEl ? (nameEl.value || 'Kierowca') : 'Kierowca';
     db.drv.plat = window.wData.p; db.drv.carType = window.wData.c; db.drv.emp = window.wData.e; 
     let b = window.wData.p === 'corp' ? window.safeVal('wd-b-v') : 0; let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
@@ -132,48 +94,57 @@ window.dFin = function() {
 }
 
 window.hFin = function() { 
-    db.mainProfile = 'home'; let nameEl = document.getElementById('w-name'); db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; 
-    db.home.members = [db.userName]; db.role = 'home'; db.tab = 'dash'; db.init = true; window.save(); window.render(); 
+    db.mainProfile = 'home'; let nameEl = document.getElementById('w-name'); db.userName = nameEl ? (nameEl.value || 'Domownik') : 'Domownik'; db.home.members = [db.userName]; db.role = 'home'; db.tab = 'dash'; db.init = true; window.save(); window.render(); 
 }
 
-// --- 7. LOGOWANIE GOOGLE (Naprawiony Offline Error) ---
+// --- LOGOWANIE GOOGLE ---
 window.loginWithGoogle = function() {
-    if (typeof firebase === 'undefined') {
-        return window.sysAlert('Chwilkę!', 'Sprawdzam połączenie. Spróbuj ponownie za 3 sekundy.', 'warning');
+    if (typeof firebase === 'undefined' || !firebase.auth) {
+        if(window.sysAlert) return window.sysAlert('Brak połączenia', 'Biblioteki Google ładują się. Spróbuj za sekundę.', 'warning');
+        return alert("Poczekaj chwilę na załadowanie usług Google.");
     }
     
-    window.initFirebase();
+    // Inicjalizacja "w locie" - bezpiecznie!
+    if (!firebase.apps.length) {
+        firebase.initializeApp({
+            apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o",
+            authDomain: "styreos.firebaseapp.com",
+            projectId: "styreos",
+            storageBucket: "styreos.firebasestorage.app",
+            messagingSenderId: "72578059548",
+            appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
+        });
+    }
+
     const provider = new firebase.auth.GoogleAuthProvider();
     
     firebase.auth().signInWithPopup(provider)
         .then((result) => {
             const user = result.user;
-            if(typeof firestore !== 'undefined' && firestore) {
-                firestore.collection('users').doc(user.uid).get()
+            if (typeof firebase.firestore !== 'undefined') {
+                firebase.firestore().collection('users').doc(user.uid).get()
                     .then((doc) => {
                         if (doc.exists) {
-                            db = doc.data();     
-                            db.init = true;      
-                            window.save();       
-                            window.sysAlert('Witaj ponownie!', `Przywrócono historię z chmury, ${user.displayName.split(' ')[0]}!`, 'success');
+                            window.db = doc.data();     
+                            window.db.init = true;      
+                            if(window.save) window.save();       
+                            if(window.sysAlert) window.sysAlert('Witaj ponownie!', `Przywrócono Twoją historię z chmury, ${user.displayName.split(' ')[0]}!`, 'success');
                             window.render(); 
                         } else {
                             let loginBox = document.getElementById('google-login-box');
                             if(loginBox) loginBox.style.display = 'none';
                             let nameInput = document.getElementById('w-name');
                             if(nameInput && user.displayName) nameInput.value = user.displayName.split(' ')[0]; 
-                            window.sysAlert('Konto utworzone!', `Cześć ${user.displayName.split(' ')[0]}! Zsynchronizujemy dane w tle.`, 'success');
+                            if(window.sysAlert) window.sysAlert('Konto utworzone!', `Cześć ${user.displayName.split(' ')[0]}! Dokończ konfigurację offline.`, 'success');
                         }
                     })
                     .catch((error) => {
-                        // Złagodzony komunikat błędu Offline
-                        window.sysAlert('Tryb Offline Aktywny', `Zalogowano jako ${user.displayName.split(' ')[0]}, ale masz słaby zasięg (lub blokadę reklam). Dane zapisują się w telefonie.`, 'info');
-                        console.error("Błąd chmury:", error);
+                        if(window.sysAlert) window.sysAlert('Tryb Offline Aktywny', `Masz słaby zasięg (lub działa bloker). Dane zapisują się w telefonie.`, 'info');
                     });
             }
         })
         .catch((error) => {
-            window.sysAlert('Błąd Logowania', error.message, 'error');
+            if(window.sysAlert) window.sysAlert('Błąd Logowania', error.message, 'error');
         });
 }
 
