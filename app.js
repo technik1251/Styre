@@ -2,13 +2,9 @@
 // PLIK: app.js - GŁÓWNY SILNIK, LOGOWANIE I LAUNCHER
 // ==========================================
 
-if (typeof window.db === 'undefined') {
-    window.db = {};
-}
+if (typeof window.db === 'undefined') { window.db = {}; }
 let savedLocal = localStorage.getItem('styre_v101_db');
-if (savedLocal) {
-    try { window.db = JSON.parse(savedLocal); } catch(e) { window.db = {}; }
-}
+if (savedLocal) { try { window.db = JSON.parse(savedLocal); } catch(e) { window.db = {}; } }
 
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
@@ -22,20 +18,16 @@ window.patchDb = function(data) {
     if(!d.home.piggy) d.home.piggy = [];
     if(!d.home.debts) d.home.debts = [];
     if(!d.home.recurring) d.home.recurring = [];
-    
     if (!Array.isArray(d.home.members)) d.home.members = [];
     if (d.home.members.length === 0) d.home.members.push(d.userName || 'Domownik');
     
     if(!d.drv) d.drv = { trans: [], shifts: [], clients: [], fuel: [], exp: [], h: [], cfg: { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 }, q: {s: 8, w: 60, t1: 3.5, t2: 4.5, t3: 6, t4: 8} };
     if(!d.drv.cfg) d.drv.cfg = { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 };
-    
     if(d.drv.emp === undefined) d.drv.emp = 'partner';
     if(d.drv.plat === undefined) d.drv.plat = 'apps';
     if(d.drv.carType === undefined) d.drv.carType = 'rent';
     if(!d.userName) d.userName = "Użytkownik";
-
     if (d.init && d.setupDone === undefined) d.setupDone = true;
-
     return d;
 };
 
@@ -64,21 +56,17 @@ window.onerror = function(msg, url, lineNo) {
     return false; 
 };
 
-// --- GLOBALNA FUNKCJA PRZEŁĄCZANIA ZAKŁADEK ---
+// --- GWARANCJA FUNKCJI SWITCH TAB ---
 window.switchTab = function(t) { 
     if (window.db) window.db.tab = t; 
     window.save(); 
     window.render(); 
     window.scrollTo(0,0); 
 };
+if (typeof switchTab === 'undefined') { window.switchTab = switchTab; }
 
-// --- FUNKCJA POWROTU DO EKRANU STARTOWEGO ---
 window.logoutToLauncher = function() {
-    if (window.db) {
-        window.db.role = null; 
-        window.db.tab = null;
-        window.save();
-    }
+    if (window.db) { window.db.role = null; window.db.tab = null; window.save(); }
     let switcher = document.getElementById('m-switcher');
     if (switcher) switcher.classList.add('hidden');
     window.render();
@@ -87,26 +75,10 @@ window.logoutToLauncher = function() {
 window.render = function() { 
     try { 
         window.db = window.patchDb(window.db);
-        
-        if(!window.db.setupDone) {
-            return window.rWiz(); 
-        }
-        
+        if(!window.db.setupDone) { return window.rWiz(); }
         if(window.dSessionInit) window.dSessionInit(); 
-        
-        if(window.db.role === 'drv') {
-            if(window.rDrv) return window.rDrv(); 
-            else return window.rLauncher(); 
-        }
-        if(window.db.role === 'home') {
-            if(window.rHome) {
-                if(window.hCheckAuto) window.hCheckAuto(); 
-                return window.rHome(); 
-            } else {
-                return window.rLauncher(); 
-            }
-        }
-        
+        if(window.db.role === 'drv') { if(window.rDrv) return window.rDrv(); else return window.rLauncher(); }
+        if(window.db.role === 'home') { if(window.rHome) { if(window.hCheckAuto) window.hCheckAuto(); return window.rHome(); } else { return window.rLauncher(); } }
         return window.rLauncher(); 
     } catch(err) { 
         console.error(err);
@@ -238,13 +210,11 @@ window.loginWithGoogle = function() {
                     .then((doc) => {
                         if (doc.exists) {
                             let cloudData = window.patchDb(doc.data()); 
-                            
                             let hasLocalData = false;
                             if (window.db && window.db.setupDone) {
                                 if (window.db.drv && window.db.drv.h && window.db.drv.h.length > 0) hasLocalData = true;
                                 if (window.db.home && window.db.home.trans && window.db.home.trans.length > 0) hasLocalData = true;
                             }
-
                             if (hasLocalData) {
                                 window.tempCloudData = cloudData;
                                 let modalHtml = `
@@ -253,11 +223,9 @@ window.loginWithGoogle = function() {
                                         <div style="font-size:3rem; margin-bottom:10px;">☁️</div>
                                         <h3 style="color:var(--warning); margin-bottom:10px;">Konto odnalezione!</h3>
                                         <p style="font-size:0.85rem; color:var(--muted); margin-bottom:20px; line-height:1.4;">Masz już dane w chmurze, ale pracowałeś też jako Gość na tym telefonie. Co chcesz zachować?</p>
-                                        
                                         <button class="btn" style="background:var(--success); color:#000; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="window.resolveConflict('cloud')">
                                             📥 POBIERZ Z CHMURY<br><small style="font-weight:normal;">(Skasuje dane Gościa)</small>
                                         </button>
-                                        
                                         <button class="btn" style="background:var(--info); color:#fff; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="window.resolveConflict('local')">
                                             📤 WYŚLIJ DO CHMURY<br><small style="font-weight:normal;">(Zachowa dane Gościa)</small>
                                         </button>
@@ -313,19 +281,16 @@ window.rWiz = function() {
         </div>
         <h1 style="color:#fff; font-size:3.5rem; margin:0; font-weight:900; letter-spacing:-2.5px;">STYRE OS</h1>
         <p style="color:var(--muted); font-size:1.1rem; font-weight:600; margin-top:5px; margin-bottom:40px;">Twój Asystent Finansowy</p>
-
         <div style="width:100%; max-width:350px;">
             <button class="btn" style="background:#fff; color:#000; box-shadow: 0 4px 15px rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; gap:10px; font-weight:800; padding:15px;" onclick="window.loginWithGoogle()">
                 <span style="font-size:1.3rem;">G</span> Zaloguj przez Google
             </button>
             <p style="font-size:0.7rem; color:var(--success); margin-top:10px; margin-bottom:25px;">Zalecane: bezpieczna kopia w chmurze</p>
-
             <div style="display:flex; align-items:center; margin: 20px 0; color:var(--muted); font-size:0.7rem; text-transform:uppercase; font-weight:bold;">
                 <div style="flex:1; height:1px; background:rgba(255,255,255,0.1);"></div>
                 <span style="padding:0 10px;">LUB</span>
                 <div style="flex:1; height:1px; background:rgba(255,255,255,0.1);"></div>
             </div>
-
             <button class="btn" style="background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.2); padding:15px;" onclick="window.wS('w-name')">
                 Rozpocznij (Konto Offline)
             </button>
@@ -336,9 +301,7 @@ window.rWiz = function() {
         <div style="width:100%; max-width:350px; margin-top:50px;">
             <h2 style="color:#fff; margin-bottom:5px;">Jak masz na imię?</h2>
             <p style="color:var(--muted); font-size:0.85rem; margin-bottom:30px;">Abyśmy wiedzieli, jak się do Ciebie zwracać.</p>
-            
             <input type="text" id="w-guest-name" class="premium-input" placeholder="Wpisz imię..." value="${uName}" style="text-align:center; font-size:1.2rem; padding:15px; margin-bottom:30px;">
-            
             <button class="btn btn-info" style="padding:15px;" onclick="window.saveNameAndNext()">DALEJ ➔</button>
             <button class="btn" style="background:transparent; color:var(--muted); margin-top:10px;" onclick="window.wS('w-main')">Wróć</button>
         </div>
@@ -348,31 +311,20 @@ window.rWiz = function() {
         <div style="width:100%; max-width:380px; margin-top:30px;">
             <h2 style="color:#fff; margin-bottom:5px;">Konfiguracja Konta</h2>
             <p style="color:var(--muted); font-size:0.85rem; margin-bottom:30px;">Z czego będziesz korzystać w StyreOS?</p>
-
             <div class="opt-card" style="border-color:rgba(59,130,246,0.5); background:rgba(59,130,246,0.05); text-align:left;" onclick="window.wSetupChoice('taxi')">
                 <div class="opt-icon">🚕</div>
-                <div class="opt-text">
-                    <h3 style="color:var(--driver)">Jestem Kierowcą Taxi</h3>
-                    <p style="font-size:0.75rem;">Skonfiguruj auto, prowizje i korporację</p>
-                </div>
+                <div class="opt-text"><h3 style="color:var(--driver)">Jestem Kierowcą Taxi</h3><p style="font-size:0.75rem;">Skonfiguruj auto, prowizje i korporację</p></div>
             </div>
-            
             <div class="opt-card" style="border-color:rgba(20,184,166,0.5); background:rgba(20,184,166,0.05); text-align:left;" onclick="window.wSetupChoice('home')">
                 <div class="opt-icon">🏠</div>
-                <div class="opt-text">
-                    <h3 style="color:var(--life)">Tylko Budżet Domowy</h3>
-                    <p style="font-size:0.75rem;">Zarządzaj domem, pomiń ustawienia Taxi</p>
-                </div>
+                <div class="opt-text"><h3 style="color:var(--life)">Tylko Budżet Domowy</h3><p style="font-size:0.75rem;">Zarządzaj domem, pomiń ustawienia Taxi</p></div>
             </div>
-            
             <button class="btn" style="background:transparent; color:var(--muted); margin-top:20px;" onclick="window.wS('w-name')">Wróć</button>
         </div>
     </div>
 
     <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-modules')">Wróć</button></div>
-    
     <div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div>
-    
     <div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px; padding:15px;" onclick="window.finishSetup(true)">ZAKOŃCZ I WEJDŹ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>
     `;
 }
@@ -399,5 +351,4 @@ if (typeof firebase !== 'undefined') {
         }
     }, 1000);
 }
-
 window.render();
