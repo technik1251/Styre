@@ -2,6 +2,28 @@
 // PLIK: home_views.js - Renderowanie zakładek Budżetu Domowego
 // ==========================================
 
+// --- ŁATKA: Nadpisanie funkcji zapisu długu, aby obsługiwała datę wstecz i PayPo (Termin) ---
+window.hAddDebt = function() {
+    let n = document.getElementById('hd-name').value.trim();
+    let v = parseFloat(document.getElementById('hd-val').value);
+    let dt = document.getElementById('hd-date') ? document.getElementById('hd-date').value : window.getLocalYMD();
+    let dl = document.getElementById('hd-deadline') ? document.getElementById('hd-deadline').value : '';
+
+    if(!n || isNaN(v) || v <= 0) return window.sysAlert('Błąd', 'Wpisz poprawną nazwę i kwotę.', 'error');
+
+    window.db.home.debts.push({
+        id: Date.now(),
+        person: n,
+        amount: v,
+        type: window.hDebtType || 'they_owe',
+        date: dt, // Data wpisu (np. data zakupu PayPo)
+        deadline: dl, // Termin oddania / spłaty
+        isClosed: false
+    });
+    window.save();
+    window.render();
+};
+
 window.rHome = function() {
     let h = window.db.home; 
     let t = window.db.tab; 
@@ -264,7 +286,7 @@ window.rHome = function() {
         let hideScrollStyle = `<style>.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }</style>`;
 
         if (activeLoans.length === 0) { 
-            loansHtml = '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:10px 0 30px;">Brak zobowiązań kredytowych. Ciesz się wolnością! 🕊️</div>'; 
+            loansHtml = '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:10px 0 30px;">Brak zobowiązań. Dodaj kredyt lub raty u znajomego! 🕊️</div>'; 
         } else {
             let mappedLoans = activeLoans.map(l => {
                 let kap = parseFloat(l.kapital); 
@@ -289,9 +311,9 @@ window.rHome = function() {
                 if(paidKap < 0) paidKap = 0; 
                 let paidPctKap = bor > 0 ? (paidKap / bor) * 100 : 0; 
                 
-                let today = new Date(); 
-                let nextD = new Date(today.getFullYear(), today.getMonth(), l.day || 10); 
-                if(today.getDate() > (l.day || 10)) nextD.setMonth(nextD.getMonth() + 1); 
+                let todayDate = new Date(); 
+                let nextD = new Date(todayDate.getFullYear(), todayDate.getMonth(), l.day || 10); 
+                if(todayDate.getDate() > (l.day || 10)) nextD.setMonth(nextD.getMonth() + 1); 
                 let nextDateStr = nextD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                 
                 let detailsGrid = `
@@ -380,14 +402,90 @@ window.rHome = function() {
 
         APP.innerHTML = hdr + `
         <div class="dash-hero" style="padding-bottom:10px;">
-            <p style="letter-spacing:1px; color:var(--danger)">KREDYTY I LEASINGI</p>
+            <p style="letter-spacing:1px; color:var(--danger)">KREDYTY, RATY (PAYPO), LEASINGI</p>
             <h1 style="color:#fff; font-size:2.5rem; margin-bottom:20px;">Zobowiązania</h1>
-            <button class="btn btn-danger" style="border-radius:12px; font-weight:900; box-shadow:0 4px 20px rgba(239,68,68,0.4); width:auto; padding:12px 25px; font-size:0.9rem;" onclick="window.hOpenLoanModal()">+ DODAJ ZOBOWIĄZANIE</button>
+            <button class="btn btn-danger" style="border-radius:12px; font-weight:900; box-shadow:0 4px 20px rgba(239,68,68,0.4); width:auto; padding:12px 25px; font-size:0.9rem;" onclick="window.hOpenLoanModal()">+ DODAJ ZOBOWIĄZANIE (KREDYT/RATY)</button>
         </div>
         ${debtSummaryHtml}
         ${toggleHtml}
         ${loansHtml}
         ${proOptBtn}
+        
+        <div class="section-lbl" style="color:var(--warning); border-color:var(--warning); margin-top:30px;">⏳ PayPo / Odroczone i Długi</div>
+        <div class="panel" style="border-color:var(--warning);">
+            <p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-bottom:15px;">Masz zakupy z odroczoną płatnością (PayPo/AllegroPay) na 30 dni lub pożyczyłeś komuś gotówkę? Zapisz to tutaj!</p>
+            ${notebookSummary}
+            <div class="mode-switch" style="margin-bottom:15px; background:rgba(0,0,0,0.5);">
+                <div class="m-btn ${window.hDebtType==='i_owe'?'active':''}" style="${window.hDebtType==='i_owe'?'background:var(--danger);color:#000;':''}" onclick="window.hDebtType='i_owe';window.render()">Ja komuś wiszę (PayPo)</div>
+                <div class="m-btn ${window.hDebtType==='they_owe'?'active':''}" style="${window.hDebtType==='they_owe'?'background:var(--success);color:#000;':''}" onclick="window.hDebtType='they_owe';window.render()">Ktoś mi wisi</div>
+            </div>
+            <div class="inp-row">
+                <div class="inp-group"><label>Kto / Tytuł (np. PayPo - Buty)</label><input type="text" id="hd-name" placeholder="np. Allegro Pay" style="background:#000;"></div>
+                <div class="inp-group"><label>Kwota (zł)</label><input type="number" id="hd-val" placeholder="np. 150" style="background:#000;"></div>
+            </div>
+            <div class="inp-row">
+                <div class="inp-group"><label>Data powstania (Zakupu)</label><input type="date" id="hd-date" value="${today}" style="background:#000;"></div>
+                <div class="inp-group"><label>Termin spłaty (do kiedy?)</label><input type="date" id="hd-deadline" style="background:#000;"></div>
+            </div>
+            <button class="btn" style="background:var(--warning); color:#000; padding:15px; margin-top:10px; margin-bottom:20px; font-weight:900;" onclick="window.hAddDebt()">ZAPISZ DO ODROCZONYCH</button>
+            <div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">
+                ${h.debts.filter(d => !d.isClosed).length === 0 ? '<div style="text-align:center; color:var(--muted); font-size:0.85rem;">Brak wpisów w zeszycie. Wpisz swoje pierwsze PayPo!</div>' : 
+                h.debts.filter(d => !d.isClosed).map(d => { 
+                    let amt = parseFloat(d.amount) || 0; 
+                    
+                    // --- Logika Paska Postępu i Odliczania (A'la PayPo) ---
+                    let dlHtml = '';
+                    if (d.deadline) {
+                        let dlDate = new Date(d.deadline);
+                        let tDate = new Date();
+                        tDate.setHours(0,0,0,0);
+                        let diff = Math.ceil((dlDate - tDate) / (1000 * 60 * 60 * 24));
+                        let cStr = diff > 7 ? 'var(--success)' : (diff >= 0 ? 'var(--warning)' : 'var(--danger)');
+                        let tStr = diff > 0 ? `zostało ${diff} dni` : (diff === 0 ? 'dzisiaj!' : `po terminie (${Math.abs(diff)} dni)`);
+                        
+                        let totalDays = 30; 
+                        if(d.date) {
+                            let stDate = new Date(d.date);
+                            let calcDays = Math.ceil((dlDate - stDate)/(1000*60*60*24));
+                            if (calcDays > 0) totalDays = calcDays;
+                        }
+                        let pct = totalDays > 0 ? ((totalDays - diff) / totalDays) * 100 : 0;
+                        if(pct > 100) pct = 100; if(pct < 0) pct = 0;
+
+                        dlHtml = `
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:10px; border-radius:8px; margin-top:12px;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:6px;">
+                                <span style="color:var(--muted)">Spłać do: ${d.deadline}</span>
+                                <strong style="color:${cStr}">${tStr}</strong>
+                            </div>
+                            <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                                <div style="width:${pct}%; background:${cStr}; height:100%;"></div>
+                            </div>
+                        </div>`;
+                    }
+                    
+                    return `
+                    <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:16px; margin-bottom:15px; border-left:4px solid ${d.type === 'they_owe' ? 'var(--success)' : 'var(--danger)'};">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div>
+                                <strong style="color:#fff; font-size:1.15rem; display:block; margin-bottom:4px;">${d.person}</strong>
+                                <span style="font-size:0.75rem; color:var(--muted);">Kwota: <strong style="color:${d.type === 'they_owe' ? 'var(--success)' : 'var(--danger)'}; font-size:1.1rem;">${Number(amt || 0).toFixed(2)} zł</strong></span>
+                                ${d.date ? `<div style="font-size:0.65rem; color:var(--muted); margin-top:4px;">Z dnia: ${d.date}</div>` : ''}
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-end;">
+                                <button style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:6px 12px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="window.hOpenPayDebtModal(${d.id})">💸 SPŁAĆ</button>
+                                <div style="display:flex; gap:5px;">
+                                    <button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; padding:6px; border-radius:8px; cursor:pointer; font-size:0.8rem;" onclick="window.hDelDebtMistake(${d.id})">🗑️</button>
+                                </div>
+                            </div>
+                        </div>
+                        ${dlHtml}
+                        ${d.type === 'i_owe' ? `<div style="text-align:center; margin-top:12px; background:rgba(14,165,233,0.1); padding:8px; border-radius:8px; border:1px dashed rgba(14,165,233,0.3);"><span onclick="window.sysAlert('Odroczone na Raty', 'Jeśli chcesz rozłożyć to PayPo/Dług na raty: 1. Skasuj ten wpis koszem. 2. Wyjedź na samą górę i dodaj to jako nowe ZOBOWIĄZANIE (Kredyt). Podaj tam kwotę, ilość rat i prowizję od PayPo.', 'info')" style="font-size:0.7rem; color:var(--info); font-weight:bold; cursor:pointer;">Czy to PayPo / dług przechodzi na Raty? 👉</span></div>` : ''}
+                    </div>`; 
+                }).join('')}
+            </div>
+        </div>
+        
         <div class="section-lbl" style="color:var(--success); border-color:var(--success); margin-top:10px;">🎯 Skarbonki / Cele Oszczędnościowe</div>
         <div style="padding: 10px 15px;">
             <div style="text-align:center; margin-bottom:15px;">
@@ -430,37 +528,7 @@ window.rHome = function() {
                 </div>`;
             }).join('') || '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:10px 0;">Brak aktywnych celów.</div>'}
         </div>
-        
-        <div class="section-lbl" style="color:var(--warning); border-color:var(--warning); margin-top:30px;">🤝 Zeszyt Długów</div>
-        <div class="panel" style="border-color:var(--warning);">
-            ${notebookSummary}
-            <div class="mode-switch" style="margin-bottom:15px; background:rgba(0,0,0,0.5);">
-                <div class="m-btn ${window.hDebtType==='they_owe'?'active':''}" style="${window.hDebtType==='they_owe'?'background:var(--success);color:#000;':''}" onclick="window.hDebtType='they_owe';window.render()">Ktoś mi wisi</div>
-                <div class="m-btn ${window.hDebtType==='i_owe'?'active':''}" style="${window.hDebtType==='i_owe'?'background:var(--danger);color:#000;':''}" onclick="window.hDebtType='i_owe';window.render()">Ja komuś wiszę</div>
-            </div>
-            <div class="inp-row">
-                <div class="inp-group"><label>Kto / Od kogo?</label><input type="text" id="hd-name" placeholder="np. Jan Kowalski" style="background:#000;"></div>
-                <div class="inp-group"><label>Kwota (zł)</label><input type="number" id="hd-val" placeholder="np. 150" style="background:#000;"></div>
-            </div>
-            <button class="btn" style="background:var(--warning); color:#000; padding:15px; margin-bottom:20px; font-weight:900;" onclick="window.hAddDebt()">ZAPISZ DŁUG DO ZESZYTU</button>
-            <div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">
-                ${h.debts.filter(d => !d.isClosed).length === 0 ? '<div style="text-align:center; color:var(--muted); font-size:0.85rem;">Brak wpisów w zeszycie.</div>' : 
-                h.debts.filter(d => !d.isClosed).map(d => { 
-                    let amt = parseFloat(d.amount) || 0; 
-                    return `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:12px 15px; border-radius:12px; margin-bottom:10px; border-left:4px solid ${d.type === 'they_owe' ? 'var(--success)' : 'var(--danger)'};">
-                        <div>
-                            <strong style="color:#fff; font-size:1.1rem;">${d.person}</strong>
-                            <span style="font-size:0.75rem; color:var(--muted); display:block;">Pozostało: <strong style="color:${d.type === 'they_owe' ? 'var(--success)' : 'var(--danger)'};">${Number(amt || 0).toFixed(2)} zł</strong></span>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <button style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="window.hOpenPayDebtModal(${d.id})">💸 SPŁAĆ</button>
-                            <button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; padding:8px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="window.hDelDebtMistake(${d.id})">🗑️</button>
-                        </div>
-                    </div>`; 
-                }).join('')}
-            </div>
-        </div>` + nav;
+        ` + nav;
     }
     
     // ==========================================
@@ -588,7 +656,7 @@ window.rHome = function() {
                 <div class="panel" style="padding:15px; border-left:4px solid ${a.c}; margin-bottom:15px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div style="display:flex; align-items:center; gap:15px;">
-                            <div style="width:50px; height:50px; border-radius:50%; background:${a.c}22; display:flex; align-items:center; justify-content:center; font-size:1.8rem; border:1px solid ${a.c}55;">${a.i}</div>
+                            <div style="width:50px; height:50px; border-radius:50%; background:${a.c}22; display:flex; align-items:center; justify-content:center; font-size:1.8rem; border:1px solid ${a.c}55 regular;">${a.i}</div>
                             <div>
                                 <strong style="font-size:1.2rem; color:#fff;">${a.n}</strong>
                                 <small style="color:var(--muted); display:block; margin-top:2px; font-size:0.75rem;">Bieżące saldo (${pct}%)</small>
