@@ -66,13 +66,14 @@ window.rDrv = function() {
     let d = (window.db && window.db.drv) ? window.db.drv : {cfg:{}, sh:{tr:[]}, q:{}, clients:[]};
     let t = window.db.tab || 'term';
     
+    // NAPRAWA: Zmiana window.db.tab=... na window.switchTab(...) gwarantująca zapis stanu
     let nav = `
     <div class="nav">
-        <div class="nav-item ${t==='term'?'active':''}" onclick="window.db.tab='term'; window.render();"><i>🚕</i>Panel</div>
-        <div class="nav-item ${t==='quote'?'active':''}" onclick="window.db.tab='quote'; window.render();"><i>🧮</i>Wycena</div>
-        <div class="nav-item ${t==='garage'?'active':''}" onclick="window.db.tab='garage'; window.render();"><i>⛽</i>Garaż</div>
-        <div class="nav-item ${t==='stats'?'active':''}" onclick="window.db.tab='stats'; window.render();"><i>📊</i>Wyniki</div>
-        <div class="nav-item ${t==='set'?'active':''}" onclick="window.db.tab='set'; window.render();"><i>⚙️</i>Opcje</div>
+        <div class="nav-item ${t==='term'?'active':''}" onclick="window.switchTab('term')"><i>🚕</i>Panel</div>
+        <div class="nav-item ${t==='quote'?'active':''}" onclick="window.switchTab('quote')"><i>🧮</i>Wycena</div>
+        <div class="nav-item ${t==='garage'?'active':''}" onclick="window.switchTab('garage')"><i>⛽</i>Garaż</div>
+        <div class="nav-item ${t==='stats'?'active':''}" onclick="window.switchTab('stats')"><i>📊</i>Wyniki</div>
+        <div class="nav-item ${t==='set'?'active':''}" onclick="window.switchTab('set')"><i>⚙️</i>Opcje</div>
     </div>`;
     
     let hdr = `
