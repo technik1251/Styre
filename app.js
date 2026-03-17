@@ -73,7 +73,6 @@ window.onerror = function(msg, url, lineNo) {
 // 4. GLOBALNE FUNKCJE NAWIGACYJNE
 // ==========================================
 
-// 🔥 To naprawia przełączanie widoków w menu (zastępuje wywalone funkcje)
 window.switchTab = function(t) { 
     if (window.db) window.db.tab = t; 
     window.save(); 
@@ -150,13 +149,39 @@ window.render = function() {
 // ==========================================
 
 window.rLauncher = function() {
+    let roadmapHtml = `
+    <div style="width:100%; max-width:350px; margin-top:25px; text-align:left; background:linear-gradient(145deg, #1e1b4b, #09090b); border:1px solid rgba(139, 92, 246, 0.3); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(139, 92, 246, 0.1);">
+        <h3 style="color:#c084fc; margin:0 0 15px 0; font-size:1rem; display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:1px;"><span>🚀</span> Wkrótce w StyreOS PRO</h3>
+        
+        <div style="margin-bottom:15px; border-left:2px solid #8b5cf6; padding-left:10px;">
+            <strong style="color:#fff; font-size:0.85rem;">🚕 RideHelper AI & e-Kasa API</strong>
+            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Pływająca nakładka opłacalności zlecenia (Uber/Bolt) oraz auto-zaciąganie kursów z kas RT3000 i centrali.</p>
+        </div>
+        
+        <div style="margin-bottom:15px; border-left:2px solid #14b8a6; padding-left:10px;">
+            <strong style="color:#fff; font-size:0.85rem;">🏦 Open Banking (Banki & Budżet)</strong>
+            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Połączenie z bankami. AI samo w locie rozpozna i skategoryzuje transakcje (np. Żabka ➔ Zakupy Spożywcze).</p>
+        </div>
+
+        <div style="margin-bottom:15px; border-left:2px solid #ec4899; padding-left:10px;">
+            <strong style="color:#fff; font-size:0.85rem;">📸 Inteligentny Skaner Paragonów</strong>
+            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Wystarczy zrobić zdjęcie paragonu, a AI odczyta kwotę, datę i samo wrzuci ją w koszty napraw lub tankowania.</p>
+        </div>
+        
+        <div style="border-left:2px solid #f59e0b; padding-left:10px;">
+            <strong style="color:#fff; font-size:0.85rem;">🚛 Moduł Flota / Spedycja</strong>
+            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Obsługa wielu aut i kierowców, fakturowanie, KSeF i pełna automatyczna księgowość firmy transportowej.</p>
+        </div>
+    </div>
+    `;
+
     APP.innerHTML = `
-    <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; background:var(--bg);">
+    <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px 20px; text-align:center; background:var(--bg);">
         <div style="width:90px;height:90px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
             <img src="icon-512.png" style="width:100%;height:100%;border-radius:22px;box-shadow:0 10px 25px rgba(0,0,0,0.5);" alt="Logo" onerror="this.outerHTML='<div style=\\'font-size:3rem;\\'>🚀</div>'">
         </div>
         <h1 style="color:#fff; font-size:2.2rem; margin-bottom:5px;">Cześć, ${window.db.userName}! 👋</h1>
-        <p style="color:var(--muted); margin-bottom:40px; font-size:0.95rem;">Wybierz swój pulpit roboczy</p>
+        <p style="color:var(--muted); margin-bottom:30px; font-size:0.95rem;">Wybierz swój pulpit roboczy</p>
 
         <div style="width:100%; max-width:350px; display:flex; flex-direction:column; gap:15px;">
             <button class="btn" style="background:var(--driver); color:#000; padding:20px; font-size:1.2rem; font-weight:900; box-shadow:0 8px 25px rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center; gap:12px; border-radius:16px;" onclick="window.db.role='drv'; window.db.tab='term'; window.save(); window.render();">
@@ -170,7 +195,9 @@ window.rLauncher = function() {
             </button>
         </div>
 
-        <div style="margin-top:50px; display:flex; flex-direction:column; gap:15px; align-items:center;">
+        ${roadmapHtml}
+
+        <div style="margin-top:40px; display:flex; flex-direction:column; gap:15px; align-items:center;">
             <button style="background:transparent; border:none; color:var(--danger); font-size:0.8rem; text-decoration:underline; cursor:pointer;" onclick="if(confirm('Chcesz zresetować konfigurację i zacząć od nowa?')){ localStorage.clear(); location.reload(); }">Wyczyść dane i zresetuj aplikację</button>
         </div>
     </div>
