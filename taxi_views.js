@@ -66,7 +66,6 @@ window.rDrv = function() {
     let d = (window.db && window.db.drv) ? window.db.drv : {cfg:{}, sh:{tr:[]}, q:{}, clients:[]};
     let t = window.db.tab || 'term';
     
-    // Niezawodna nawigacja pomijająca zaginione funkcje
     let nav = `
     <div class="nav">
         <div class="nav-item ${t==='term'?'active':''}" onclick="window.db.tab='term'; window.render();"><i>🚕</i>Panel</div>
@@ -415,6 +414,25 @@ window.rDrv = function() {
             <div class="inp-group"><label>Do</label><input type="date" value="${window.db.filterTo||''}" onchange="window.db.filterTo=this.value; window.render()"></div>
         </div>` : '';
 
+        // --- Logika Inteligentnego Przycisku Transferu ---
+        let totalTransferred = 0;
+        if(window.db.home && window.db.home.trans) {
+            window.db.home.trans.forEach(t => {
+                if(t.cat === 'Wypłata z Etatu' && t.d === 'Utarg z Taxi') {
+                    totalTransferred += (parseFloat(t.v)||0);
+                }
+            });
+        }
+        let availableCashForTransfer = cashEarned - totalTransferred;
+        
+        let transferButtonHtml = '';
+        if (availableCashForTransfer > 0) {
+            transferButtonHtml = `<button class="btn btn-success" style="margin-top:15px; width:calc(100% - 30px); margin-left:auto; margin-right:auto; font-weight:bold; box-shadow: 0 0 20px rgba(34,197,94,0.4);" onclick="window.dTransferToHomeModal()"><span style="font-size:1.1rem; margin-right:8px;">💸</span> PRZELEJ GOTÓWKĘ DO BUDŻETU<br><small style="font-weight:normal; font-size:0.75rem; color:rgba(255,255,255,0.8); display:block; margin-top:4px;">Nierozliczone: ${Number(availableCashForTransfer).toFixed(2)} zł</small></button>`;
+        } else {
+            transferButtonHtml = `<button class="btn" style="margin-top:15px; width:calc(100% - 30px); margin-left:auto; margin-right:auto; font-weight:bold; background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1); cursor:not-allowed;" disabled><span style="font-size:1.1rem; margin-right:8px;">✅</span> GOTÓWKA W PEŁNI ROZLICZONA<br><small style="font-weight:normal; font-size:0.75rem; display:block; margin-top:4px;">Zaksięgowano w Domu: ${Number(totalTransferred).toFixed(2)} zł</small></button>`;
+        }
+        // ---------------------------------------------------
+
         APP.innerHTML = hdr + `
         <div class="mode-switch" style="margin:12px;">
             <div class="m-btn ${fM==='today'?'active':''}" onclick="window.db.filter='today'; window.render()">Dziś</div>
@@ -431,7 +449,7 @@ window.rDrv = function() {
         <div class="dash-hero" style="padding-top:0;">
             <p>${window.db.drv.showFixed ? 'TWOJE PRAWDZIWE NETTO' : 'ZYSK Z KURSÓW (BEZ ZUS/AUTA)'}</p>
             <h1 style="color:${n>=0?'var(--success)':'var(--danger)'}; font-size:3.8rem;">${Number(n).toFixed(2)} zł</h1>
-            <button class="btn btn-success" style="margin-top:15px; width:calc(100% - 30px); margin-left:auto; margin-right:auto; font-weight:bold;" onclick="window.dTransferToHomeModal(${cashEarned})">💸 PRZELEJ GOTÓWKĘ DO BUDŻETU</button>
+            ${transferButtonHtml}
         </div>
         ${breakdownStatsHtml}
         <div class="grid-2">
