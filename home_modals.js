@@ -269,8 +269,8 @@ window.hToggleLoanFields = function() {
     let isCard = (type === 'Karta');
     let isRaty = (type === 'Raty');
     
-    document.getElementById('lbl-borrowed').innerText = isCard ? 'Przyznany Limit Karty (zł)' : 'Całkowita kwota do spłaty (zł)';
-    document.getElementById('lbl-kapital').innerText = isCard ? 'Bieżące Zadłużenie na Karcie (zł)' : 'Kwota kapitału pozostająca na dziś (zł)';
+    document.getElementById('lbl-borrowed').innerText = isCard ? 'Przyznany Limit Karty (zł)' : 'Całkowita kwota zakupów/kredytu (zł)';
+    document.getElementById('lbl-kapital').innerText = isCard ? 'Bieżące Zadłużenie na Karcie (zł)' : 'Kwota pozostająca NA DZIŚ (zł)';
     
     let lblDay = document.getElementById('lbl-day'); 
     if(lblDay) lblDay.innerText = isCard ? 'Dzień cyklu rozliczeniowego (Spłata)' : 'Dzień spłaty w miesiącu (1-31)';
@@ -291,6 +291,15 @@ window.hToggleLoanFields = function() {
     }
 };
 
+// Pomocnicza funkcja do przeliczania kapitału przy wpisywaniu rat (dla nowych wpisów)
+window.hCalcKapital = function() {
+    let r = parseFloat(document.getElementById('ml-rata').value) || 0;
+    let l = parseInt(document.getElementById('ml-left-inst').value) || 0;
+    if(r > 0 && l > 0) {
+        document.getElementById('ml-kapital').value = (r * l).toFixed(2);
+    }
+};
+
 window.hOpenLoanModal = function(id = null, forceCard = false) {
     window.hInitDb();
     let ln = id ? window.db.home.loans.find(x => x.id == id) : null; 
@@ -300,25 +309,29 @@ window.hOpenLoanModal = function(id = null, forceCard = false) {
     let dPay = ln && ln.declaredPay ? ln.declaredPay : '100';
 
     let html = `<div id="m-loan" class="modal-overlay"><div class="panel" style="width:100%; max-width:380px; background:#18181b; border:1px solid #27272a; max-height:90vh; overflow-y:auto;">
-        <h3 style="margin-top:0; color:#fff; display:flex; align-items:center; gap:10px;">${ln ? '✏️ Edytuj' : (isC ? '💳 Nowa Karta' : '🏦 Nowe Zobowiązanie')}</h3>
-        <div class="inp-group" style="margin-bottom:12px;"><label>Nazwa (np. ${isC?'Karta Millenium':'PayPo - Zakupy'})</label><input type="text" id="ml-n" value="${ln?ln.n:''}"></div>
+        <h3 style="margin-top:0; color:#fff; display:flex; align-items:center; gap:10px;">${ln ? '✏️ Edytuj Zobowiązanie' : (isC ? '💳 Nowa Karta' : '🏦 Nowe Zobowiązanie')}</h3>
+        
         <div class="inp-group" style="margin-bottom:12px; ${isC?'display:none':''}"><label>Typ zobowiązania</label>
             <select id="ml-type" onchange="window.hToggleLoanFields()" style="background:#09090b; border-color:var(--info); color:var(--info); font-weight:bold;">
-                <option value="Kredyt" ${ln&&ln.type==='Kredyt'?'selected':''}>Kredyt Gotówkowy / Hipoteka</option>
-                <option value="Raty" ${(!ln && !isC) || (ln&&ln.type==='Raty')?'selected':''}>Raty 0% / PayPo / Znajomy</option>
-                <option value="Leasing" ${ln&&ln.type==='Leasing'?'selected':''}>Leasing</option>
+                <option value="Raty" ${(!ln && !isC) || (ln&&ln.type==='Raty')?'selected':''}>🛍️ Odroczone / PayPo / Raty 0%</option>
+                <option value="Kredyt" ${ln&&ln.type==='Kredyt'?'selected':''}>🏦 Kredyt Gotówkowy / Hipoteka</option>
+                <option value="Leasing" ${ln&&ln.type==='Leasing'?'selected':''}>🚗 Leasing</option>
                 <option value="Karta" ${isC?'selected':''}>💳 Karta Kredytowa</option>
             </select>
         </div>
         ${isC ? `<input type="hidden" id="ml-type" value="Karta">` : ''}
+
+        <div class="inp-group" style="margin-bottom:12px;"><label>Nazwa (np. ${isC?'Karta Millenium':'Allegro Pay - Buty'})</label><input type="text" id="ml-n" value="${ln?ln.n:''}"></div>
         <div class="inp-group" style="margin-bottom:12px;"><label>Konto z którego najczęściej spłacasz</label><select id="ml-acc" style="background:#09090b;">${window.db.home.accs.map(a => `<option value="${a.id}" ${a.id==(ln?ln.accId:'')?'selected':''}>${a.n}</option>`).join('')}</select></div>
-        <div class="inp-group" style="margin-bottom:12px; border:1px solid var(--success); padding:10px; border-radius:12px; background:rgba(34,197,94,0.05);"><label id="lbl-borrowed" style="color:var(--success);">Całkowita kwota do spłaty (zł)</label><input type="number" step="0.01" id="ml-borrowed" value="${b}" placeholder="np. 237" style="color:var(--success); font-weight:bold;"></div>
+        <div class="inp-group" style="margin-bottom:12px; border:1px solid var(--success); padding:10px; border-radius:12px; background:rgba(34,197,94,0.05);"><label id="lbl-borrowed" style="color:var(--success);">Całkowita kwota zakupu / Limit Karty (zł)</label><input type="number" step="0.01" id="ml-borrowed" value="${b}" placeholder="np. 237" style="color:var(--success); font-weight:bold;"></div>
         
         <div id="row-rates-1" class="inp-row" style="margin-bottom:12px; display:none;"><div class="inp-group"><label>Oprocentowanie RRSO (%)</label><input type="number" step="0.01" id="ml-pct" value="${ln?(ln.pct||0):0}"></div><div class="inp-group"><label>Typ Oprocentowania</label><select id="ml-int-type" style="background:#09090b;"><option value="Stałe" ${ln&&ln.intType==='Stałe'?'selected':''}>Stałe</option><option value="Zmienne" ${ln&&ln.intType==='Zmienne'?'selected':''}>Zmienne</option></select></div></div>
         
-        <div class="inp-row" style="margin-bottom:15px;"><div class="inp-group"><label id="lbl-kapital">Kwota pozostająca NA DZIŚ (zł)</label><input type="number" step="0.01" id="ml-kapital" value="${ln?(ln.kapital||''):''}" style="border-color:var(--danger); color:var(--danger); background:rgba(239,68,68,0.05);"></div><div class="inp-group" id="group-rata"><label>Kwota JEDNEJ raty (zł)</label><input type="number" step="0.01" id="ml-rata" value="${ln?(ln.rata||''):''}"></div></div>
+        <div id="row-rates-2" class="inp-row" style="margin-bottom:12px; display:flex;"><div class="inp-group" id="group-rata"><label>Kwota JEDNEJ raty (zł)</label><input type="number" step="0.01" id="ml-rata" value="${ln?(ln.rata||''):''}" oninput="window.hCalcKapital()"></div><div class="inp-group"><label>Ile rat zostało do końca?</label><input type="number" id="ml-left-inst" value="${ln?(ln.installmentsLeft||''):''}" oninput="window.hCalcKapital()"></div></div>
         
-        <div id="row-rates-2" class="inp-row" style="margin-bottom:12px; display:flex;"><div class="inp-group"><label>Z ilu rat łącznie?</label><input type="number" id="ml-total-inst" value="${ln?(ln.totalInst||''):''}"></div><div class="inp-group"><label>Ile rat zostało do końca?</label><input type="number" id="ml-left-inst" value="${ln?(ln.installmentsLeft||''):''}"></div></div>
+        <div class="inp-group" style="margin-bottom:15px;"><label id="lbl-kapital">Kwota pozostająca NA DZIŚ (zł)</label><input type="number" step="0.01" id="ml-kapital" value="${ln?(ln.kapital||''):''}" style="border-color:var(--danger); color:var(--danger); background:rgba(239,68,68,0.05);"></div>
+        
+        <div class="inp-group" style="margin-bottom:12px; display:none;"><label>Z ilu rat łącznie?</label><input type="number" id="ml-total-inst" value="${ln?(ln.totalInst||''):''}"></div>
         
         <div id="row-card-opts" class="inp-row" style="margin-bottom:12px; display:none;">
             <div class="inp-group"><label>Minimalna spłata (%)</label><input type="number" step="0.1" id="ml-min-pay" value="${mPay}"></div>
@@ -348,8 +361,8 @@ window.hSaveLoan = function(id) {
     let p = (isRaty || isCard) ? 0 : (parseFloat(document.getElementById('ml-pct').value) || 0); 
     
     let r = isCard ? 0 : parseFloat(document.getElementById('ml-rata').value); 
-    let ti = isCard ? 0 : parseInt(document.getElementById('ml-total-inst').value) || 0; 
     let i = isCard ? 0 : parseInt(document.getElementById('ml-left-inst').value) || 0;
+    let ti = parseInt(document.getElementById('ml-total-inst').value) || i; // Jeśli to nowe PayPo, ustawiamy tyle co zostało
     
     let minPay = isCard ? (parseFloat(document.getElementById('ml-min-pay').value) || 5) : 0; 
     let decPay = isCard ? document.getElementById('ml-dec-pay').value : '100';
@@ -410,12 +423,12 @@ window.hCreditHoliday = function(loanId) {
         return alert("Już masz wakacje"); 
     } 
     if(window.sysConfirm) {
-        window.sysConfirm("Wakacje 🏖️", "Zawiesić spłatę w tym miesiącu?", () => { 
+        window.sysConfirm("Wakacje / Odroczenie 🏖️", "Zawiesić spłatę raty w tym miesiącu?", () => { 
             ln.holidayMonth = currentM; 
             window.hSyncSchedule(); 
             window.save(); 
             window.render(); 
-            window.sysAlert("Sukces!", "Wakacje aktywowane.", "success"); 
+            window.sysAlert("Sukces!", "Rata została odroczona na kolejny miesiąc.", "success"); 
         });
     } else {
         ln.holidayMonth = currentM; 
@@ -429,7 +442,7 @@ window.hPayOffCompletely = function(loanId) {
     let ln = window.db.home.loans.find(x => x.id == loanId); 
     if(!ln) return; 
     if(window.sysConfirm) {
-        window.sysConfirm("Całkowita Spłata 🏆", `Spłacić całkowicie zadłużenie dzisiaj?`, () => { 
+        window.sysConfirm("Całkowita Spłata 🏆", `Czy na pewno opłacasz całość na dziś (${Number(ln.kapital).toFixed(2)} zł)?`, () => { 
             executePayOffCompletely(ln); 
             window.sysAlert("Zrealizowano! 🎉", `Zobowiązanie spłacone w całości!`, "success"); 
         });
@@ -458,11 +471,16 @@ window.hOpenPayLoanModal = function(loanId, transId = null) {
     let ln = window.db.home.loans.find(x => x.id == loanId); 
     if(!ln) return; 
     let isCard = ln.type === 'Karta';
+    let isRaty = ln.type === 'Raty';
     
     let minP = (ln.kapital * (ln.minPayPct || 5)) / 100;
     if(minP < 50 && ln.kapital > 0) minP = Math.min(50, ln.kapital);
+    
     let defVal = isCard ? (ln.declaredPay === 'min' ? minP : ln.kapital) : ln.rata;
-    let subText = isCard ? `Zadłużenie całkowite: <strong>${Number(ln.kapital||0).toFixed(2)} zł</strong><br>Min. spłata: <strong>${Number(minP||0).toFixed(2)} zł</strong>` : `Kwota raty: <strong>${Number(ln.rata||0).toFixed(2)} zł</strong>`;
+    // Ostatnia rata w PayPo potrafi być inna, dlatego upewniamy się, że nie każe spłacać więcej niż zostało:
+    if(ln.installmentsLeft === 1) defVal = ln.kapital;
+
+    let subText = isCard ? `Zadłużenie całkowite: <strong>${Number(ln.kapital||0).toFixed(2)} zł</strong><br>Min. spłata: <strong>${Number(minP||0).toFixed(2)} zł</strong>` : `Zalecana kwota do spłaty z harmonogramu: <strong>${Number(defVal||0).toFixed(2)} zł</strong>`;
 
     let html = `<div id="m-pay-loan" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--danger);"><h3 style="margin-top:0; color:var(--danger);">💸 Spłata: ${ln.n}</h3><p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">${subText}</p><div class="inp-group" style="margin-bottom:15px;"><label>Kwota wpłaty (zł)</label><input type="number" step="0.01" id="mpl-val" value="${Number(defVal||0).toFixed(2)}" class="big-inp" style="color:var(--danger); background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:20px;"><label>Konto pobrania</label><select id="mpl-acc" style="background:#18181b;">${window.db.home.accs.map(a => `<option value="${a.id}" ${a.id==(ln.accId||window.db.home.accs[0].id)?'selected':''}>${a.n}</option>`).join('')}</select></div><button class="btn btn-danger" onclick="window.hExecPayLoan('${loanId}', '${transId||''}')">POTWIERDŹ SPŁATĘ</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-pay-loan').remove()">ANULUJ</button></div></div>`; 
     document.body.insertAdjacentHTML('beforeend', html);
@@ -478,6 +496,7 @@ window.hExecPayLoan = function(loanId, transId) {
     let ln = window.db.home.loans.find(x => x.id == loanId);
     if(ln) {
         let isCard = ln.type === 'Karta'; 
+        let isRaty = ln.type === 'Raty';
         let kap = parseFloat(ln.kapital)||0; 
         let pct = parseFloat(ln.pct)||0; 
         let principalPaid = 0; 
@@ -491,6 +510,9 @@ window.hExecPayLoan = function(loanId, transId) {
                 principalPaid = val - interest; 
                 if(principalPaid < 0) principalPaid = 0; 
             }
+        } else if (isRaty) {
+            // Raty 0% - wszystko idzie na spłatę kapitału
+            principalPaid = val; interest = 0;
         } else {
             interest = kap * (pct / 100) / 12; 
             principalPaid = val - interest; 
@@ -506,8 +528,12 @@ window.hExecPayLoan = function(loanId, transId) {
         
         ln.kapital = kap - principalPaid; 
         if(!isCard) ln.installmentsLeft = (parseInt(ln.installmentsLeft)||0) - 1; 
-        if(ln.kapital < 0) ln.kapital = 0; 
-        if(ln.installmentsLeft < 0) ln.installmentsLeft = 0;
+        
+        if(ln.kapital <= 0) {
+            ln.kapital = 0; 
+            ln.installmentsLeft = 0;
+            ln.isClosed = true;
+        }
         
         if(transId) window.db.home.trans = window.db.home.trans.filter(x => x.id != transId); 
         else window.db.home.trans = window.db.home.trans.filter(x => !(x.isPlanned && x.loanId == loanId && x.rD.startsWith(window.getLocalYMD().substring(0,7)))); 
@@ -524,7 +550,7 @@ window.hExecPayLoan = function(loanId, transId) {
 window.hOverpayLoan = function(loanId) {
     let ln = window.db.home.loans.find(x => x.id == loanId); 
     if(!ln) return;
-    let html = `<div id="m-overpay" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--info);"><h3 style="margin-top:0; color:var(--info);">💰 Nadpłata Kapitału</h3><div class="inp-group" style="margin-bottom:15px;"><label>Dodatkowa gotówka (zł)</label><input type="number" id="mo-val" placeholder="np. 1000" class="big-inp" style="color:var(--info); background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:20px;"><label>Konto</label><select id="mo-acc" style="background:#18181b;">${window.db.home.accs.map(a => `<option value="${a.id}" ${a.id==(ln.accId||window.db.home.accs[0].id)?'selected':''}>${a.n}</option>`).join('')}</select></div><button class="btn" style="background:var(--info); color:#fff;" onclick="window.hSaveOverpay('${loanId}')">ZAPISZ NADPŁATĘ</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-overpay').remove()">ANULUJ</button></div></div>`; 
+    let html = `<div id="m-overpay" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--info);"><h3 style="margin-top:0; color:var(--info);">💰 Nadpłata Kapitału</h3><div class="inp-group" style="margin-bottom:15px;"><label>Nadpłata (dowolna kwota)</label><input type="number" id="mo-val" placeholder="np. 12.58" class="big-inp" style="color:var(--info); background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:20px;"><label>Konto</label><select id="mo-acc" style="background:#18181b;">${window.db.home.accs.map(a => `<option value="${a.id}" ${a.id==(ln.accId||window.db.home.accs[0].id)?'selected':''}>${a.n}</option>`).join('')}</select></div><button class="btn" style="background:var(--info); color:#fff;" onclick="window.hSaveOverpay('${loanId}')">ZAPISZ NADPŁATĘ</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-overpay').remove()">ANULUJ</button></div></div>`; 
     document.body.insertAdjacentHTML('beforeend', html);
 };
 
@@ -539,16 +565,19 @@ window.hSaveOverpay = function(loanId) {
     if(ln) { 
         window.db.home.trans.unshift({ 
             id: Date.now(), type: 'exp', cat: 'Kredyt / Leasing', v: val, 
-            d: 'Nadpłata: ' + ln.n, dt: new Date().toLocaleDateString('pl-PL'), 
+            d: 'Nadpłata / Spłata dowolna: ' + ln.n, dt: new Date().toLocaleDateString('pl-PL'), 
             rD: new Date().toISOString(), isPlanned: false, acc: accId, loanAction: 'overpay', 
             loanId: ln.id, principalPaid: val, instReduced: 0 
         }); 
         ln.kapital = (parseFloat(ln.kapital)||0) - val; 
-        if(ln.kapital < 0) ln.kapital = 0; 
+        if(ln.kapital <= 0) {
+            ln.kapital = 0;
+            ln.isClosed = true;
+        } 
         window.hSyncSchedule(); 
         window.save(); 
         window.render(); 
-        if(window.sysAlert) window.sysAlert("Nadpłacono!", `Zmniejszyłeś kapitał o ${Number(val||0).toFixed(2)} zł!`, "success"); 
+        if(window.sysAlert) window.sysAlert("Zaksięgowano!", `Zmniejszyłeś kapitał o ${Number(val||0).toFixed(2)} zł!`, "success"); 
     } 
     document.getElementById('m-overpay').remove(); 
 };
@@ -616,7 +645,7 @@ window.hDelPiggy = function(id) {
     } 
 };
 
-// --- DŁUGI / PAYPO I RATY ---
+// --- ODROCZONE (PAYPO) / DŁUGI ---
 window.hAddDebt = function() { 
     let n = document.getElementById('hd-name').value.trim(); 
     let v = parseFloat(document.getElementById('hd-val').value); 
@@ -649,7 +678,7 @@ window.hAddDebt = function() {
     
     window.db.home.trans.push({ 
         id: 'd_'+dId, type: isOwe ? 'exp' : 'inc', cat: isOwe ? 'Inne Wydatki' : 'Inne Wpływy', 
-        acc: window.db.home.accs[0].id, d: (isOwe ? 'Odroczone (PayPo): ' : 'Dług: ') + n, 
+        acc: window.db.home.accs[0].id, d: (isOwe ? 'Odroczone (BNPL): ' : 'Dług prywatny: ') + n, 
         v: v, who: window.db.userName, dt: dObj.toLocaleDateString('pl-PL'), 
         rD: dObj.toISOString(), isPlanned: true, debtId: dId 
     }); 
@@ -658,7 +687,7 @@ window.hAddDebt = function() {
     window.hSyncSchedule(); 
     window.save(); 
     window.render(); 
-    if(window.sysAlert) window.sysAlert("Sukces", "Zapisano wpis w zeszycie!", "success"); 
+    if(window.sysAlert) window.sysAlert("Sukces", "Zapisano wpis w Odroczonych!", "success"); 
 };
 
 window.hDelDebtMistake = function(id) { 
@@ -675,7 +704,7 @@ window.hDelDebtMistake = function(id) {
 window.hOpenPayDebtModal = function(id) { 
     let d = window.db.home.debts.find(x => x.id == id); 
     if(!d) return; 
-    let html = `<div id="m-pay-debt" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--warning);"><h3 style="margin-top:0; color:var(--warning);">🤝 Rozliczenie</h3><p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px;">Wpis: <strong>${d.person}</strong></p><div class="inp-group" style="margin-bottom:15px;"><input type="number" step="0.01" id="mpd-val" value="${Number(d.amount||0).toFixed(2)}" max="${d.amount}" class="big-inp" style="color:var(--warning); background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:20px;"><label>Konto</label><select id="mpd-acc" style="background:#18181b;">${window.db.home.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join('')}</select></div><button class="btn" style="background:var(--warning); color:#000;" onclick="window.hExecPayDebt('${d.id}')">POTWIERDŹ SPŁATĘ</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-pay-debt').remove()">ANULUJ</button></div></div>`; 
+    let html = `<div id="m-pay-debt" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--warning);"><h3 style="margin-top:0; color:var(--warning);">🤝 Rozliczenie</h3><p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px;">Wpis: <strong>${d.person}</strong></p><div class="inp-group" style="margin-bottom:15px;"><label>Spłacasz (zł)</label><input type="number" step="0.01" id="mpd-val" value="${Number(d.amount||0).toFixed(2)}" max="${d.amount}" class="big-inp" style="color:var(--warning); background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:20px;"><label>Konto pobrania</label><select id="mpd-acc" style="background:#18181b;">${window.db.home.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join('')}</select></div><button class="btn" style="background:var(--warning); color:#000;" onclick="window.hExecPayDebt('${d.id}')">POTWIERDŹ SPŁATĘ</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-pay-debt').remove()">ANULUJ</button></div></div>`; 
     document.body.insertAdjacentHTML('beforeend', html); 
 };
 
@@ -703,10 +732,10 @@ window.hExecPayDebt = function(id) {
         d.amount = 0; 
         d.isClosed = true; 
         if(ptr) window.db.home.trans = window.db.home.trans.filter(x => x.id != ptr.id); 
-        if(window.sysAlert) window.sysAlert("Rozliczono!", "Płatność w pełni uregulowana.", "success"); 
+        if(window.sysAlert) window.sysAlert("Rozliczono!", "Płatność uregulowana bez dodatkowych kosztów.", "success"); 
     } else { 
         if(ptr) ptr.v = d.amount; 
-        if(window.sysAlert) window.sysAlert("Sukces!", `Pozostało jeszcze: ${Number(d.amount||0).toFixed(2)} zł.`, "success"); 
+        if(window.sysAlert) window.sysAlert("Sukces!", `Pozostało jeszcze do oddania: ${Number(d.amount||0).toFixed(2)} zł.`, "success"); 
     } 
     window.hSyncSchedule(); 
     window.save(); 
@@ -714,11 +743,40 @@ window.hExecPayDebt = function(id) {
     document.getElementById('m-pay-debt').remove(); 
 };
 
-// NOWOŚĆ: Funkcja do rozbicia Długu/PayPo na Raty pod właściwą nazwą guzika!
+// NOWOŚĆ: Rozbicie BNPL/PayPo na Raty z inteligentnym wyliczaniem prowizji
+window.hRecalcSplitDebt = function() {
+    let rata = parseFloat(document.getElementById('msd-rata').value) || 0;
+    let ilosc = parseInt(document.getElementById('msd-ilosc').value) || 0;
+    let baseAmount = parseFloat(document.getElementById('msd-base').value) || 0;
+    
+    let infoEl = document.getElementById('msd-info');
+    if(rata > 0 && ilosc > 0 && baseAmount > 0) {
+        let total = rata * ilosc;
+        let prowizja = total - baseAmount;
+        if(prowizja < 0) prowizja = 0; // zabezpieczenie przed dziwnymi wpisami
+        
+        infoEl.innerHTML = `Po rozbiciu oddasz łącznie: <strong style="color:var(--danger)">${Number(total).toFixed(2)} zł</strong><br>Koszty operatora (Prowizja): <strong>${Number(prowizja).toFixed(2)} zł</strong>`;
+        infoEl.style.display = 'block';
+    } else {
+        infoEl.style.display = 'none';
+    }
+};
+
 window.hConvertDebtToInstallments = function(id) {
     let d = window.db.home.debts.find(x => x.id == id); 
     if(!d) return; 
-    let html = `<div id="m-split-debt" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--info);"><h3 style="margin-top:0; color:var(--info);">🔄 Rozbicie na Raty</h3><p style="font-size:0.75rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">Zmieniasz ten wpis (${d.person}) w harmonogram ratalny. Zostanie on przeniesiony do głównych Zobowiązań.</p><div class="inp-group" style="margin-bottom:10px;"><label>Kwota JEDNEJ Raty (zł)</label><input type="number" step="0.01" id="msd-rata" placeholder="np. 68.14" class="big-inp" style="color:var(--info); background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:15px;"><label>Z ilu rat łącznie?</label><input type="number" id="msd-ilosc" placeholder="np. 4"></div><div class="inp-group" style="margin-bottom:20px;"><label>Dzień spłaty w miesiącu (1-31)</label><input type="number" id="msd-day" value="${new Date().getDate()}"></div><button class="btn" style="background:var(--info); color:#fff;" onclick="window.hExecSplitDebt('${d.id}')">ZATWIERDŹ I UTWÓRZ RATY</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-split-debt').remove()">ANULUJ</button></div></div>`; 
+    let html = `<div id="m-split-debt" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--info);"><h3 style="margin-top:0; color:var(--info);">🔄 Rozbicie na Raty</h3><p style="font-size:0.75rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">Zmieniasz ten wpis z Odroczonych (${d.person}) w harmonogram ratalny. Zostanie przeniesiony do głównych Zobowiązań.</p>
+    
+    <input type="hidden" id="msd-base" value="${d.amount}">
+    <div class="inp-group" style="margin-bottom:10px;"><label>Kwota początkowa zakupu</label><input type="number" value="${Number(d.amount).toFixed(2)}" disabled style="background:transparent; border:none; color:#fff; font-weight:bold; font-size:1.1rem; padding:0;"></div>
+    
+    <div class="inp-group" style="margin-bottom:10px;"><label>Na ile rat łącznie?</label><input type="number" id="msd-ilosc" placeholder="np. 4" oninput="window.hRecalcSplitDebt()"></div>
+    <div class="inp-group" style="margin-bottom:10px;"><label>Kwota JEDNEJ Raty (zł)</label><input type="number" step="0.01" id="msd-rata" placeholder="np. 68.14" class="big-inp" style="color:var(--info); background:rgba(0,0,0,0.5);" oninput="window.hRecalcSplitDebt()"></div>
+    <div class="inp-group" style="margin-bottom:15px;"><label>Dzień spłaty w miesiącu (1-31)</label><input type="number" id="msd-day" value="${new Date().getDate()}"></div>
+    
+    <div id="msd-info" style="display:none; font-size:0.75rem; color:var(--muted); text-align:center; margin-bottom:15px; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);"></div>
+    
+    <button class="btn" style="background:var(--info); color:#fff;" onclick="window.hExecSplitDebt('${d.id}')">ZATWIERDŹ I UTWÓRZ RATY</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-split-debt').remove()">ANULUJ</button></div></div>`; 
     document.body.insertAdjacentHTML('beforeend', html); 
 };
 
@@ -726,6 +784,7 @@ window.hExecSplitDebt = function(id) {
     let rata = parseFloat(document.getElementById('msd-rata').value);
     let ilosc = parseInt(document.getElementById('msd-ilosc').value);
     let day = parseInt(document.getElementById('msd-day').value) || 10;
+    let baseAmount = parseFloat(document.getElementById('msd-base').value) || 0;
     
     if(!rata || !ilosc || rata <= 0 || ilosc <= 0) {
         if(window.sysAlert) return window.sysAlert("Błąd", "Wpisz poprawną kwotę raty i ich ilość.");
@@ -737,7 +796,6 @@ window.hExecSplitDebt = function(id) {
 
     let calkowitaKwota = rata * ilosc;
 
-    // Utwórz nowy kredyt "Raty 0%"
     window.db.home.loans.push({
         id: Date.now(), 
         n: d.person, 
@@ -751,13 +809,12 @@ window.hExecSplitDebt = function(id) {
         isClosed: false, 
         intType: 'Stałe', 
         instType: 'Równe', 
-        borrowed: calkowitaKwota, 
+        borrowed: baseAmount, // Zachowujemy informację o pierwotnej wartości zakupu!
         type: 'Raty', 
         minPayPct: 0, 
         declaredPay: '100'
     });
 
-    // Usuń stary dług i jego planowaną transakcję
     window.db.home.debts = window.db.home.debts.filter(x => x.id != id); 
     window.db.home.trans = window.db.home.trans.filter(t => !(t.isPlanned && t.debtId == id)); 
 
@@ -765,13 +822,10 @@ window.hExecSplitDebt = function(id) {
     window.save(); 
     
     document.getElementById('m-split-debt').remove(); 
-    
-    // Przenieś usera do zakładki Zobowiązań
     window.switchTab('goals');
     
-    if(window.sysAlert) window.sysAlert("Sukces!", "Przeniesiono PayPo/Dług do Harmonogramu Rat!", "success");
+    if(window.sysAlert) window.sysAlert("Sukces!", "Odroczona płatność przeniesiona do Harmonogramu Rat!", "success");
 };
-
 
 // --- USTAWIENIA I RODZINA ---
 window.hAddMem = function() { 
