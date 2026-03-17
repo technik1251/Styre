@@ -255,20 +255,19 @@ window.rDrv = function() {
             <div class="inp-group"><input type="number" id="ds-o" class="big-inp" value="${(d.odo||0)>0?d.odo:''}" placeholder="Stan licznika (KM)"></div>
             <button class="btn" style="background:linear-gradient(135deg, var(--success), #059669); color:#fff; font-size:1.1rem; padding:18px; margin-top:15px;" onclick="window.dStartS()">ROZPOCZNIJ PRACĘ</button>
         </div>` + 
-        (d.plat === 'apps' ? 
-            (!window.dShowOff ? 
-                `<div style="padding:0 15px;"><button class="btn" style="background:rgba(14,165,233,0.1); color:var(--info); border:1px dashed rgba(14,165,233,0.4); margin-top:10px; font-size:0.85rem; box-shadow:none; width: 100%;" onclick="window.dShowOff=true; window.render()">📥 DODAJ ZALEGŁE ROZLICZENIE (WBITKA)</button></div>` : 
-                `<div class="section-lbl" style="color:var(--info); border-color:var(--info); margin-top:25px;">⚡ Zaległe rozliczenie</div>
-                <div class="panel" style="border-color:rgba(14,165,233,0.4); animation:fadeIn 0.3s;">
-                    <div class="form-section" style="padding:10px; margin-bottom:10px;"><div class="fs-title" style="margin-bottom:6px;">Aplikacja Docelowa</div><div class="chip-box" style="margin-bottom:0; padding-bottom:0;">${ch1}</div>${otherSrcHtml}</div>
-                    <div class="inp-row" style="margin-bottom:15px;"><div class="inp-group"><label>Data Od</label><input type="date" id="dw-d-from" value="${window.getLocalYMD()}"></div><div class="inp-group"><label>Data Do</label><input type="date" id="dw-d-to" value="${window.getLocalYMD()}"></div></div>
-                    <div class="inp-group" style="margin-bottom:10px;"><input type="number" id="dw-v" class="big-inp" placeholder="Brutto łącznie (zł)" style="color:var(--info); border:none; background:rgba(0,0,0,0.5);"></div>
-                    <div class="inp-row"><div class="inp-group"><input type="number" id="dw-k" placeholder="Dystans (KM)"></div><div class="inp-group"><input type="number" id="dw-c" placeholder="Z tego w gotówce (zł)"></div></div>
-                    <div class="inp-group" style="margin-top:10px;"><input type="number" id="dw-h" placeholder="Przepracowane godziny (Opcjonalnie)"></div>
-                    <button class="btn" style="background:var(--info); color:#fff; margin-top:15px; padding:15px;" onclick="window.dAddOfflineWeekly()">ZAKSIĘGUJ DO HISTORII</button>
-                    <button class="btn" style="background:transparent; color:var(--muted); margin-top:5px; border:1px solid rgba(255,255,255,0.1); box-shadow:none;" onclick="window.dShowOff=false; window.render()">ANULUJ</button>
-                </div>`
-            ) : '');
+        (!window.dShowOff ? 
+            `<div style="padding:0 15px;"><button class="btn" style="background:rgba(14,165,233,0.1); color:var(--info); border:1px dashed rgba(14,165,233,0.4); margin-top:10px; font-size:0.85rem; box-shadow:none; width: 100%;" onclick="window.dShowOff=true; window.render()">📥 WPROWADŹ UTARG Z RAPORTU (WBITKA)</button></div>` : 
+            `<div class="section-lbl" style="color:var(--info); border-color:var(--info); margin-top:25px;">⚡ Zaległe rozliczenie / Raport z Kasy</div>
+            <div class="panel" style="border-color:rgba(14,165,233,0.4); animation:fadeIn 0.3s;">
+                <div class="form-section" style="padding:10px; margin-bottom:10px;"><div class="fs-title" style="margin-bottom:6px;">${d.plat==='apps'?'Aplikacja Docelowa':'Główne Źródło (Centrala)'}</div><div class="chip-box" style="margin-bottom:0; padding-bottom:0;">${ch1}</div>${otherSrcHtml}</div>
+                <div class="inp-row" style="margin-bottom:15px;"><div class="inp-group"><label>Data Od</label><input type="date" id="dw-d-from" value="${window.getLocalYMD()}"></div><div class="inp-group"><label>Data Do</label><input type="date" id="dw-d-to" value="${window.getLocalYMD()}"></div></div>
+                <div class="inp-group" style="margin-bottom:10px;"><input type="number" id="dw-v" class="big-inp" placeholder="Brutto łącznie (zł)" style="color:var(--info); border:none; background:rgba(0,0,0,0.5);"></div>
+                <div class="inp-row"><div class="inp-group"><input type="number" id="dw-k" placeholder="Dystans (KM)"></div><div class="inp-group"><input type="number" id="dw-c" placeholder="Z tego w gotówce (zł)"></div></div>
+                <div class="inp-group" style="margin-top:10px;"><input type="number" id="dw-h" placeholder="Przepracowane godziny (Opcjonalnie)"></div>
+                <button class="btn" style="background:var(--info); color:#fff; margin-top:15px; padding:15px;" onclick="window.dAddOfflineWeekly()">ZAKSIĘGUJ DO HISTORII</button>
+                <button class="btn" style="background:transparent; color:var(--muted); margin-top:5px; border:1px solid rgba(255,255,255,0.1); box-shadow:none;" onclick="window.dShowOff=false; window.render()">ANULUJ</button>
+            </div>`
+        );
         
         APP.innerHTML = hdr + act + nav;
     }
@@ -530,7 +529,7 @@ window.rDrv = function() {
         let clientOpts = (d.clients || []).map(c => `<option value="${c.id}" data-d="${c.d||0}">${c.n} (Rabat: ${c.d||0}%)</option>`).join('');
         
         APP.innerHTML = hdr + `
-        <div class="dash-hero" style="padding-bottom:5px;"><p>INTELIGENT WYCENA (MAPY)</p></div>
+        <div class="dash-hero" style="padding-bottom:5px;"><p>INTELIGENTNA WYCENA (MAPY)</p></div>
         <div class="panel" style="border-color:rgba(217, 70, 239, 0.4)">
             <div class="form-section" style="padding:15px;">
                 <div class="inp-group" style="margin-bottom:10px;"><label style="color:var(--success)">🟢 Adres początkowy</label><input type="text" id="dq-start" placeholder="np. Dworzec Główny" style="border-color:var(--success);"></div>
