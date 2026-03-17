@@ -17,21 +17,12 @@ let defaultDb = {
     }
 };
 
-let db;
-try {
-    db = JSON.parse(localStorage.getItem('styre_v101_db')) || defaultDb;
-    if(!db.drv) db.drv = defaultDb.drv; if(!db.home) db.home = defaultDb.home; if(!db.drv.cfg) db.drv.cfg = defaultDb.drv.cfg;
-    if(db.drv.showFixed === undefined) db.drv.showFixed = true;
-    if(db.drv.panelMode === undefined) db.drv.panelMode = 'net';
-    if(db.drv.cfg.fuelCons === undefined) db.drv.cfg.fuelCons = 7.0; if(db.drv.cfg.fuelPriceL === undefined) db.drv.cfg.fuelPriceL = 6.5;
-    if(!db.drv.clients) db.drv.clients = []; if(!db.drv.fuel) db.drv.fuel = []; if(!db.drv.exp) db.drv.exp = []; if(!db.drv.h) db.drv.h = [];
-    if(!db.drv.sh) db.drv.sh = defaultDb.drv.sh; if(!db.drv.sh.tr) db.drv.sh.tr = []; if(!db.drv.q) db.drv.q = defaultDb.drv.q;
-    if(db.drv.sh && !db.drv.sh.shiftStart) db.drv.sh.shiftStart = db.drv.sh.t || Date.now();
-    if(db.drv.sh && db.drv.sh.sPT === undefined) db.drv.sh.sPT = 0; if(db.drv.sh && db.drv.sh.rWT === undefined) db.drv.sh.rWT = 0;
-    if(!db.home.accs) db.home.accs = defaultDb.home.accs; if(!db.home.trans) db.home.trans = []; if(!db.home.budgets) db.home.budgets = {};
-    if(!db.home.members || db.home.members.length === 0) db.home.members = [db.userName || 'Domownik'];
-    if(!db.home.recurring) db.home.recurring = []; if(!db.home.debts) db.home.debts = []; if(!db.home.lastAuto) db.home.lastAuto = "";
-} catch(e) { db = defaultDb; }
+if (typeof window.db === 'undefined') {
+    try {
+        let loaded = JSON.parse(localStorage.getItem('styre_v101_db'));
+        window.db = loaded || defaultDb;
+    } catch(e) { window.db = defaultDb; }
+}
 
 const STYRE_LOGO = `<div style="display:flex; align-items:center; gap:6px;"><div style="background:linear-gradient(135deg, #3b82f6, #14b8a6); color:#000; border-radius:6px; padding:2px 8px; font-weight:900; font-style:italic; font-size:1.1rem; box-shadow: 0 2px 10px rgba(59,130,246,0.5);">S</div><span style="font-weight:900; font-size:1.2rem; letter-spacing:0.5px;">STYRE<span style="color:var(--muted); font-weight:600;">OS</span></span><span style="font-size:0.7rem; color:var(--muted); margin-left:4px;">⏷</span></div>`;
 let wData = { p: 'apps', c: 'rent', e: 'partner', mainProfile: null }; 
@@ -50,54 +41,27 @@ window.sysPrompt = function(title, placeholder, onConfirm) { let html = `<div id
 
 window.hardReset = function() { window.sysConfirm("TWARDE RESETOWANIE", "Trwałe usunięcie danych z telefonu! Jesteś pewny?", () => { localStorage.clear(); location.reload(); }); }
 
-// === BRAKUJĄCE FUNKCJE DODANE PONIŻEJ ===
-window.dSessionInit = function() { if(!db || !db.drv) return; if(db.drv.plat === 'apps') { if(!['Uber', 'Bolt', 'FreeNow', 'Inna'].includes(dTSrc)) dTSrc = 'Uber'; if(!['Aplikacja', 'Gotówka'].includes(dTPay)) dTPay = 'Aplikacja'; } else { if(!['Centrala', 'Postój', 'Prywatny', 'Inna'].includes(dTSrc)) dTSrc = 'Centrala'; if(!['Gotówka', 'Karta'].includes(dTPay)) dTPay = 'Gotówka'; } }
-window.openSwitcher = function() { let s = document.getElementById('m-switcher'); let sBtns = document.getElementById('switcher-btns'); let html = ''; if (db.mainProfile === 'driver') { html += `<button class="btn btn-driver" style="margin:0;" onclick="window.switchApp('drv')">🚕 Panel Taxi</button><button class="btn btn-home" style="margin:0;" onclick="window.switchApp('home')">🏠 Budżet Domowy</button>`; } else { html += `<button class="btn btn-home" style="margin:0;" onclick="window.switchApp('home')">🏠 Budżet Domowy</button><button class="btn btn-driver" style="margin:0;" onclick="window.switchApp('drv')">🚕 Panel Taxi</button>`; } sBtns.innerHTML = html; s.classList.remove('hidden'); }
-window.switchApp = function(newRole) { db.role = newRole; db.tab = (newRole==='drv') ? 'term' : 'dash'; window.save(); document.getElementById('m-switcher').classList.add('hidden'); window.render(); }
+window.dSessionInit = function() { 
+    if(!window.db || !window.db.drv) return; 
+    if(window.db.drv.plat === 'apps') { 
+        if(!['Uber', 'Bolt', 'FreeNow', 'Inna'].includes(dTSrc)) dTSrc = 'Uber'; 
+        if(!['Aplikacja', 'Gotówka'].includes(dTPay)) dTPay = 'Aplikacja'; 
+    } else { 
+        if(!['Centrala', 'Postój', 'Prywatny', 'Inna'].includes(dTSrc)) dTSrc = 'Centrala'; 
+        if(!['Gotówka', 'Karta'].includes(dTPay)) dTPay = 'Gotówka'; 
+    } 
+}
 
 // ==========================================
-// INTEGRACJA Z CHMURĄ FIREBASE (STYRE OS PRO)
+// INTEGRACJA Z CHMURĄ FIREBASE
 // ==========================================
-const firebaseConfig = {
-    apiKey: "AIzaSyADA7FPv6xEZNg0_WI_Nl8iZLpYYv-g61o",
-    authDomain: "styreos.firebaseapp.com",
-    projectId: "styreos",
-    storageBucket: "styreos.firebasestorage.app",
-    messagingSenderId: "72578059548",
-    appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
-};
-
-// Inicjalizacja usług
-firebase.initializeApp(firebaseConfig);
-const firestore = firebase.firestore();
-const auth = firebase.auth();
-
-let currentUserUID = null;
-
-// Nasłuchiwanie stanu logowania
-auth.onAuthStateChanged(user => {
-    if (user) {
-        currentUserUID = user.uid;
-        console.log("Kierowca zalogowany! ID:", currentUserUID);
-    } else {
-        currentUserUID = null;
-        console.log("Tryb offline / Niezalogowany.");
-    }
-});
-
-// ZASTĄPIONA FUNKCJA ZAPISU (Lokalnie + Chmura)
-window.save = function() { 
-    // 1. Zapis lokalny (dla bezpieczeństwa i działania offline)
-    localStorage.setItem('styre_v101_db', JSON.stringify(db)); 
-    
-    // 2. Zapis w chmurze (tylko jeśli użytkownik jest zalogowany)
-    if (currentUserUID) {
-        firestore.collection('users').doc(currentUserUID).set(db)
-            .then(() => {
-                console.log("✅ Kopia zapasowa wysłana do chmury");
-            })
-            .catch((error) => {
-                console.error("❌ Błąd zapisu do chmury:", error);
-            });
-    }
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    firebase.initializeApp({
+        apiKey: "AIzaSyADA7FPv6xEZNg0_WI_Nl8iZLpYYv-g61o",
+        authDomain: "styreos.firebaseapp.com",
+        projectId: "styreos",
+        storageBucket: "styreos.firebasestorage.app",
+        messagingSenderId: "72578059548",
+        appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
+    });
 }
