@@ -480,10 +480,12 @@ window.rHome = function() {
         }); 
         allocBar += `</div>`;
         
+        // --- ZAJAWKA WERSJI PRO (OPEN BANKING / AI) ---
         let proBankBtn = `
-        <div style="margin-top:20px; padding:15px; border-radius:16px; border:1px dashed rgba(139, 92, 246, 0.4); background:rgba(139, 92, 246, 0.05); text-align:center; cursor:pointer;" onclick="window.sysAlert('Funkcja PRO', 'Automatyczna synchronizacja kont z bankami (Open Banking API) pojawi się w wersji PRO! Nie będziesz musiał wpisywać wydatków ręcznie. 🏦', 'info')">
-            <strong style="color:#a855f7; font-size:1rem; display:flex; align-items:center; justify-content:center; gap:8px;"><span>🔗</span> Podłącz prawdziwy bank (Wkrótce PRO)</strong>
-            <p style="font-size:0.75rem; color:var(--muted); margin-top:5px; margin-bottom:0;">Automatyczne pobieranie historii i salda</p>
+        <div style="margin: 20px 0 10px; padding: 15px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(14, 165, 233, 0.1)); border: 1px dashed rgba(139, 92, 246, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.1); transition: 0.3s;" onclick="window.sysAlert('Open Banking & AI (PRO)', 'W wersji StyreOS PRO połączysz aplikację bezpośrednio ze swoim bankiem (np. mBank, Revolut). Algorytmy AI same rozpoznają, że płatność w Żabce to Zakupy, a na Orlenie to Paliwo, i same wrzucą je do statystyk! 🏦🤖', 'info')">
+            <div style="font-size: 1.8rem; margin-bottom: 5px;">🔗</div>
+            <strong style="color: #c084fc; font-size: 0.95rem; display: block; text-transform: uppercase;">Automatyczna Synchronizacja z Bankiem</strong>
+            <span style="font-size: 0.75rem; color: var(--muted); margin-top: 4px; display: block;">Sztuczna inteligencja i Open Banking same skategoryzują Twoje wydatki (np. Żabka ➔ Zakupy). Wkrótce w wersji PRO! Kliknij po szczegóły.</span>
         </div>`;
         
         let topActions = `
