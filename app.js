@@ -154,13 +154,13 @@ window.rLauncher = function() {
         <h3 style="color:#c084fc; margin:0 0 15px 0; font-size:1rem; display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:1px;"><span>🚀</span> Wkrótce w StyreOS PRO</h3>
         
         <div style="margin-bottom:15px; border-left:2px solid #8b5cf6; padding-left:10px;">
-            <strong style="color:#fff; font-size:0.85rem;">🚕 RideHelper AI & e-Kasa API</strong>
-            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Pływająca nakładka opłacalności zlecenia (Uber/Bolt) oraz auto-zaciąganie kursów z kas RT3000 i centrali.</p>
+            <strong style="color:#fff; font-size:0.85rem;">🚕 Asystent Zleceń AI & e-Kasa API</strong>
+            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Pływająca nakładka opłacalności zlecenia oraz auto-zaciąganie kursów z kas RT3000 i centrali.</p>
         </div>
         
         <div style="margin-bottom:15px; border-left:2px solid #14b8a6; padding-left:10px;">
             <strong style="color:#fff; font-size:0.85rem;">🏦 Open Banking (Banki & Budżet)</strong>
-            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Połączenie z bankami. AI samo w locie rozpozna i skategoryzuje transakcje (np. Żabka ➔ Zakupy Spożywcze).</p>
+            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Połączenie z bankami. AI samo w locie rozpozna i skategoryzuje transakcje i przypisze je do odpowiedniego miejsca w panelu.</p>
         </div>
 
         <div style="margin-bottom:15px; border-left:2px solid #ec4899; padding-left:10px;">
