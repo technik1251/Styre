@@ -275,9 +275,9 @@ window.hToggleLoanFields = function() {
     let lblDay = document.getElementById('lbl-day'); 
     if(lblDay) lblDay.innerText = isCard ? 'Dzień cyklu rozliczeniowego (Spłata)' : 'Dzień spłaty w miesiącu (1-31)';
 
-    document.getElementById('row-rates-1').style.display = (isCard || isRaty) ? 'none' : 'flex'; // Ukryj Oprocentowanie dla Karty i Rat 0%
-    document.getElementById('row-rates-2').style.display = isCard ? 'none' : 'flex'; // Pokaż Ilość rat, ukryj dla karty
-    document.getElementById('row-card-opts').style.display = isCard ? 'flex' : 'none'; // Tylko dla Kart
+    document.getElementById('row-rates-1').style.display = (isCard || isRaty) ? 'none' : 'flex'; 
+    document.getElementById('row-rates-2').style.display = isCard ? 'none' : 'flex'; 
+    document.getElementById('row-card-opts').style.display = isCard ? 'flex' : 'none'; 
     document.getElementById('group-rata').style.display = isCard ? 'none' : 'block';
 
     if(isCard) { 
@@ -287,7 +287,6 @@ window.hToggleLoanFields = function() {
     }
     
     if(isRaty) {
-        // Dla Rat 0% / PayPo / Znajomy wymuszamy Oprocentowanie = 0
         document.getElementById('ml-pct').value = 0;
     }
 };
@@ -346,7 +345,6 @@ window.hSaveLoan = function(id) {
     let bor = parseFloat(document.getElementById('ml-borrowed').value) || k; 
     let d = parseInt(document.getElementById('ml-day').value) || 10;
     
-    // Ustaw Oprocentowanie na 0, jeśli to proste "Raty" lub "Karta", inaczej pobierz z pola.
     let p = (isRaty || isCard) ? 0 : (parseFloat(document.getElementById('ml-pct').value) || 0); 
     
     let r = isCard ? 0 : parseFloat(document.getElementById('ml-rata').value); 
@@ -716,8 +714,8 @@ window.hExecPayDebt = function(id) {
     document.getElementById('m-pay-debt').remove(); 
 };
 
-// NOWOŚĆ: Rozbicie długu/PayPo na Raty
-window.hSplitDebtToRaty = function(id) {
+// NOWOŚĆ: Funkcja do rozbicia Długu/PayPo na Raty pod właściwą nazwą guzika!
+window.hConvertDebtToInstallments = function(id) {
     let d = window.db.home.debts.find(x => x.id == id); 
     if(!d) return; 
     let html = `<div id="m-split-debt" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--info);"><h3 style="margin-top:0; color:var(--info);">🔄 Rozbicie na Raty</h3><p style="font-size:0.75rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">Zmieniasz ten wpis (${d.person}) w harmonogram ratalny. Zostanie on przeniesiony do głównych Zobowiązań.</p><div class="inp-group" style="margin-bottom:10px;"><label>Kwota JEDNEJ Raty (zł)</label><input type="number" step="0.01" id="msd-rata" placeholder="np. 68.14" class="big-inp" style="color:var(--info); background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:15px;"><label>Z ilu rat łącznie?</label><input type="number" id="msd-ilosc" placeholder="np. 4"></div><div class="inp-group" style="margin-bottom:20px;"><label>Dzień spłaty w miesiącu (1-31)</label><input type="number" id="msd-day" value="${new Date().getDate()}"></div><button class="btn" style="background:var(--info); color:#fff;" onclick="window.hExecSplitDebt('${d.id}')">ZATWIERDŹ I UTWÓRZ RATY</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-split-debt').remove()">ANULUJ</button></div></div>`; 
