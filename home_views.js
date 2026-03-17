@@ -2,28 +2,6 @@
 // PLIK: home_views.js - Renderowanie zakładek Budżetu Domowego
 // ==========================================
 
-// --- ŁATKA: Nadpisanie funkcji zapisu długu, aby obsługiwała datę wstecz i PayPo (Termin) ---
-window.hAddDebt = function() {
-    let n = document.getElementById('hd-name').value.trim();
-    let v = parseFloat(document.getElementById('hd-val').value);
-    let dt = document.getElementById('hd-date') ? document.getElementById('hd-date').value : window.getLocalYMD();
-    let dl = document.getElementById('hd-deadline') ? document.getElementById('hd-deadline').value : '';
-
-    if(!n || isNaN(v) || v <= 0) return window.sysAlert('Błąd', 'Wpisz poprawną nazwę i kwotę.', 'error');
-
-    window.db.home.debts.push({
-        id: Date.now(),
-        person: n,
-        amount: v,
-        type: window.hDebtType || 'they_owe',
-        date: dt, 
-        deadline: dl, 
-        isClosed: false
-    });
-    window.save();
-    window.render();
-};
-
 window.rHome = function() {
     let h = window.db.home; 
     let t = window.db.tab; 
@@ -95,6 +73,9 @@ window.rHome = function() {
         }
     });
 
+    // ==========================================
+    // ZAKŁADKA: DASHBOARD (PRZEGLĄD)
+    // ==========================================
     if(t === 'dash') {
         let topCatName = Object.keys(dashCats).sort((a,b) => dashCats[b] - dashCats[a])[0];
         let insightsHtml = '';
@@ -205,6 +186,9 @@ window.rHome = function() {
         ` + nav;
     }
 
+    // ==========================================
+    // ZAKŁADKA: CELE / KREDYTY (GOALS)
+    // ==========================================
     if(t === 'goals') {
         let activeLoans = window.db.home.loans.filter(l => !l.isClosed && l.type !== 'Karta');
         let isCompact = window.hForceCompact !== undefined ? window.hForceCompact : (activeLoans.length > 1);
@@ -283,6 +267,12 @@ window.rHome = function() {
             loansHtml = '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:10px 0 30px;">Brak zobowiązań. Dodaj kredyt lub raty u znajomego! 🕊️</div>'; 
         } else {
             let mappedLoans = activeLoans.map(l => {
+                let isRaty = l.type === 'Raty';
+                let cIcon = isRaty ? '🛍️' : '🏦';
+                let cTheme = isRaty ? 'var(--info)' : 'var(--danger)';
+                let cBg = isRaty ? 'rgba(14,165,233,0.1)' : 'rgba(239,68,68,0.1)';
+                let cBorder = isRaty ? 'rgba(14,165,233,0.3)' : 'rgba(239,68,68,0.3)';
+                
                 let kap = parseFloat(l.kapital); 
                 if(isNaN(kap)) kap = parseFloat(l.left) || 0; 
                 let bor = parseFloat(l.borrowed); 
@@ -295,7 +285,7 @@ window.rHome = function() {
                 
                 let totalCostRemaining = rat * instL; 
                 let savings = totalCostRemaining - kap; 
-                let isError = totalCostRemaining < kap && l.type !== 'Raty'; // PayPo raty nie muszą mieć odsetek
+                let isError = (!isRaty) && (totalCostRemaining < kap); 
                 let errorHtml = isError ? `<div style="background:rgba(239,68,68,0.15); color:var(--danger); padding:8px; border-radius:8px; font-size:0.75rem; margin-top:10px; margin-bottom:10px; border:1px solid rgba(239,68,68,0.3); text-align:center;">⚠️ Błąd: Suma rat mniejsza niż kapitał!</div>` : ''; 
                 
                 let pct = totInst > 0 ? ((totInst - instL) / totInst) * 100 : 0; 
@@ -310,23 +300,66 @@ window.rHome = function() {
                 if(todayDate.getDate() > (l.day || 10)) nextD.setMonth(nextD.getMonth() + 1); 
                 let nextDateStr = nextD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                 
-                let detailsGrid = `
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">
-                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">🗓️ Najbliższa rata</span><br><strong style="color:#fff; font-size:0.85rem;">${nextDateStr}</strong></div>
-                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">📊 Oprocentowanie</span><br><strong style="color:#fff; font-size:0.85rem;">${l.type === 'Raty' ? '0% / Brak' : `${Number(pctBank || 0).toFixed(2)}% (${l.intType||'Stałe'})`}</strong></div>
-                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">📉 Typ rat</span><br><strong style="color:#fff; font-size:0.85rem;">${l.instType||'Równe'}</strong></div>
-                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">🏦 Kwota z umowy</span><br><strong style="color:#fff; font-size:0.85rem;">${Number(bor || 0).toFixed(2)} zł</strong></div>
-                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px; grid-column: span 2;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">✅ Spłacony Kapitał</span><strong style="color:var(--success); font-size:0.85rem;">${Number(paidKap || 0).toFixed(2)} zł (${Number(paidPctKap || 0).toFixed(1)}%)</strong></div>
-                        <div style="width:100%; height:4px; background:rgba(255,255,255,0.05); border-radius:2px;"><div style="width:${paidPctKap}%; background:var(--success); height:100%;"></div></div>
-                    </div>
-                    <div style="background:rgba(239,68,68,0.05); padding:10px; border-radius:10px; grid-column: span 2; border:1px solid rgba(239,68,68,0.2);">
-                        <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:0.7rem; color:var(--danger); text-transform:uppercase; font-weight:bold;">Całkowity Koszt do końca</span><strong style="color:var(--danger); font-size:1rem;">${Number(totalCostRemaining || 0).toFixed(2)} zł</strong></div>
-                    </div>
-                </div>`;
+                let detailsHtml = '';
+                
+                if(isRaty) {
+                    // --- OŚ CZASU DLA BNPL / PAYPO ---
+                    let paidCount = totInst - instL;
+                    detailsHtml = `<div style="margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
+                    
+                    // Krok 0: Zakup
+                    detailsHtml += `
+                    <div style="display:flex; gap:10px; margin-bottom:10px; position:relative;">
+                        <div style="width:2px; background:var(--success); position:absolute; left:11px; top:25px; bottom:-15px;"></div>
+                        <div style="width:24px; height:24px; border-radius:50%; background:var(--success); color:#000; display:flex; align-items:center; justify-content:center; font-size:0.8rem; z-index:1;">🛍️</div>
+                        <div style="flex:1;"><strong style="color:#fff; font-size:0.85rem;">Dokonujesz zakupu</strong><br><small style="color:var(--muted)">Wartość bazowa</small></div>
+                        <strong style="color:#fff; font-size:0.85rem;">${Number(bor).toFixed(2)} zł</strong>
+                    </div>`;
+                    
+                    // Kroki: Raty
+                    for(let i=1; i<=totInst; i++) {
+                        let isPaid = i <= paidCount;
+                        let isCurrent = i === paidCount + 1;
+                        let sColor = isPaid ? 'var(--success)' : (isCurrent ? 'var(--info)' : 'var(--muted)');
+                        let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
+                        let lineDisp = i === totInst ? 'none' : 'block';
+                        
+                        // Inteligentne wyliczanie ostatniej raty (końcówki groszowe)
+                        let rataKwota = (i === totInst) ? (kap - (rat * (instL - 1))) : rat; 
+                        if(isPaid) rataKwota = rat; // Już opłacone pokazujemy standardowo
+                        if(rataKwota < 0) rataKwota = rat;
+                        
+                        detailsHtml += `
+                        <div style="display:flex; gap:10px; margin-bottom:10px; position:relative;">
+                            <div style="display:${lineDisp}; width:2px; background:${isPaid?'var(--success)':'rgba(255,255,255,0.1)'}; position:absolute; left:11px; top:25px; bottom:-15px;"></div>
+                            <div style="width:24px; height:24px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.6rem; z-index:1;">${isPaid?sIcon:i}</div>
+                            <div style="flex:1;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.85rem;">Rata nr ${i}</strong><br><small style="color:var(--muted)">${isCurrent?`Spłać do: ${nextDateStr}`:''}</small></div>
+                            <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.85rem; text-decoration:${isPaid?'line-through':'none'};">${Number(rataKwota).toFixed(2)} zł</strong>
+                        </div>`;
+                    }
+                    detailsHtml += `</div>`;
+                } else {
+                    // --- STANDARDOWA SIATKA DLA KREDYTU ---
+                    detailsHtml = `
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">
+                        <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">🗓️ Najbliższa rata</span><br><strong style="color:#fff; font-size:0.85rem;">${nextDateStr}</strong></div>
+                        <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">📊 Oprocentowanie</span><br><strong style="color:#fff; font-size:0.85rem;">${Number(pctBank || 0).toFixed(2)}% (${l.intType||'Stałe'})</strong></div>
+                        <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">📉 Typ rat</span><br><strong style="color:#fff; font-size:0.85rem;">${l.instType||'Równe'}</strong></div>
+                        <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">🏦 Kwota z umowy</span><br><strong style="color:#fff; font-size:0.85rem;">${Number(bor || 0).toFixed(2)} zł</strong></div>
+                        <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px; grid-column: span 2;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">✅ Spłacony Kapitał</span><strong style="color:var(--success); font-size:0.85rem;">${Number(paidKap || 0).toFixed(2)} zł (${Number(paidPctKap || 0).toFixed(1)}%)</strong></div>
+                            <div style="width:100%; height:4px; background:rgba(255,255,255,0.05); border-radius:2px;"><div style="width:${paidPctKap}%; background:var(--success); height:100%;"></div></div>
+                        </div>
+                        <div style="background:rgba(239,68,68,0.05); padding:10px; border-radius:10px; grid-column: span 2; border:1px solid rgba(239,68,68,0.2);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:0.7rem; color:var(--danger); text-transform:uppercase; font-weight:bold;">Całkowity Koszt do końca</span><strong style="color:var(--danger); font-size:1rem;">${Number(totalCostRemaining || 0).toFixed(2)} zł</strong></div>
+                        </div>
+                    </div>`;
+                }
 
                 if(!isCompact) {
-                    let savingsHtml = (!isError && savings > 0) ? `<div style="font-size:0.75rem; color:var(--success); margin-top:5px; font-weight:bold; text-align:center;">Spłacając dziś, unikasz ${Number(savings || 0).toFixed(2)} zł odsetek! 💸</div>` : '';
+                    let savingsHtml = (!isError && savings > 0 && !isRaty) ? `<div style="font-size:0.75rem; color:var(--success); margin-top:5px; font-weight:bold; text-align:center;">Spłacając dziś, unikasz ${Number(savings || 0).toFixed(2)} zł odsetek! 💸</div>` : '';
+                    let mainTitle = isRaty ? 'POZOSTAŁO DO SPŁATY' : 'KAPITAŁ POZOSTAŁY DO SPŁATY';
+                    
                     return `
                     <div class="panel" style="flex: 0 0 85%; min-width: 280px; max-width: 320px; scroll-snap-align: center; padding:0; border:1px solid #27272a; border-radius:24px; overflow:hidden; margin-bottom:0; background:#18181b;">
                         <div style="padding:20px 20px 10px; text-align:center; position:relative;">
@@ -335,42 +368,44 @@ window.rHome = function() {
                                 <button style="background:transparent; border:none; color:var(--danger); font-size:1.2rem; cursor:pointer;" onclick="window.hDelLoan('${l.id}')">🗑️</button>
                             </div>
                             <div style="display:flex; justify-content:center; margin-bottom:10px;">
-                                <div style="width:50px; height:50px; border-radius:16px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); display:flex; align-items:center; justify-content:center; font-size:1.6rem;">🏦</div>
+                                <div style="width:50px; height:50px; border-radius:16px; background:${cBg}; border:1px solid ${cBorder}; display:flex; align-items:center; justify-content:center; font-size:1.6rem;">${cIcon}</div>
                             </div>
                             <h3 style="margin:0 0 5px; font-size:1.2rem; color:#fff;">${l.n}</h3>
-                            <div style="width:40px; height:3px; background:var(--danger); margin:0 auto 15px; border-radius:2px;"></div>
+                            <div style="width:40px; height:3px; background:${cTheme}; margin:0 auto 15px; border-radius:2px;"></div>
                             ${errorHtml}
-                            <span style="font-size:0.75rem; color:var(--muted); text-transform:uppercase;">KAPITAŁ POZOSTAŁY DO SPŁATY</span>
+                            <span style="font-size:0.75rem; color:var(--muted); text-transform:uppercase;">${mainTitle}</span>
                             <div style="font-size:2.2rem; font-weight:900; color:#fff; margin-top:5px; letter-spacing:-1px;">${Number(kap || 0).toFixed(2)} PLN</div>
                             ${savingsHtml}
                         </div>
-                        <div style="padding:0 20px 15px;">${detailsGrid}</div>
+                        <div style="padding:0 20px 15px;">${detailsHtml}</div>
                         <div style="padding:0 20px 20px; display:flex; flex-direction:column; gap:10px;">
-                            <button style="background:var(--danger); color:#fff; width:100%; padding:15px; border-radius:14px; font-weight:bold; font-size:0.9rem; border:none; box-shadow:0 6px 15px rgba(239,68,68,0.3); cursor:pointer;" onclick="window.hOpenPayLoanModal('${l.id}')">💸 SPŁAĆ RATĘ ( ${Number(rat || 0).toFixed(2)} zł )</button>
+                            <button style="background:${cTheme}; color:${isRaty?'#000':'#fff'}; width:100%; padding:15px; border-radius:14px; font-weight:bold; font-size:0.9rem; border:none; box-shadow:0 6px 15px ${cBg}; cursor:pointer;" onclick="window.hOpenPayLoanModal('${l.id}')">💸 SPŁAĆ NAJBLIŻSZĄ</button>
                             <div style="display:flex; gap:10px;">
                                 <button style="background:rgba(14,165,233,0.2); color:var(--info); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(14,165,233,0.4);" onclick="window.hOverpayLoan('${l.id}')">💰 NADPŁAĆ</button>
-                                <button style="background:rgba(245,158,11,0.2); color:var(--warning); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(245,158,11,0.4);" onclick="window.hCreditHoliday('${l.id}')">🏖️ WAKACJE</button>
+                                <button style="background:rgba(245,158,11,0.2); color:var(--warning); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(245,158,11,0.4);" onclick="window.hCreditHoliday('${l.id}')">🏖️ ODROCZ</button>
                                 <button style="background:rgba(34,197,94,0.2); color:var(--success); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(34,197,94,0.4);" onclick="window.hPayOffCompletely('${l.id}')">🏆 ZAMKNIJ</button>
                             </div>
                         </div>
                     </div>`;
                 } else {
-                    let savingsHtml = (!isError && savings > 0) ? `<div style="font-size:0.65rem; color:var(--success); margin-bottom:8px; font-weight:bold; text-align:center;">Spłacając dziś, unikasz ${Number(savings || 0).toFixed(2)} zł odsetek! 💸</div>` : '';
+                    let savingsHtml = (!isError && savings > 0 && !isRaty) ? `<div style="font-size:0.65rem; color:var(--success); margin-bottom:8px; font-weight:bold; text-align:center;">Spłacając dziś, unikasz ${Number(savings || 0).toFixed(2)} zł odsetek! 💸</div>` : '';
                     let rightInfo = `<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Pozostało rat</span><br><strong style="color:#fff; font-size:0.9rem;">${instL} z ${totInst}</strong>`;
+                    let mainTitleCompact = isRaty ? 'Kwota do spłaty' : 'Kapitał do spłaty';
+
                     return `
-                    <div class="panel" style="flex: 0 0 75%; min-width: 250px; max-width: 280px; scroll-snap-align: center; padding:15px; border-left:4px solid var(--danger); border-radius:16px; margin-bottom:0; background:linear-gradient(145deg, #18181b, #09090b); position:relative;">
+                    <div class="panel" style="flex: 0 0 75%; min-width: 250px; max-width: 280px; scroll-snap-align: center; padding:15px; border-left:4px solid ${cTheme}; border-radius:16px; margin-bottom:0; background:linear-gradient(145deg, #18181b, #09090b); position:relative;">
                         <div style="position:absolute; right:15px; top:15px; display:flex; gap:5px;">
                             <button style="background:transparent; border:none; color:var(--muted); font-size:1.1rem; cursor:pointer;" onclick="window.hOpenLoanModal('${l.id}')">✏️</button>
                             <button style="background:transparent; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer;" onclick="window.hDelLoan('${l.id}')">🗑️</button>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-right:50px;">
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <div style="width:35px; height:35px; border-radius:10px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); display:flex; align-items:center; justify-content:center; font-size:1.2rem;">🏦</div>
+                                <div style="width:35px; height:35px; border-radius:10px; background:${cBg}; border:1px solid ${cBorder}; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">${cIcon}</div>
                                 <div><strong style="color:#fff; font-size:1rem; display:block; line-height:1.2;">${l.n}</strong><span style="color:var(--muted); font-size:0.7rem;">Rata: <strong style="color:#fff">${Number(rat || 0).toFixed(2)} zł</strong></span></div>
                             </div>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
-                            <div><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Kapitał do spłaty</span><strong style="color:#fff; font-size:1.3rem; line-height:1.2; display:block;">${Number(kap || 0).toFixed(2)} zł</strong></div>
+                            <div><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">${mainTitleCompact}</span><strong style="color:#fff; font-size:1.3rem; line-height:1.2; display:block;">${Number(kap || 0).toFixed(2)} zł</strong></div>
                             <div style="text-align:right;">${rightInfo}</div>
                         </div>
                         ${savingsHtml}${errorHtml}
@@ -378,11 +413,11 @@ window.rHome = function() {
                             <div style="width:${pct}%; background:var(--success); height:100%;"></div>
                         </div>
                         <div style="text-align:center; margin-bottom:10px;">
-                            <span onclick="let el=document.getElementById('ldet_${l.id}'); let txt=this; if(el.style.display==='none'){el.style.display='block'; txt.innerHTML='🔼 Zwiń szczegóły';}else{el.style.display='none'; txt.innerHTML='🔽 Rozwiń szczegóły';}" style="color:var(--info); font-size:0.75rem; cursor:pointer; font-weight:bold; display:inline-block; padding:5px;">🔽 Rozwiń szczegóły</span>
+                            <span onclick="let el=document.getElementById('ldet_${l.id}'); let txt=this; if(el.style.display==='none'){el.style.display='block'; txt.innerHTML='🔼 Zwiń plan ratalny';}else{el.style.display='none'; txt.innerHTML='🔽 Rozwiń plan ratalny';}" style="color:var(--info); font-size:0.75rem; cursor:pointer; font-weight:bold; display:inline-block; padding:5px;">🔽 Rozwiń plan ratalny</span>
                         </div>
-                        <div id="ldet_${l.id}" style="display:none; margin-bottom:12px;">${detailsGrid}</div>
+                        <div id="ldet_${l.id}" style="display:none; margin-bottom:12px;">${detailsHtml}</div>
                         <div style="display:flex; gap:6px;">
-                            <button style="background:var(--danger); color:#fff; flex:1; padding:8px 0; border-radius:8px; font-weight:bold; font-size:0.75rem; border:none; cursor:pointer;" onclick="window.hOpenPayLoanModal('${l.id}')">💸 SPŁAĆ</button>
+                            <button style="background:${cTheme}; color:${isRaty?'#000':'#fff'}; flex:1; padding:8px 0; border-radius:8px; font-weight:bold; font-size:0.75rem; border:none; cursor:pointer;" onclick="window.hOpenPayLoanModal('${l.id}')">💸 SPŁAĆ</button>
                             <button style="background:rgba(14,165,233,0.15); color:var(--info); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(14,165,233,0.3); cursor:pointer;" onclick="window.hOverpayLoan('${l.id}')">💰</button>
                             <button style="background:rgba(245,158,11,0.15); color:var(--warning); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(245,158,11,0.3); cursor:pointer;" onclick="window.hCreditHoliday('${l.id}')">🏖️</button>
                             <button style="background:rgba(34,197,94,0.15); color:var(--success); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(34,197,94,0.3); cursor:pointer;" onclick="window.hPayOffCompletely('${l.id}')">🏆</button>
@@ -405,25 +440,25 @@ window.rHome = function() {
         ${loansHtml}
         ${proOptBtn}
         
-        <div class="section-lbl" style="color:var(--warning); border-color:var(--warning); margin-top:30px;">⏳ PayPo / Odroczone i Długi</div>
+        <div class="section-lbl" style="color:var(--warning); border-color:var(--warning); margin-top:30px;">⏳ Odroczone i Rozliczenia</div>
         <div class="panel" style="border-color:var(--warning);">
             <p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-bottom:15px;">Masz zakupy z odroczoną płatnością (PayPo/AllegroPay) na 30 dni lub pożyczyłeś komuś gotówkę? Zapisz to tutaj!</p>
             ${notebookSummary}
             <div class="mode-switch" style="margin-bottom:15px; background:rgba(0,0,0,0.5);">
-                <div class="m-btn ${window.hDebtType==='i_owe'?'active':''}" style="${window.hDebtType==='i_owe'?'background:var(--danger);color:#000;':''}" onclick="window.hDebtType='i_owe';window.render()">Ja komuś wiszę (PayPo)</div>
-                <div class="m-btn ${window.hDebtType==='they_owe'?'active':''}" style="${window.hDebtType==='they_owe'?'background:var(--success);color:#000;':''}" onclick="window.hDebtType='they_owe';window.render()">Ktoś mi wisi</div>
+                <div class="m-btn ${window.hDebtType==='i_owe'?'active':''}" style="${window.hDebtType==='i_owe'?'background:var(--danger);color:#000;':''}" onclick="window.hDebtType='i_owe';window.render()">Moje PayPo / Odroczone</div>
+                <div class="m-btn ${window.hDebtType==='they_owe'?'active':''}" style="${window.hDebtType==='they_owe'?'background:var(--success);color:#000;':''}" onclick="window.hDebtType='they_owe';window.render()">Prywatne (Ktoś mi wisi)</div>
             </div>
             <div class="inp-row">
                 <div class="inp-group"><label>Kto / Tytuł (np. PayPo - Buty)</label><input type="text" id="hd-name" placeholder="np. Allegro Pay" style="background:#000;"></div>
                 <div class="inp-group"><label>Kwota (zł)</label><input type="number" id="hd-val" placeholder="np. 150" style="background:#000;"></div>
             </div>
             <div class="inp-row">
-                <div class="inp-group"><label>Data powstania (Zakupu)</label><input type="date" id="hd-date" value="${today}" style="background:#000;"></div>
+                <div class="inp-group"><label>Data zakupu / powstania</label><input type="date" id="hd-date" value="${today}" style="background:#000;"></div>
                 <div class="inp-group"><label>Termin spłaty (do kiedy?)</label><input type="date" id="hd-deadline" style="background:#000;"></div>
             </div>
             <button class="btn" style="background:var(--warning); color:#000; padding:15px; margin-top:10px; margin-bottom:20px; font-weight:900;" onclick="window.hAddDebt()">ZAPISZ DO ODROCZONYCH</button>
             <div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">
-                ${h.debts.filter(d => !d.isClosed).length === 0 ? '<div style="text-align:center; color:var(--muted); font-size:0.85rem;">Brak wpisów w zeszycie. Wpisz swoje pierwsze PayPo!</div>' : 
+                ${h.debts.filter(d => !d.isClosed).length === 0 ? '<div style="text-align:center; color:var(--muted); font-size:0.85rem;">Brak wpisów. Wpisz swoje pierwsze PayPo lub dług!</div>' : 
                 h.debts.filter(d => !d.isClosed).map(d => { 
                     let amt = parseFloat(d.amount) || 0; 
                     
@@ -462,7 +497,7 @@ window.rHome = function() {
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <div>
                                 <strong style="color:#fff; font-size:1.15rem; display:block; margin-bottom:4px;">${d.person}</strong>
-                                <span style="font-size:0.75rem; color:var(--muted);">Kwota: <strong style="color:${d.type === 'they_owe' ? 'var(--success)' : 'var(--danger)'}; font-size:1.1rem;">${Number(amt || 0).toFixed(2)} zł</strong></span>
+                                <span style="font-size:0.75rem; color:var(--muted);">Kwota bazowa: <strong style="color:${d.type === 'they_owe' ? 'var(--success)' : 'var(--danger)'}; font-size:1.1rem;">${Number(amt || 0).toFixed(2)} zł</strong></span>
                                 ${d.date ? `<div style="font-size:0.65rem; color:var(--muted); margin-top:4px;">Z dnia: ${d.date}</div>` : ''}
                             </div>
                             <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-end;">
@@ -473,7 +508,7 @@ window.rHome = function() {
                             </div>
                         </div>
                         ${dlHtml}
-                        ${d.type === 'i_owe' ? `<button style="width:100%; background:rgba(14,165,233,0.15); color:var(--info); border:1px dashed rgba(14,165,233,0.4); border-radius:10px; padding:10px; margin-top:12px; font-weight:bold; font-size:0.8rem; cursor:pointer;" onclick="window.hConvertDebtToInstallments('${d.id}')">🔄 ROZŁÓŻ NA RATY (Przenieś wyżej)</button>` : ''}
+                        ${d.type === 'i_owe' ? `<button class="btn" style="background:rgba(14,165,233,0.1); color:var(--info); border:1px solid rgba(14,165,233,0.3); border-radius:8px; padding:10px; width:100%; font-size:0.75rem; font-weight:bold; margin-top:12px; box-shadow:none;" onclick="window.hConvertDebtToInstallments(${d.id})">🔄 ROZŁÓŻ NA RATY (Przenieś wyżej)</button>` : ''}
                     </div>`; 
                 }).join('')}
             </div>
@@ -524,7 +559,9 @@ window.rHome = function() {
         ` + nav;
     }
     
-    // (PONIŻSZE ZAKŁADKI ZOSTAJĄ BEZ ZMIAN W home_views.js)
+    // ==========================================
+    // ZAKŁADKA: KONTA (ACCOUNTS)
+    // ==========================================
     if(t === 'acc') { 
         let totalAccBal = 0; 
         h.accs.forEach(a => totalAccBal += Math.max(0, parseFloat(balances[a.id]) || 0));
@@ -665,6 +702,9 @@ window.rHome = function() {
         </div>` + nav; 
     }
 
+    // ==========================================
+    // ZAKŁADKA: DODAWANIE TRANSAKCJI (ADD)
+    // ==========================================
     if(t === 'add') { 
         let isExp = window.hTransType === 'exp'; 
         let isTrans = window.hTransType === 'transfer'; 
@@ -749,6 +789,9 @@ window.rHome = function() {
         </div>` + nav; 
     } 
     
+    // ==========================================
+    // ZAKŁADKA: STATYSTYKI (STATS)
+    // ==========================================
     if(t === 'stats') { 
         let now = new Date(); 
         let cats = {}; 
@@ -867,6 +910,9 @@ window.rHome = function() {
         } 
     } 
     
+    // ==========================================
+    // ZAKŁADKA: KALENDARZ (CALENDAR/HISTORY)
+    // ==========================================
     if(t === 'cal') { 
         let isPlannedMode = window.hCalMode === 'planned'; 
         let switchHtml = `<div class="mode-switch" style="margin: 15px 15px 5px 15px;"><div class="m-btn ${!isPlannedMode?'active':''}" style="${!isPlannedMode?'background:var(--success);color:#000;':''}" onclick="window.hCalMode='history'; window.render()">📅 Zrealizowane</div><div class="m-btn ${isPlannedMode?'active':''}" style="${isPlannedMode?'background:var(--warning);color:#000;':''}" onclick="window.hCalMode='planned'; window.render()">⏳ Planowane</div></div>`;
@@ -920,7 +966,7 @@ window.rHome = function() {
                 
                 let payBtn = ''; 
                 if(x.isPlanned && x.loanId) payBtn = `<button style="background:rgba(34,197,94,0.2); color:var(--success); border:1px solid var(--success); border-radius:8px; padding:6px 12px; font-size:0.75rem; font-weight:bold; cursor:pointer; width:100%; margin-top:8px;" onclick="window.hOpenPayLoanModal('${x.loanId}', '${x.id}')">💸 OPŁAĆ RATĘ TERAZ</button>`; 
-                if(x.isPlanned && x.debtId) payBtn = `<button style="background:rgba(245,158,11,0.2); color:var(--warning); border:1px solid var(--warning); border-radius:8px; padding:6px 12px; font-size:0.75rem; font-weight:bold; cursor:pointer; width:100%; margin-top:8px;" onclick="window.hOpenPayDebtModal('${x.debtId}')">🤝 ROZLICZ DŁUG</button>`;
+                if(x.isPlanned && x.debtId) payBtn = `<button style="background:rgba(245,158,11,0.2); color:var(--warning); border:1px solid var(--warning); border-radius:8px; padding:6px 12px; font-size:0.75rem; font-weight:bold; cursor:pointer; width:100%; margin-top:8px;" onclick="window.hOpenPayDebtModal('${x.debtId}')">🤝 ROZLICZ DŁUG / PAYPO</button>`;
                 
                 return `
                 <div style="display:flex; flex-direction:column; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.03); opacity:${x.isPlanned?'0.7':'1'};">
@@ -954,6 +1000,9 @@ window.rHome = function() {
         APP.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:0;"><p>HISTORIA I KALENDARZ</p></div>${switchHtml}${monthNavHtml}${searchHtml}${filterButtons}${monthlySummaryHtml}<div style="padding:0 15px 30px;">${calHtml || '<div style="text-align:center; color:var(--muted); padding:30px;">Brak operacji.</div>'}</div>` + nav; 
     }
     
+    // ==========================================
+    // ZAKŁADKA: USTAWIENIA (SETTINGS)
+    // ==========================================
     if(t === 'set') { 
         let catSrcSet = window.hRecType === 'exp' ? C_EXP : C_INC; 
         if(!catSrcSet[window.hRecCat]) window.hRecCat = Object.keys(catSrcSet)[0]; 
