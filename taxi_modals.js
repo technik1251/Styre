@@ -38,6 +38,61 @@ window.dImport = function(event) {
     reader.readAsText(file); 
 };
 
+// --- EDYCJA LICZNIKA I ANULOWANIE ZMIANY (NOWOŚĆ) ---
+window.dEditGlobalOdo = function() {
+    let current = window.db.drv.odo || 0;
+    window.sysPrompt("Edytuj Licznik", `Obecnie: ${current}`, (val) => {
+        let v = parseFloat(val);
+        if(v > 0) {
+            window.db.drv.odo = v;
+            if (window.db.drv.sh && window.db.drv.sh.on) {
+                window.db.drv.sh.o = v;
+            }
+            window.save();
+            window.render();
+            if(window.sysAlert) window.sysAlert("Sukces", "Stan licznika poprawiony!", "success");
+        } else {
+            if(window.sysAlert) window.sysAlert("Błąd", "Wprowadź poprawną liczbę większą od zera.", "error");
+        }
+    });
+};
+
+window.dEditStartOdo = function() {
+    let current = (window.db.drv && window.db.drv.sh && window.db.drv.sh.o) ? window.db.drv.sh.o : 0;
+    window.sysPrompt("Korekta ODO Start", `Obecnie: ${current}`, (val) => {
+        let v = parseFloat(val);
+        if(v > 0) {
+            window.db.drv.sh.o = v;
+            window.db.drv.odo = v;
+            window.save();
+            window.render();
+            setTimeout(() => window.openEndShiftModal(), 200);
+        } else {
+            if(window.sysAlert) window.sysAlert("Błąd", "Wprowadź poprawną liczbę.", "error");
+        }
+    });
+};
+
+window.dCancelShift = function() {
+    let m = document.getElementById('m-end-shift');
+    if(m) m.remove();
+    
+    window.sysConfirm("Anulowanie Zmiany", "Na pewno chcesz usunąć trwającą zmianę? Niezapisane kursy z tego ekranu przepadną.", () => {
+        window.db.drv.sh.on = false; 
+        window.db.drv.sh.tr = []; 
+        window.db.drv.liveRideStart = null; 
+        window.db.drv.sh.t = null; 
+        window.db.drv.sh.shiftStart = null; 
+        window.db.drv.sh.sPS = null; 
+        window.db.drv.sh.sPT = 0; 
+        window.db.drv.sh.rWT = 0; 
+        window.db.drv.sh.rWS = null;
+        window.save();
+        window.render();
+        if(window.sysAlert) window.sysAlert("Anulowano", "Omyłkowa zmiana została skasowana.", "success");
+    });
+};
+
 // --- SYSTEM PRACY (ZMIANA) ---
 window.openEndShiftModal = function() {
     let diffHrs=0, diffMins=0, autoHw=0, shiftDateStr = window.getLocalYMD();
@@ -68,7 +123,7 @@ window.openEndShiftModal = function() {
                 </div>
                 <div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);">
                     <span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">ODO Start</span><br>
-                    <strong style="color:#fff; font-size:1.1rem;">${startOdo} km</strong>
+                    <strong style="color:#fff; font-size:1.1rem; cursor:pointer;" onclick="document.getElementById('m-end-shift').remove(); window.dEditStartOdo();">${startOdo} <span style="font-size:0.8rem; color:var(--info);">✏️</span></strong>
                 </div>
             </div>
             <div class="inp-group" style="margin-bottom:12px;">
@@ -86,7 +141,11 @@ window.openEndShiftModal = function() {
                 </div>
             </div>
             <button class="btn btn-danger" style="padding:18px;" onclick="window.dEndS()">ZAKOŃCZ I ZAPISZ</button>
-            <button class="btn" style="background:transparent; color:var(--muted); box-shadow:none; border:1px solid rgba(255,255,255,0.1);" onclick="document.getElementById('m-end-shift').remove()">ANULUJ</button>
+            <button class="btn" style="background:transparent; color:var(--muted); box-shadow:none; border:1px solid rgba(255,255,255,0.1); margin-top:8px;" onclick="document.getElementById('m-end-shift').remove()">ANULUJ ZAMYKANIE</button>
+            
+            <div style="text-align:center; margin-top:20px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.1);">
+                <span style="color:var(--danger); font-size:0.75rem; text-decoration:underline; cursor:pointer; opacity:0.8;" onclick="window.dCancelShift()">Omyłkowo rozpoczęta zmiana? Anuluj ją bez zapisu.</span>
+            </div>
         </div>
     </div>`;
     
@@ -130,7 +189,7 @@ window.dEndS = function() {
     if(k <= 0) { 
         let el = document.getElementById('de-o'); 
         if(el) { el.style.borderBottom='2px solid var(--danger)'; el.classList.add('shake-anim'); setTimeout(()=>el.classList.remove('shake-anim'),300); } 
-        if(window.sysAlert) return window.sysAlert("Błąd", "Stan końcowy musi być większy niż początkowy!"); 
+        if(window.sysAlert) return window.sysAlert("Błąd", `Stan końcowy musi być wyższy niż startowy (${startOdo} km)! Możesz edytować ODO Start używając ołówka powyżej.`); 
         return; 
     }
     
@@ -213,7 +272,7 @@ window.dEndS = function() {
     document.body.insertAdjacentHTML('beforeend', mHtml);
 };
 
-// --- SYNCHRONIZACJA Z DOMEM (INTELIGENTNY LICZNIK GOTÓWKI) ---
+// --- SYNCHRONIZACJA Z DOMEM ---
 window.dTransferToHomeModal = function() {
     let accOpts = (window.db.home && window.db.home.accs) ? window.db.home.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join('') : '';
     if(!accOpts) { 
@@ -221,7 +280,6 @@ window.dTransferToHomeModal = function() {
         return; 
     }
     
-    // 1. Liczymy całą zarobioną gotówkę w Taxi (Historia + Obecna zmiana)
     let totalCashEarned = 0;
     if(window.db.drv && window.db.drv.h) {
         window.db.drv.h.forEach(s => { 
@@ -232,7 +290,6 @@ window.dTransferToHomeModal = function() {
         window.db.drv.sh.tr.forEach(t => { if(t.p === 'Gotówka') totalCashEarned += (parseFloat(t.v)||0); });
     }
     
-    // 2. Liczymy całą gotówkę już przelaną do Domu
     let totalTransferred = 0;
     if(window.db.home && window.db.home.trans) {
         window.db.home.trans.forEach(t => {
@@ -242,7 +299,6 @@ window.dTransferToHomeModal = function() {
         });
     }
     
-    // 3. Obliczamy dostępną resztę
     let availableCash = totalCashEarned - totalTransferred;
     if (availableCash <= 0) {
         if(window.sysAlert) return window.sysAlert('Brak środków', 'Rozliczyłeś już całą gotówkę z Taxi w Budżecie Domowym!', 'info');
@@ -286,8 +342,7 @@ window.dExecTransferToHome = function() {
         return; 
     }
     
-    // Blokada wpisania zbyt dużej kwoty
-    if(v > maxV + 0.05) { // Mały margines błędu dla ułamków
+    if(v > maxV + 0.05) {
         if(window.sysAlert) window.sysAlert('Odmowa', `Próbujesz przelać więcej, niż masz w gotówce z Taxi! (Max: ${Number(maxV).toFixed(2)} zł)`, 'error'); 
         return;
     }
@@ -307,7 +362,6 @@ window.dExecTransferToHome = function() {
     window.db.home.trans.sort((a,b) => new Date(b.rD) - new Date(a.rD));
     window.save();
     
-    // Bezpieczne usuwanie okienka i odświeżenie UI
     let modal = document.getElementById('m-transfer-home');
     if(modal) modal.remove();
     window.render();
