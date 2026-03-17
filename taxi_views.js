@@ -190,13 +190,23 @@ window.rDrv = function() {
             }
         }
 
-        // --- ZAJAWKA WERSJI PRO (RIDE HELPER) ---
-        let proBannerHtml = `
-        <div style="margin: 20px 15px 10px; padding: 15px; background: linear-gradient(135deg, rgba(217, 70, 239, 0.1), rgba(139, 92, 246, 0.1)); border: 1px dashed rgba(217, 70, 239, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(217, 70, 239, 0.1); transition: 0.3s;" onclick="window.sysAlert('Inteligentny Asystent (PRO)', 'Wkrótce udostępnimy aplikację StyreOS PRO! Nakładka na ekran odczyta szczegóły zlecenia bezpośrednio z Ubera/Bolta i w ułamku sekundy pokaże Ci zysk na czysto na malutkim bąbelku, zanim zdążysz to zaakceptować! 🚀', 'info')">
-            <div style="font-size: 1.8rem; margin-bottom: 5px;">🔮</div>
-            <strong style="color: #e879f9; font-size: 0.95rem; display: block; text-transform: uppercase;">Inteligentny Asystent Zleceń</strong>
-            <span style="font-size: 0.75rem; color: var(--muted); margin-top: 4px; display: block;">Pływająca nakładka opłacalności (RideHelper) pojawi się wkrótce w wersji PRO! Kliknij po szczegóły.</span>
-        </div>`;
+        // --- ZAJAWKA WERSJI PRO (ZALEŻNA OD PLATFORMY) ---
+        let proBannerHtml = '';
+        if (d.plat === 'apps') {
+            proBannerHtml = `
+            <div style="margin: 20px 15px 10px; padding: 15px; background: linear-gradient(135deg, rgba(217, 70, 239, 0.1), rgba(139, 92, 246, 0.1)); border: 1px dashed rgba(217, 70, 239, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(217, 70, 239, 0.1); transition: 0.3s;" onclick="window.sysAlert('Inteligentny Asystent (PRO)', 'Wkrótce udostępnimy aplikację StyreOS PRO! Nakładka na ekran odczyta szczegóły zlecenia bezpośrednio z Ubera/Bolta i w ułamku sekundy pokaże Ci zysk na czysto na malutkim bąbelku, zanim zdążysz to zaakceptować! 🚀', 'info')">
+                <div style="font-size: 1.8rem; margin-bottom: 5px;">🔮</div>
+                <strong style="color: #e879f9; font-size: 0.95rem; display: block; text-transform: uppercase;">Inteligentny Asystent Zleceń</strong>
+                <span style="font-size: 0.75rem; color: var(--muted); margin-top: 4px; display: block;">Pływająca nakładka opłacalności (RideHelper) pojawi się wkrótce w wersji PRO! Kliknij po szczegóły.</span>
+            </div>`;
+        } else {
+            proBannerHtml = `
+            <div style="margin: 20px 15px 10px; padding: 15px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(14, 165, 233, 0.1)); border: 1px dashed rgba(59, 130, 246, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1); transition: 0.3s;" onclick="window.sysAlert('Integracja e-Kasy / RT3000 (PRO)', 'W wersji StyreOS PRO wprowadzimy bezpośrednią integrację z systemami korporacyjnymi i kasami wirtualnymi (API). Zlecenia i e-paragony będą wpadać do aplikacji w 100% automatycznie! 🖨️☁️', 'info')">
+                <div style="font-size: 1.8rem; margin-bottom: 5px;">📡</div>
+                <strong style="color: #60a5fa; font-size: 0.95rem; display: block; text-transform: uppercase;">Integracja e-Kasy / RT3000</strong>
+                <span style="font-size: 0.75rem; color: var(--muted); margin-top: 4px; display: block;">Automatyczne zaciąganie kursów prosto z centrali (API) już wkrótce w wersji PRO! Kliknij po szczegóły.</span>
+            </div>`;
+        }
 
         let act = (d.sh && d.sh.on) ? `
         <div class="dash-hero" style="padding-bottom:5px;">
