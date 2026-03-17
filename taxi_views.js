@@ -79,7 +79,7 @@ window.rDrv = function() {
     <header>
         <button class="logo" onclick="window.openSwitcher()">S</button>
         <div class="header-actions">
-            <div class="badge" style="color:var(--fuel); border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.1);">${Number(d.odo||0).toFixed(0)} KM</div>
+            <div class="badge" style="color:var(--fuel); border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.1); cursor:pointer;" onclick="window.dEditGlobalOdo()">${Number(d.odo||0).toFixed(0)} KM <span style="font-size:0.8rem;">✏️</span></div>
         </div>
     </header>`;
     
