@@ -16,8 +16,8 @@ window.hAddDebt = function() {
         person: n,
         amount: v,
         type: window.hDebtType || 'they_owe',
-        date: dt, // Data wpisu (np. data zakupu PayPo)
-        deadline: dl, // Termin oddania / spłaty
+        date: dt, 
+        deadline: dl, 
         isClosed: false
     });
     window.save();
@@ -95,9 +95,6 @@ window.rHome = function() {
         }
     });
 
-    // ==========================================
-    // ZAKŁADKA: DASHBOARD (PRZEGLĄD)
-    // ==========================================
     if(t === 'dash') {
         let topCatName = Object.keys(dashCats).sort((a,b) => dashCats[b] - dashCats[a])[0];
         let insightsHtml = '';
@@ -208,9 +205,6 @@ window.rHome = function() {
         ` + nav;
     }
 
-    // ==========================================
-    // ZAKŁADKA: CELE / KREDYTY (GOALS)
-    // ==========================================
     if(t === 'goals') {
         let activeLoans = window.db.home.loans.filter(l => !l.isClosed && l.type !== 'Karta');
         let isCompact = window.hForceCompact !== undefined ? window.hForceCompact : (activeLoans.length > 1);
@@ -301,7 +295,7 @@ window.rHome = function() {
                 
                 let totalCostRemaining = rat * instL; 
                 let savings = totalCostRemaining - kap; 
-                let isError = totalCostRemaining < kap; 
+                let isError = totalCostRemaining < kap && l.type !== 'Raty'; // PayPo raty nie muszą mieć odsetek
                 let errorHtml = isError ? `<div style="background:rgba(239,68,68,0.15); color:var(--danger); padding:8px; border-radius:8px; font-size:0.75rem; margin-top:10px; margin-bottom:10px; border:1px solid rgba(239,68,68,0.3); text-align:center;">⚠️ Błąd: Suma rat mniejsza niż kapitał!</div>` : ''; 
                 
                 let pct = totInst > 0 ? ((totInst - instL) / totInst) * 100 : 0; 
@@ -319,7 +313,7 @@ window.rHome = function() {
                 let detailsGrid = `
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">
                     <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">🗓️ Najbliższa rata</span><br><strong style="color:#fff; font-size:0.85rem;">${nextDateStr}</strong></div>
-                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">📊 Oprocentowanie</span><br><strong style="color:#fff; font-size:0.85rem;">${Number(pctBank || 0).toFixed(2)}% (${l.intType||'Stałe'})</strong></div>
+                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">📊 Oprocentowanie</span><br><strong style="color:#fff; font-size:0.85rem;">${l.type === 'Raty' ? '0% / Brak' : `${Number(pctBank || 0).toFixed(2)}% (${l.intType||'Stałe'})`}</strong></div>
                     <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">📉 Typ rat</span><br><strong style="color:#fff; font-size:0.85rem;">${l.instType||'Równe'}</strong></div>
                     <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">🏦 Kwota z umowy</span><br><strong style="color:#fff; font-size:0.85rem;">${Number(bor || 0).toFixed(2)} zł</strong></div>
                     <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px; grid-column: span 2;">
@@ -433,7 +427,6 @@ window.rHome = function() {
                 h.debts.filter(d => !d.isClosed).map(d => { 
                     let amt = parseFloat(d.amount) || 0; 
                     
-                    // --- Logika Paska Postępu i Odliczania (A'la PayPo) ---
                     let dlHtml = '';
                     if (d.deadline) {
                         let dlDate = new Date(d.deadline);
@@ -480,7 +473,7 @@ window.rHome = function() {
                             </div>
                         </div>
                         ${dlHtml}
-                        ${d.type === 'i_owe' ? `<div style="text-align:center; margin-top:12px; background:rgba(14,165,233,0.1); padding:8px; border-radius:8px; border:1px dashed rgba(14,165,233,0.3);"><span onclick="window.sysAlert('Odroczone na Raty', 'Jeśli chcesz rozłożyć to PayPo/Dług na raty: 1. Skasuj ten wpis koszem. 2. Wyjedź na samą górę i dodaj to jako nowe ZOBOWIĄZANIE (Kredyt). Podaj tam kwotę, ilość rat i prowizję od PayPo.', 'info')" style="font-size:0.7rem; color:var(--info); font-weight:bold; cursor:pointer;">Czy to PayPo / dług przechodzi na Raty? 👉</span></div>` : ''}
+                        ${d.type === 'i_owe' ? `<button style="width:100%; background:rgba(14,165,233,0.15); color:var(--info); border:1px dashed rgba(14,165,233,0.4); border-radius:10px; padding:10px; margin-top:12px; font-weight:bold; font-size:0.8rem; cursor:pointer;" onclick="window.hConvertDebtToInstallments('${d.id}')">🔄 ROZŁÓŻ NA RATY (Przenieś wyżej)</button>` : ''}
                     </div>`; 
                 }).join('')}
             </div>
@@ -531,9 +524,7 @@ window.rHome = function() {
         ` + nav;
     }
     
-    // ==========================================
-    // ZAKŁADKA: KONTA (ACCOUNTS)
-    // ==========================================
+    // (PONIŻSZE ZAKŁADKI ZOSTAJĄ BEZ ZMIAN W home_views.js)
     if(t === 'acc') { 
         let totalAccBal = 0; 
         h.accs.forEach(a => totalAccBal += Math.max(0, parseFloat(balances[a.id]) || 0));
@@ -548,7 +539,6 @@ window.rHome = function() {
         }); 
         allocBar += `</div>`;
         
-        // --- ZAJAWKA WERSJI PRO (OPEN BANKING / AI) ---
         let proBankBtn = `
         <div style="margin: 20px 0 10px; padding: 15px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(14, 165, 233, 0.1)); border: 1px dashed rgba(139, 92, 246, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.1); transition: 0.3s;" onclick="window.sysAlert('Open Banking & AI (PRO)', 'W wersji StyreOS PRO połączysz aplikację bezpośrednio ze swoim bankiem (np. mBank, Revolut). Algorytmy AI same rozpoznają, że płatność w Żabce to Zakupy, a na Orlenie to Paliwo, i same wrzucą je do statystyk! 🏦🤖', 'info')">
             <div style="font-size: 1.8rem; margin-bottom: 5px;">🔗</div>
@@ -656,7 +646,7 @@ window.rHome = function() {
                 <div class="panel" style="padding:15px; border-left:4px solid ${a.c}; margin-bottom:15px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div style="display:flex; align-items:center; gap:15px;">
-                            <div style="width:50px; height:50px; border-radius:50%; background:${a.c}22; display:flex; align-items:center; justify-content:center; font-size:1.8rem; border:1px solid ${a.c}55 regular;">${a.i}</div>
+                            <div style="width:50px; height:50px; border-radius:50%; background:${a.c}22; display:flex; align-items:center; justify-content:center; font-size:1.8rem; border:1px solid ${a.c}55;">${a.i}</div>
                             <div>
                                 <strong style="font-size:1.2rem; color:#fff;">${a.n}</strong>
                                 <small style="color:var(--muted); display:block; margin-top:2px; font-size:0.75rem;">Bieżące saldo (${pct}%)</small>
@@ -675,9 +665,6 @@ window.rHome = function() {
         </div>` + nav; 
     }
 
-    // ==========================================
-    // ZAKŁADKA: DODAWANIE TRANSAKCJI (ADD)
-    // ==========================================
     if(t === 'add') { 
         let isExp = window.hTransType === 'exp'; 
         let isTrans = window.hTransType === 'transfer'; 
@@ -762,9 +749,6 @@ window.rHome = function() {
         </div>` + nav; 
     } 
     
-    // ==========================================
-    // ZAKŁADKA: STATYSTYKI (STATS)
-    // ==========================================
     if(t === 'stats') { 
         let now = new Date(); 
         let cats = {}; 
@@ -883,9 +867,6 @@ window.rHome = function() {
         } 
     } 
     
-    // ==========================================
-    // ZAKŁADKA: KALENDARZ (CALENDAR/HISTORY)
-    // ==========================================
     if(t === 'cal') { 
         let isPlannedMode = window.hCalMode === 'planned'; 
         let switchHtml = `<div class="mode-switch" style="margin: 15px 15px 5px 15px;"><div class="m-btn ${!isPlannedMode?'active':''}" style="${!isPlannedMode?'background:var(--success);color:#000;':''}" onclick="window.hCalMode='history'; window.render()">📅 Zrealizowane</div><div class="m-btn ${isPlannedMode?'active':''}" style="${isPlannedMode?'background:var(--warning);color:#000;':''}" onclick="window.hCalMode='planned'; window.render()">⏳ Planowane</div></div>`;
@@ -973,9 +954,6 @@ window.rHome = function() {
         APP.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:0;"><p>HISTORIA I KALENDARZ</p></div>${switchHtml}${monthNavHtml}${searchHtml}${filterButtons}${monthlySummaryHtml}<div style="padding:0 15px 30px;">${calHtml || '<div style="text-align:center; color:var(--muted); padding:30px;">Brak operacji.</div>'}</div>` + nav; 
     }
     
-    // ==========================================
-    // ZAKŁADKA: USTAWIENIA (SETTINGS)
-    // ==========================================
     if(t === 'set') { 
         let catSrcSet = window.hRecType === 'exp' ? C_EXP : C_INC; 
         if(!catSrcSet[window.hRecCat]) window.hRecCat = Object.keys(catSrcSet)[0]; 
