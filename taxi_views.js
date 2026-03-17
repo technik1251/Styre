@@ -190,24 +190,6 @@ window.rDrv = function() {
             }
         }
 
-        // --- ZAJAWKA WERSJI PRO (ZALEŻNA OD PLATFORMY) ---
-        let proBannerHtml = '';
-        if (d.plat === 'apps') {
-            proBannerHtml = `
-            <div style="margin: 20px 15px 10px; padding: 15px; background: linear-gradient(135deg, rgba(217, 70, 239, 0.1), rgba(139, 92, 246, 0.1)); border: 1px dashed rgba(217, 70, 239, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(217, 70, 239, 0.1); transition: 0.3s;" onclick="window.sysAlert('Inteligentny Asystent (PRO)', 'Wkrótce udostępnimy aplikację StyreOS PRO! Nakładka na ekran odczyta szczegóły zlecenia bezpośrednio z Ubera/Bolta i w ułamku sekundy pokaże Ci zysk na czysto na malutkim bąbelku, zanim zdążysz to zaakceptować! 🚀', 'info')">
-                <div style="font-size: 1.8rem; margin-bottom: 5px;">🔮</div>
-                <strong style="color: #e879f9; font-size: 0.95rem; display: block; text-transform: uppercase;">Inteligentny Asystent Zleceń</strong>
-                <span style="font-size: 0.75rem; color: var(--muted); margin-top: 4px; display: block;">Pływająca nakładka opłacalności (RideHelper) pojawi się wkrótce w wersji PRO! Kliknij po szczegóły.</span>
-            </div>`;
-        } else {
-            proBannerHtml = `
-            <div style="margin: 20px 15px 10px; padding: 15px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(14, 165, 233, 0.1)); border: 1px dashed rgba(59, 130, 246, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1); transition: 0.3s;" onclick="window.sysAlert('Integracja e-Kasy / RT3000 (PRO)', 'W wersji StyreOS PRO wprowadzimy bezpośrednią integrację z systemami korporacyjnymi i kasami wirtualnymi (API). Zlecenia i e-paragony będą wpadać do aplikacji w 100% automatycznie! 🖨️☁️', 'info')">
-                <div style="font-size: 1.8rem; margin-bottom: 5px;">📡</div>
-                <strong style="color: #60a5fa; font-size: 0.95rem; display: block; text-transform: uppercase;">Integracja e-Kasy / RT3000</strong>
-                <span style="font-size: 0.75rem; color: var(--muted); margin-top: 4px; display: block;">Automatyczne zaciąganie kursów prosto z centrali (API) już wkrótce w wersji PRO! Kliknij po szczegóły.</span>
-            </div>`;
-        }
-
         let act = (d.sh && d.sh.on) ? `
         <div class="dash-hero" style="padding-bottom:5px;">
             <p>${displayLabel}</p>
@@ -222,7 +204,6 @@ window.rDrv = function() {
                 <div style="font-size:0.75rem; color:var(--muted); text-align:center; margin-top:8px;">${etaHtml}</div>
             </div>
             ${breakdownHtml}
-            ${proBannerHtml}
             <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:6px 12px; border-radius:10px; display:inline-block; margin-top:15px;">
                 <span style="font-size:0.7rem; color:var(--muted); text-transform:uppercase;">⏳ Czas pracy dniówki:</span><strong style="color:var(--info); font-size:1rem; margin-left:5px;">${diffHrs}h ${diffMins}m</strong>
             </div>
@@ -452,6 +433,24 @@ window.rDrv = function() {
         }
         // ---------------------------------------------------
 
+        // --- ZAJAWKA WERSJI PRO (ZALEŻNA OD PLATFORMY) ---
+        let proBannerHtml = '';
+        if (d.plat === 'apps') {
+            proBannerHtml = `
+            <div style="margin: 20px 15px 10px; padding: 15px; background: linear-gradient(135deg, rgba(217, 70, 239, 0.1), rgba(139, 92, 246, 0.1)); border: 1px dashed rgba(217, 70, 239, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(217, 70, 239, 0.1); transition: 0.3s;" onclick="window.sysAlert('Inteligentny Asystent Zleceń (PRO)', 'Wkrótce udostępnimy aplikację StyreOS PRO! Nakładka na ekran odczyta szczegóły zlecenia bezpośrednio z aplikacji partnerskiej i w ułamku sekundy pokaże Ci zysk na czysto na malutkim bąbelku, zanim zdążysz to zaakceptować! 🚀', 'info')">
+                <div style="font-size: 1.8rem; margin-bottom: 5px;">🔮</div>
+                <strong style="color: #e879f9; font-size: 0.95rem; display: block; text-transform: uppercase;">Inteligentny Asystent Zleceń</strong>
+                <span style="font-size: 0.75rem; color: var(--muted); margin-top: 4px; display: block;">Pływająca nakładka opłacalności pojawi się wkrótce w wersji PRO! Kliknij po szczegóły.</span>
+            </div>`;
+        } else {
+            proBannerHtml = `
+            <div style="margin: 20px 15px 10px; padding: 15px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(14, 165, 233, 0.1)); border: 1px dashed rgba(59, 130, 246, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1); transition: 0.3s;" onclick="window.sysAlert('Integracja e-Kasy / RT3000 (PRO)', 'W wersji StyreOS PRO wprowadzimy bezpośrednią integrację z systemami korporacyjnymi i kasami wirtualnymi (API). Zlecenia i e-paragony będą wpadać do aplikacji w 100% automatycznie! 🖨️☁️', 'info')">
+                <div style="font-size: 1.8rem; margin-bottom: 5px;">📡</div>
+                <strong style="color: #60a5fa; font-size: 0.95rem; display: block; text-transform: uppercase;">Integracja e-Kasy / RT3000</strong>
+                <span style="font-size: 0.75rem; color: var(--muted); margin-top: 4px; display: block;">Automatyczne zaciąganie kursów prosto z centrali (API) już wkrótce w wersji PRO! Kliknij po szczegóły.</span>
+            </div>`;
+        }
+
         APP.innerHTML = hdr + `
         <div class="mode-switch" style="margin:12px;">
             <div class="m-btn ${fM==='today'?'active':''}" onclick="window.db.filter='today'; window.render()">Dziś</div>
@@ -483,6 +482,7 @@ window.rDrv = function() {
             <div class="box" style="border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.05);"><span style="color:var(--success)">KM z Klientem</span><strong style="color:#fff">${Number(pkSum).toFixed(1)} km</strong></div>
             <div class="box" style="border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.05);"><span style="color:var(--danger)">Puste KM (Dojazdy)</span><strong style="color:#fff">${Number(emptyKSum).toFixed(1)} km</strong></div>
         </div>
+        ${proBannerHtml}
         <div class="panel" style="padding:20px 15px;">
             <div class="p-title">Wodospad Finansowy (P&L)</div>
             <div class="fin-row"><span class="fin-label">Utarg Brutto z aplikacji</span><span class="fin-val" style="color:var(--success)">${Number(g).toFixed(2)} zł</span></div>
@@ -530,7 +530,7 @@ window.rDrv = function() {
         let clientOpts = (d.clients || []).map(c => `<option value="${c.id}" data-d="${c.d||0}">${c.n} (Rabat: ${c.d||0}%)</option>`).join('');
         
         APP.innerHTML = hdr + `
-        <div class="dash-hero" style="padding-bottom:5px;"><p>INTELIGENTNA WYCENA (MAPY)</p></div>
+        <div class="dash-hero" style="padding-bottom:5px;"><p>INTELIGENT WYCENA (MAPY)</p></div>
         <div class="panel" style="border-color:rgba(217, 70, 239, 0.4)">
             <div class="form-section" style="padding:15px;">
                 <div class="inp-group" style="margin-bottom:10px;"><label style="color:var(--success)">🟢 Adres początkowy</label><input type="text" id="dq-start" placeholder="np. Dworzec Główny" style="border-color:var(--success);"></div>
