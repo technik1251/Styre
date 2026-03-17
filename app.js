@@ -1,4 +1,35 @@
 // ==========================================
+// ZABEZPIECZENIA ANTYPIRACKIE
+// ==========================================
+
+// 1. Blokada prawego przycisku myszy
+document.addEventListener('contextmenu', event => event.preventDefault());
+
+// 2. Blokada skrótów klawiszowych (F12, Zbadaj Element, Źródło)
+document.addEventListener('keydown', function(e) {
+    // Blokada F12
+    if (e.keyCode === 123) {
+        e.preventDefault();
+        return false;
+    }
+    // Blokada Ctrl+Shift+I (Narzędzia deweloperskie)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+        e.preventDefault();
+        return false;
+    }
+    // Blokada Ctrl+Shift+J (Konsola)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
+        e.preventDefault();
+        return false;
+    }
+    // Blokada Ctrl+U (Wyświetl źródło)
+    if (e.ctrlKey && e.keyCode === 85) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// ==========================================
 // PLIK: app.js - GŁÓWNY SILNIK I LAUNCHER
 // ==========================================
 
