@@ -66,7 +66,6 @@ window.rDrv = function() {
     let d = (window.db && window.db.drv) ? window.db.drv : {cfg:{}, sh:{tr:[]}, q:{}, clients:[]};
     let t = window.db.tab || 'term';
     
-    // NAPRAWA: Zmiana window.db.tab=... na window.switchTab(...) gwarantująca zapis stanu
     let nav = `
     <div class="nav">
         <div class="nav-item ${t==='term'?'active':''}" onclick="window.switchTab('term')"><i>🚕</i>Panel</div>
@@ -191,6 +190,14 @@ window.rDrv = function() {
             }
         }
 
+        // --- ZAJAWKA WERSJI PRO (RIDE HELPER) ---
+        let proBannerHtml = `
+        <div style="margin: 20px 15px 10px; padding: 15px; background: linear-gradient(135deg, rgba(217, 70, 239, 0.1), rgba(139, 92, 246, 0.1)); border: 1px dashed rgba(217, 70, 239, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(217, 70, 239, 0.1); transition: 0.3s;" onclick="window.sysAlert('Inteligentny Asystent (PRO)', 'Wkrótce udostępnimy aplikację StyreOS PRO! Nakładka na ekran odczyta szczegóły zlecenia bezpośrednio z Ubera/Bolta i w ułamku sekundy pokaże Ci zysk na czysto na malutkim bąbelku, zanim zdążysz to zaakceptować! 🚀', 'info')">
+            <div style="font-size: 1.8rem; margin-bottom: 5px;">🔮</div>
+            <strong style="color: #e879f9; font-size: 0.95rem; display: block; text-transform: uppercase;">Inteligentny Asystent Zleceń</strong>
+            <span style="font-size: 0.75rem; color: var(--muted); margin-top: 4px; display: block;">Pływająca nakładka opłacalności (RideHelper) pojawi się wkrótce w wersji PRO! Kliknij po szczegóły.</span>
+        </div>`;
+
         let act = (d.sh && d.sh.on) ? `
         <div class="dash-hero" style="padding-bottom:5px;">
             <p>${displayLabel}</p>
@@ -205,6 +212,7 @@ window.rDrv = function() {
                 <div style="font-size:0.75rem; color:var(--muted); text-align:center; margin-top:8px;">${etaHtml}</div>
             </div>
             ${breakdownHtml}
+            ${proBannerHtml}
             <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:6px 12px; border-radius:10px; display:inline-block; margin-top:15px;">
                 <span style="font-size:0.7rem; color:var(--muted); text-transform:uppercase;">⏳ Czas pracy dniówki:</span><strong style="color:var(--info); font-size:1rem; margin-left:5px;">${diffHrs}h ${diffMins}m</strong>
             </div>
