@@ -596,27 +596,70 @@ window.hDelPiggy = function(id) {
     } 
 };
 
-// --- DŁUGI I INNE ---
+// --- DŁUGI / PAYPO I INNE ---
 window.hAddDebt = function() { 
-    let n = document.getElementById('hd-name').value; 
+    let n = document.getElementById('hd-name').value.trim(); 
     let v = parseFloat(document.getElementById('hd-val').value); 
-    if(!n || !v || v <= 0) return; 
+    
+    // Pobieramy daty z modyfikacji interfejsu (lub ustawiamy domyślne)
+    let dEl = document.getElementById('hd-date');
+    let dlEl = document.getElementById('hd-deadline');
+    let dt = dEl ? dEl.value : window.getLocalYMD().substring(0,10);
+    let dl = dlEl ? dlEl.value : '';
+
+    if(!n || isNaN(v) || v <= 0) {
+        if(window.sysAlert) return window.sysAlert("Błąd", "Podaj poprawną nazwę i kwotę.", "error");
+        return alert("Błąd: Wpisz nazwę i kwotę.");
+    }
+    
     let dId = Date.now(); 
     let isOwe = window.hDebtType === 'i_owe'; 
+    
+    // Tworzymy datę obiektu płatności do kalendarza
     let dObj = new Date(); 
-    dObj.setDate(dObj.getDate() + 30); 
-    window.db.home.debts.push({ id: dId, person: n, amount: v, type: window.hDebtType, date: window.getLocalYMD().substring(0,10), isClosed: false }); 
-    window.db.home.trans.push({ id: 'd_'+dId, type: isOwe?'exp':'inc', cat: isOwe?'Inne Wydatki':'Inne Wpływy', acc: window.db.home.accs[0].id, d: 'Dług: '+n, v: v, who: window.db.userName, dt: dObj.toLocaleDateString('pl-PL'), rD: dObj.toISOString(), isPlanned: true, debtId: dId }); 
+    if (dl) {
+        dObj = new Date(dl);
+    } else {
+        dObj.setDate(dObj.getDate() + 30); // Domyślnie +30 dni jeśli brak deadline'u
+    }
+    dObj.setHours(12,0,0); 
+    
+    // Zapis długu do bazy długów
+    window.db.home.debts.push({ 
+        id: dId, 
+        person: n, 
+        amount: v, 
+        type: window.hDebtType, 
+        date: dt, 
+        deadline: dl, 
+        isClosed: false 
+    }); 
+    
+    // Zapis Długu jako transakcji PLANOWANEJ w kalendarzu
+    window.db.home.trans.push({ 
+        id: 'd_'+dId, 
+        type: isOwe ? 'exp' : 'inc', 
+        cat: isOwe ? 'Inne Wydatki' : 'Inne Wpływy', 
+        acc: window.db.home.accs[0].id, 
+        d: (isOwe ? 'Odroczone (PayPo): ' : 'Dług: ') + n, 
+        v: v, 
+        who: window.db.userName, 
+        dt: dObj.toLocaleDateString('pl-PL'), 
+        rD: dObj.toISOString(), 
+        isPlanned: true, 
+        debtId: dId 
+    }); 
+    
     window.db.home.trans.sort((a,b) => new Date(b.rD) - new Date(a.rD)); 
     window.hSyncSchedule(); 
     window.save(); 
     window.render(); 
-    if(window.sysAlert) window.sysAlert("Sukces", "Zapisano dług!", "success"); 
+    if(window.sysAlert) window.sysAlert("Sukces", "Zapisano wpis w zeszycie!", "success"); 
 };
 
 window.hDelDebtMistake = function(id) { 
     if(window.sysConfirm) { 
-        window.sysConfirm("Usuwanie", "Usunąć z zeszytu?", () => { 
+        window.sysConfirm("Usuwanie", "Usunąć wpis z zeszytu?", () => { 
             window.db.home.debts = window.db.home.debts.filter(d => d.id != id); 
             window.db.home.trans = window.db.home.trans.filter(t => !(t.isPlanned && t.debtId == id)); 
             window.save(); 
@@ -628,7 +671,7 @@ window.hDelDebtMistake = function(id) {
 window.hOpenPayDebtModal = function(id) { 
     let d = window.db.home.debts.find(x => x.id == id); 
     if(!d) return; 
-    let html = `<div id="m-pay-debt" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--warning);"><h3 style="margin-top:0; color:var(--warning);">🤝 Rozliczenie</h3><p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px;">Osoba: <strong>${d.person}</strong></p><div class="inp-group" style="margin-bottom:15px;"><input type="number" step="0.01" id="mpd-val" value="${Number(d.amount||0).toFixed(2)}" max="${d.amount}" class="big-inp" style="color:var(--warning); background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:20px;"><label>Konto</label><select id="mpd-acc" style="background:#18181b;">${window.db.home.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join('')}</select></div><button class="btn" style="background:var(--warning); color:#000;" onclick="window.hExecPayDebt('${d.id}')">POTWIERDŹ</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-pay-debt').remove()">ANULUJ</button></div></div>`; 
+    let html = `<div id="m-pay-debt" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--warning);"><h3 style="margin-top:0; color:var(--warning);">🤝 Rozliczenie</h3><p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px;">Wpis: <strong>${d.person}</strong></p><div class="inp-group" style="margin-bottom:15px;"><input type="number" step="0.01" id="mpd-val" value="${Number(d.amount||0).toFixed(2)}" max="${d.amount}" class="big-inp" style="color:var(--warning); background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:20px;"><label>Konto</label><select id="mpd-acc" style="background:#18181b;">${window.db.home.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join('')}</select></div><button class="btn" style="background:var(--warning); color:#000;" onclick="window.hExecPayDebt('${d.id}')">POTWIERDŹ</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-pay-debt').remove()">ANULUJ</button></div></div>`; 
     document.body.insertAdjacentHTML('beforeend', html); 
 };
 
@@ -642,24 +685,27 @@ window.hExecPayDebt = function(id) {
     let dObj = new Date(); 
     dObj.setHours(12,0,0); 
     
+    // Księgowanie spłaty PayPo / długu jako ZREALIZOWANA
     window.db.home.trans.unshift({ 
         id: Date.now(), type: isOwe?'exp':'inc', cat: isOwe?'Inne Wydatki':'Inne Wpływy', 
-        acc: accId, d: (isOwe?'Oddano: ':'Otrzymano: ')+d.person, v: val, 
+        acc: accId, d: (isOwe?'Spłata Odroczona: ':'Otrzymano: ')+d.person, v: val, 
         who: window.db.userName, dt: dObj.toLocaleDateString('pl-PL'), 
         rD: dObj.toISOString(), isPlanned: false, debtAction: 'pay', debtId: d.id 
     }); 
     
     d.amount -= val; 
+    
+    // Znajdź transakcję z kalendarza (zaplanowaną w przyszłości) żeby pomniejszyć na niej kwotę
     let ptr = window.db.home.trans.find(x => x.debtId == id && x.isPlanned); 
     
     if(d.amount <= 0) { 
         d.amount = 0; 
         d.isClosed = true; 
         if(ptr) window.db.home.trans = window.db.home.trans.filter(x => x.id != ptr.id); 
-        if(window.sysAlert) window.sysAlert("Rozliczono!", "Dług spłacony.", "success"); 
+        if(window.sysAlert) window.sysAlert("Rozliczono!", "Płatność w pełni uregulowana.", "success"); 
     } else { 
         if(ptr) ptr.v = d.amount; 
-        if(window.sysAlert) window.sysAlert("Sukces!", `Pozostało: ${Number(d.amount||0).toFixed(2)} zł.`, "success"); 
+        if(window.sysAlert) window.sysAlert("Sukces!", `Pozostało jeszcze: ${Number(d.amount||0).toFixed(2)} zł.`, "success"); 
     } 
     window.hSyncSchedule(); 
     window.save(); 
