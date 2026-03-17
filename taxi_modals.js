@@ -170,7 +170,6 @@ window.dEndS = function() {
     });
     window.db.drv.h.sort((a,b) => new Date(b.rD) - new Date(a.rD));
     
-    // Reset sesji zmiany
     window.db.drv.sh.on = false; 
     window.db.drv.sh.tr = []; 
     window.db.drv.liveRideStart = null; 
@@ -214,25 +213,56 @@ window.dEndS = function() {
     document.body.insertAdjacentHTML('beforeend', mHtml);
 };
 
-// --- SYNCHRONIZACJA Z DOMEM ---
-window.dTransferToHomeModal = function(suggestedCash = 0) {
+// --- SYNCHRONIZACJA Z DOMEM (INTELIGENTNY LICZNIK GOTÓWKI) ---
+window.dTransferToHomeModal = function() {
     let accOpts = (window.db.home && window.db.home.accs) ? window.db.home.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join('') : '';
     if(!accOpts) { 
         if(window.sysAlert) return window.sysAlert('Błąd', 'Brak kont w Budżecie Domowym! Dodaj je najpierw w module domowym.', 'error'); 
         return; 
     }
     
-    let hintHtml = suggestedCash > 0 ? `<div style="font-size:0.75rem; color:var(--success); margin-bottom:15px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); padding:10px; border-radius:8px; text-align:center;">Sugerowana gotówka do wypłaty (z utargu):<br><strong style="font-size:1.1rem;">${Number(suggestedCash||0).toFixed(2)} zł</strong></div>` : '';
+    // 1. Liczymy całą zarobioną gotówkę w Taxi (Historia + Obecna zmiana)
+    let totalCashEarned = 0;
+    if(window.db.drv && window.db.drv.h) {
+        window.db.drv.h.forEach(s => { 
+            if(s.tr) s.tr.forEach(t => { if(t.p === 'Gotówka') totalCashEarned += (parseFloat(t.v)||0); }); 
+        });
+    }
+    if(window.db.drv && window.db.drv.sh && window.db.drv.sh.tr) {
+        window.db.drv.sh.tr.forEach(t => { if(t.p === 'Gotówka') totalCashEarned += (parseFloat(t.v)||0); });
+    }
+    
+    // 2. Liczymy całą gotówkę już przelaną do Domu
+    let totalTransferred = 0;
+    if(window.db.home && window.db.home.trans) {
+        window.db.home.trans.forEach(t => {
+            if(t.cat === 'Wypłata z Etatu' && t.d === 'Utarg z Taxi') {
+                totalTransferred += (parseFloat(t.v)||0);
+            }
+        });
+    }
+    
+    // 3. Obliczamy dostępną resztę
+    let availableCash = totalCashEarned - totalTransferred;
+    if (availableCash <= 0) {
+        if(window.sysAlert) return window.sysAlert('Brak środków', 'Rozliczyłeś już całą gotówkę z Taxi w Budżecie Domowym!', 'info');
+        return;
+    }
     
     let html = `
     <div id="m-transfer-home" class="modal-overlay" style="z-index: 30000; animation: fadeIn 0.2s;">
         <div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--success);">
             <h3 style="margin-top:0; color:var(--success);">💸 Wypłata Utargu</h3>
             <p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px;">Przelej zarobioną gotówkę do portfela domowego.</p>
-            ${hintHtml}
+            
+            <div style="font-size:0.75rem; color:var(--success); margin-bottom:15px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); padding:10px; border-radius:8px; text-align:center;">
+                Nierozliczona gotówka w portfelu:<br>
+                <strong style="font-size:1.2rem;">${Number(availableCash).toFixed(2)} zł</strong>
+            </div>
+            
             <div class="inp-group" style="margin-bottom:15px;">
-                <label>Kwota (zł)</label>
-                <input type="number" step="0.01" id="dth-v" placeholder="np. 250" value="${suggestedCash > 0 ? Number(suggestedCash).toFixed(2) : ''}" class="big-inp" style="color:var(--success); background:rgba(0,0,0,0.5);">
+                <label>Kwota do przelania (zł)</label>
+                <input type="number" step="0.01" id="dth-v" max="${availableCash}" placeholder="np. 250" value="${Number(availableCash).toFixed(2)}" class="big-inp" style="color:var(--success); background:rgba(0,0,0,0.5);">
             </div>
             <div class="inp-group" style="margin-bottom:20px;">
                 <label>Do jakiego portfela?</label>
@@ -246,11 +276,20 @@ window.dTransferToHomeModal = function(suggestedCash = 0) {
 };
 
 window.dExecTransferToHome = function() {
-    let v = parseFloat(document.getElementById('dth-v').value);
+    let inputEl = document.getElementById('dth-v');
+    let v = parseFloat(inputEl.value);
+    let maxV = parseFloat(inputEl.getAttribute('max'));
     let accId = document.getElementById('dth-acc').value;
+    
     if(!v || v <= 0) { 
-        if(window.sysAlert) return window.sysAlert('Błąd', 'Podaj poprawną kwotę!', 'error'); 
+        if(window.sysAlert) window.sysAlert('Błąd', 'Podaj poprawną kwotę!', 'error'); 
         return; 
+    }
+    
+    // Blokada wpisania zbyt dużej kwoty
+    if(v > maxV + 0.05) { // Mały margines błędu dla ułamków
+        if(window.sysAlert) window.sysAlert('Odmowa', `Próbujesz przelać więcej, niż masz w gotówce z Taxi! (Max: ${Number(maxV).toFixed(2)} zł)`, 'error'); 
+        return;
     }
     
     let dObj = new Date(); 
@@ -267,8 +306,17 @@ window.dExecTransferToHome = function() {
     
     window.db.home.trans.sort((a,b) => new Date(b.rD) - new Date(a.rD));
     window.save();
-    document.getElementById('m-transfer-home').remove();
-    if(window.sysAlert) window.sysAlert('Sukces!', `Przelałeś ${Number(v).toFixed(2)} zł do Budżetu!`, 'success');
+    
+    // Bezpieczne usuwanie okienka i odświeżenie UI
+    let modal = document.getElementById('m-transfer-home');
+    if(modal) modal.remove();
+    window.render();
+    
+    if(window.sysAlert) {
+        setTimeout(() => {
+            window.sysAlert('Sukces!', `Przelałeś ${Number(v).toFixed(2)} zł do Budżetu!`, 'success');
+        }, 100);
+    }
 };
 
 // --- TRANSAKCJE TAXI ---
