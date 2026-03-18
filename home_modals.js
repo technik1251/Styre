@@ -133,7 +133,7 @@ window.hSaveEditTrans = function(id) {
 
 
 // ==========================================
-// ZOBOWIĄZANIA PREMIUM (UNIFIED)
+// ZOBOWIĄZANIA PREMIUM (UNIFIED MODAL)
 // ==========================================
 
 window.hToggleLoanFields = function() {
@@ -145,35 +145,60 @@ window.hToggleLoanFields = function() {
     let isPryw = isPrywWplyw || isPrywWydatek;
     let isKredyt = (type === 'Kredyt' || type === 'Leasing');
 
-    // Opisy pół zależnie od typu
     let lblBor = document.getElementById('lbl-borrowed');
-    if(isCard) lblBor.innerText = 'Przyznany Limit Karty (zł)';
-    else if(isPayPo) lblBor.innerText = 'Wartość początkowa zakupu (zł)';
-    else if(isPryw) lblBor.innerText = 'Całkowita kwota pożyczki (zł)';
-    else lblBor.innerText = 'Początkowa Kwota Umowy (zł)';
+    let lblKap = document.getElementById('lbl-kapital');
+    let mlKapital = document.getElementById('ml-kapital');
 
-    document.getElementById('lbl-kapital').innerText = isCard ? 'Bieżące Zadłużenie na Karcie (zł)' : 'Całkowita kwota do spłaty NA DZIŚ (zł)';
+    if(isCard) {
+        lblBor.innerText = 'Przyznany Limit Karty (zł)';
+        lblKap.innerText = 'Bieżące Zadłużenie na Karcie (zł)';
+        mlKapital.disabled = false;
+        mlKapital.style.opacity = '1';
+    }
+    else if(isPayPo) {
+        lblBor.innerText = 'Wartość Koszyka (zł)';
+        lblKap.innerText = 'Całkowity Koszt do Spłaty na Dziś (zł) - Auto';
+        mlKapital.disabled = true; // ZABLOKOWANE - Liczy system!
+        mlKapital.style.opacity = '0.5';
+    }
+    else if(isPryw) {
+        lblBor.innerText = 'Całkowita kwota pożyczki (zł)';
+        lblKap.innerText = 'Całkowita kwota do spłaty NA DZIŚ (zł)';
+        mlKapital.disabled = false;
+        mlKapital.style.opacity = '1';
+    }
+    else {
+        lblBor.innerText = 'Początkowa Kwota Umowy (zł)';
+        lblKap.innerText = 'Całkowita kwota do spłaty NA DZIŚ (zł)';
+        mlKapital.disabled = false;
+        mlKapital.style.opacity = '1';
+    }
 
-    // Pokazywanie/Ukrywanie sekcji
-    document.getElementById('row-rates-1').style.display = isKredyt ? 'flex' : 'none'; // Oprocentowanie tylko dla Kredytu
-    document.getElementById('row-rates-2').style.display = (isKredyt || isPayPo) ? 'flex' : 'none'; // Ilość rat
-    document.getElementById('row-card-opts').style.display = isCard ? 'flex' : 'none'; // Opcje Karty
-    document.getElementById('group-rata').style.display = (isKredyt || isPayPo) ? 'block' : 'none'; // Kwota pojedynczej raty
-    document.getElementById('paypo-dates').style.display = isPayPo ? 'flex' : 'none'; // Daty w PayPo (30 dni)
-    document.getElementById('group-day').style.display = (isKredyt || isCard) ? 'block' : 'none'; // Dzień spłaty w m-cu
+    // Pokaż / Ukryj Sekcje
+    document.getElementById('row-rates-1').style.display = isKredyt ? 'flex' : 'none'; 
+    document.getElementById('row-card-opts').style.display = isCard ? 'flex' : 'none'; 
     
-    // Sekcja Prywatna
+    // Trik dla PayPo - wyłączamy wpisywanie ręcznej kwoty raty
+    document.getElementById('group-rata').style.display = isKredyt ? 'block' : 'none';
+    
+    // Pokaż dodatkowe koszty (Prowizja PayPo)
+    document.getElementById('paypo-koszty').style.display = isPayPo ? 'block' : 'none';
+    document.getElementById('row-rates-2').style.display = (isKredyt || isPayPo) ? 'flex' : 'none'; 
+    
+    document.getElementById('paypo-dates').style.display = isPayPo ? 'flex' : 'none'; 
+    document.getElementById('group-day').style.display = (isKredyt || isCard) ? 'block' : 'none'; 
+    
     document.getElementById('custom-schedule-box').style.display = isPryw ? 'block' : 'none';
     document.getElementById('pryw-typ-splaty').style.display = isPryw ? 'block' : 'none';
 
-    // Zerowanie niepotrzebnych dla danego typu
     if(isCard || isPryw) { 
         document.getElementById('ml-rata').value = 0; 
         document.getElementById('ml-left-inst').value = 0; 
     }
     if(!isKredyt) document.getElementById('ml-pct').value = 0;
     
-    window.hTogglePrywType(); // Odśwież widok harmonogramu
+    window.hTogglePrywType(); 
+    window.hCalcBNPL(); // Przelicz przy zmianie zakładki
 };
 
 window.hTogglePrywType = function() {
@@ -186,7 +211,6 @@ window.hTogglePrywType = function() {
     }
 };
 
-// Automatyczne generowanie wiersza własnego harmonogramu (Prywatny)
 window.hAddCustomTransza = function(amt = '', date = '', id = Date.now(), isPaid = false) {
     let wrap = document.getElementById('cs-wrap');
     if(!wrap) return;
@@ -203,7 +227,6 @@ window.hAddCustomTransza = function(amt = '', date = '', id = Date.now(), isPaid
     wrap.appendChild(div);
 };
 
-// Obliczanie sumy własnego harmonogramu
 window.hCalcCustomTotal = function() {
     let sum = 0;
     document.querySelectorAll('.cs-amt').forEach(inp => sum += (parseFloat(inp.value) || 0));
@@ -225,13 +248,12 @@ window.hCalcCustomTotal = function() {
 
 window.hCalcBNPL = function() {
     let type = document.getElementById('ml-type').value;
-    if(type === 'PayPo' || type === 'Kredyt' || type === 'Leasing') {
-        let r = parseFloat(document.getElementById('ml-rata').value) || 0;
-        let i = parseInt(document.getElementById('ml-left-inst').value) || 0;
-        if(r > 0 && i > 0) {
-            document.getElementById('ml-kapital').value = (r * i).toFixed(2);
-            window.hCalcCustomTotal(); // odśwież ewentualne inne weryfikacje
-        }
+    if(type === 'PayPo') {
+        let koszyk = parseFloat(document.getElementById('ml-borrowed').value) || 0;
+        let koszty = parseFloat(document.getElementById('ml-pp-koszt').value) || 0;
+        
+        let total = koszyk + koszty;
+        document.getElementById('ml-kapital').value = total > 0 ? total.toFixed(2) : '';
     }
 };
 
@@ -242,6 +264,13 @@ window.hOpenLoanModal = function(id = null, forceCard = false) {
     let mPay = ln && ln.minPayPct ? ln.minPayPct : 5;
     let dPay = ln && ln.declaredPay ? ln.declaredPay : '100';
     let today = window.getLocalYMD().substring(0,10);
+    
+    // Oblicz koszty jeśli to paypo do edycji
+    let extKoszty = 0;
+    if(ln && ln.type === 'PayPo') {
+        extKoszty = (parseFloat(ln.totalInst)*parseFloat(ln.rata)) - parseFloat(ln.borrowed);
+        if(extKoszty < 0 || isNaN(extKoszty)) extKoszty = 0;
+    }
 
     let html = `<div id="m-loan" class="modal-overlay"><div class="panel" style="width:100%; max-width:380px; background:#18181b; border:1px solid rgba(255,255,255,0.1); max-height:90vh; overflow-y:auto;">
         <h3 style="margin-top:0; color:#fff; display:flex; align-items:center; gap:10px;">${ln ? '✏️ Edytuj Zobowiązanie' : '🏦 Nowe Zobowiązanie'}</h3>
@@ -261,11 +290,16 @@ window.hOpenLoanModal = function(id = null, forceCard = false) {
         <div class="inp-group" style="margin-bottom:12px;"><label>Nazwa (np. Maciek, Karta, PayPo)</label><input type="text" id="ml-n" value="${ln?ln.n:''}"></div>
         <div class="inp-group" style="margin-bottom:12px;"><label>Konto powiązane ze spłatą/wpływem</label><select id="ml-acc" style="background:#09090b;">${window.db.home.accs.map(a => `<option value="${a.id}" ${a.id==(ln?ln.accId:'')?'selected':''}>${a.n}</option>`).join('')}</select></div>
         
-        <div class="inp-group" style="margin-bottom:12px; border:1px solid var(--success); padding:10px; border-radius:12px; background:rgba(34,197,94,0.05);"><label id="lbl-borrowed" style="color:var(--success);">Wartość początkowa zakupu (zł)</label><input type="number" step="0.01" id="ml-borrowed" value="${ln?(parseFloat(ln.borrowed)||0):''}" placeholder="np. 237" style="color:var(--success); font-weight:bold;" oninput="window.hCalcCustomTotal()"></div>
+        <div class="inp-group" style="margin-bottom:12px; border:1px solid var(--success); padding:10px; border-radius:12px; background:rgba(34,197,94,0.05);"><label id="lbl-borrowed" style="color:var(--success);">Wartość początkowa zakupu (zł)</label><input type="number" step="0.01" id="ml-borrowed" value="${ln?(parseFloat(ln.borrowed)||0):''}" placeholder="np. 237" style="color:var(--success); font-weight:bold;" oninput="window.hCalcBNPL()"></div>
         
-        <div id="row-rates-2" class="inp-row" style="margin-bottom:12px; display:flex;"><div class="inp-group" id="group-rata"><label>Kwota JEDNEJ raty (zł)</label><input type="number" step="0.01" id="ml-rata" value="${ln?(ln.rata||''):''}" oninput="window.hCalcBNPL()"></div><div class="inp-group"><label>Ile rat zostało?</label><input type="number" id="ml-left-inst" value="${ln?(ln.installmentsLeft||''):''}" oninput="window.hCalcBNPL()"></div></div>
+        <div class="inp-group" id="paypo-koszty" style="margin-bottom:12px; display:none;"><label style="color:var(--warning);">Koszty operatora (Prowizja PayPo)</label><input type="number" step="0.01" id="ml-pp-koszt" value="${extKoszty}" placeholder="0" style="color:var(--warning);" oninput="window.hCalcBNPL()"></div>
+        
+        <div id="row-rates-2" class="inp-row" style="margin-bottom:12px; display:flex;">
+            <div class="inp-group" id="group-rata"><label>Kwota JEDNEJ raty (zł)</label><input type="number" step="0.01" id="ml-rata" value="${ln?(ln.rata||''):''}"></div>
+            <div class="inp-group" style="flex:1;"><label>Z ilu rat został wzięty?</label><input type="number" id="ml-left-inst" value="${ln?(ln.installmentsLeft||''):''}"></div>
+        </div>
 
-        <div class="inp-group" style="margin-bottom:15px;"><label id="lbl-kapital">Całkowita kwota do spłaty na dziś (zł)</label><input type="number" step="0.01" id="ml-kapital" value="${ln?(ln.kapital||''):''}" style="border-color:var(--danger); color:var(--danger); background:rgba(239,68,68,0.05);" oninput="window.hCalcCustomTotal()"></div>
+        <div class="inp-group" style="margin-bottom:15px;"><label id="lbl-kapital">Całkowita kwota do spłaty na dziś (zł)</label><input type="number" step="0.01" id="ml-kapital" value="${ln?(ln.kapital||''):''}" style="border-color:var(--danger); color:var(--danger); background:rgba(239,68,68,0.05);"></div>
 
         <div id="paypo-dates" class="inp-row" style="margin-bottom:12px; display:none;">
             <div class="inp-group"><label>Data zakupu (Start)</label><input type="date" id="ml-pp-start" value="${ln&&ln.startDate?ln.startDate:today}" style="background:#09090b;"></div>
@@ -308,13 +342,12 @@ window.hOpenLoanModal = function(id = null, forceCard = false) {
     document.body.insertAdjacentHTML('beforeend', html); 
     window.hToggleLoanFields();
     
-    // Załadowanie istniejących transz dla "Prywatny"
     let isPryw = (ln && (ln.type === 'Prywatny_WPLYW' || ln.type === 'Prywatny_WYDATEK'));
     if(isPryw && ln.prywMode === 'custom' && ln.customSchedule) {
         ln.customSchedule.forEach(cs => window.hAddCustomTransza(cs.amt, cs.date, cs.id, cs.isPaid));
         window.hCalcCustomTotal();
     } else if (isPryw && (!ln.prywMode || ln.prywMode === 'custom')) {
-        window.hAddCustomTransza(); // pusty na start
+        window.hAddCustomTransza(); 
     }
 };
 
@@ -328,17 +361,20 @@ window.hSaveLoan = function(id) {
     let isKredyt = (type === 'Kredyt' || type === 'Leasing');
     let isPryw = (type === 'Prywatny_WPLYW' || type === 'Prywatny_WYDATEK');
     
-    // Pobieramy podstawowe wartości z zabezpieczeniem przed NaN
     let r = (isPayPo || isKredyt) ? (parseFloat(document.getElementById('ml-rata').value)||0) : 0; 
     let i = (isPayPo || isKredyt) ? (parseInt(document.getElementById('ml-left-inst').value)||0) : 0;
     let bor = parseFloat(document.getElementById('ml-borrowed').value) || 0; 
 
-    // OSTATECZNY FIX KAPITAŁU
+    // POTĘŻNE WYLICZENIE KAPITAŁU
     let k = parseFloat(document.getElementById('ml-kapital').value) || 0; 
-    if (isPayPo && r > 0 && i > 0) {
-        k = r * i; // Wymuszenie twardej logiki dla BNPL
+    
+    if (isPayPo) {
+        let koszty = parseFloat(document.getElementById('ml-pp-koszt').value) || 0;
+        k = bor + koszty; // Kapitał PayPo = Koszyk + Prowizja
+        if(i > 0) r = k / i; // System sam dzieli ratę, żeby była RÓWNA co do grosza
     }
-    if (bor === 0) bor = k; // Zabezpieczenie, by bor nigdy nie było 0 jeśli kapitał istnieje
+
+    if (bor === 0) bor = k;
     
     let d = parseInt(document.getElementById('ml-day').value) || 10;
     if (isPryw && document.getElementById('pryw-mode').value === 'equal') {
@@ -356,14 +392,13 @@ window.hSaveLoan = function(id) {
         if(i > 0) r = k / i; 
     }
     
-    let ti = i; // Zapisuje całkowitą ilość rat jako ilość początkową (nie zmienia się)
+    let ti = i; // TotalInst zabezpieczone
 
     let minPay = isCard ? (parseFloat(document.getElementById('ml-min-pay').value) || 5) : 0; 
     let decPay = isCard ? document.getElementById('ml-dec-pay').value : '100';
 
     if(!n) return window.sysAlert ? window.sysAlert("Błąd", "Podaj nazwę!") : alert("Brak nazwy");
 
-    // Zbieranie transz
     let customSch = [];
     if(isPryw && prywMode === 'custom') {
         document.querySelectorAll('.cs-row').forEach(row => {
@@ -383,7 +418,6 @@ window.hSaveLoan = function(id) {
             ln.installmentsLeft = i; ln.day = d; ln.borrowed = bor; ln.type = type; 
             ln.minPayPct = minPay; ln.declaredPay = decPay; ln.startDate = startDate;
             if(isPryw) { ln.customSchedule = customSch; ln.prywMode = prywMode; }
-            // Upewnienie się, że totalInst nie znika przy edycji:
             if(!ln.totalInst || ln.totalInst < ln.installmentsLeft) ln.totalInst = ln.installmentsLeft;
         } 
     } else { 
@@ -616,15 +650,13 @@ window.hExecPayDebt = function(id) {
 
 window.hConvertDebtToInstallments = function(id) {
     let d = window.db.home.debts.find(x => x.id == id); if(!d) return; 
-    window.hOpenLoanModal(); // Otwiera nowy kreator
-    // Pre-fill fields for migration
+    window.hOpenLoanModal(); 
     setTimeout(() => {
         document.getElementById('ml-type').value = 'PayPo';
         window.hToggleLoanFields();
         document.getElementById('ml-n').value = d.person;
         document.getElementById('ml-borrowed').value = d.amount;
         document.getElementById('ml-kapital').value = d.amount;
-        // Skasuj po udanej migracji ręcznej
         window.sysAlert("Kreator otwarty", "Wypełnij szczegóły i zapisz. Stary wpis musisz usunąć ręcznie (koszem).", "info");
     }, 100);
 };
