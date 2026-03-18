@@ -73,6 +73,9 @@ window.rHome = function() {
         }
     });
 
+    // ==========================================
+    // ZAKŁADKA: DASHBOARD (PRZEGLĄD)
+    // ==========================================
     if(t === 'dash') {
         let topCatName = Object.keys(dashCats).sort((a,b) => dashCats[b] - dashCats[a])[0];
         let insightsHtml = '';
@@ -190,7 +193,7 @@ window.rHome = function() {
         let activeLoans = window.db.home.loans.filter(l => !l.isClosed && l.type !== 'Karta');
         let isCompact = window.hForceCompact !== undefined ? window.hForceCompact : (activeLoans.length > 1);
         
-        let sumBanki = 0; let sumPayPo = 0; let sumPrywInc = 0; let sumPrywExp = 0;
+        let sumBanki = 0; let sumBNPL = 0; let sumPrywInc = 0; let sumPrywExp = 0;
         let sumBankiRaty = 0;
         let maxMonths = 0;
         
@@ -202,7 +205,10 @@ window.rHome = function() {
                 sumBanki += k;
                 sumBankiRaty += r;
             }
-            else if(l.type === 'PayPo') sumPayPo += k;
+            else if(l.type === 'PayPo') {
+                // Dla podsumowania BNPL liczymy faktyczne zadłużenie na dziś (Kapitał z rat lub cały koszyk jeśli brak rat)
+                sumBNPL += k;
+            }
             else if(l.type === 'Prywatny_WPLYW') sumPrywInc += k;
             else if(l.type === 'Prywatny_WYDATEK') sumPrywExp += k;
             
@@ -226,7 +232,7 @@ window.rHome = function() {
                 </div>
             </div>` : '';
 
-        // Główny panel Kredytów z wczoraj (ZADŁUŻENIE KREDYTOWE) zintegrowany z kafelkami
+        // Główny panel Kredytów z Twojego screena zintegrowany z nowym widokiem
         let topSummaryHtml = `
             <div style="margin: 0 15px 15px; border:1px solid var(--danger); border-radius:16px; padding:20px; background:linear-gradient(145deg, rgba(239,68,68,0.05), #09090b);">
                 <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
@@ -251,7 +257,7 @@ window.rHome = function() {
             <div style="display:flex; gap:10px; padding:0 15px 15px; overflow-x:auto;">
                 <div style="flex:1; min-width:140px; background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.3); padding:12px; border-radius:12px;">
                     <span style="font-size:0.65rem; color:var(--info); text-transform:uppercase;">🛍️ Odroczone / BNPL</span><br>
-                    <strong style="color:#fff; font-size:1.2rem;">${Number(sumPayPo).toFixed(2)} zł</strong>
+                    <strong style="color:#fff; font-size:1.2rem;">${Number(sumBNPL).toFixed(2)} zł</strong>
                 </div>
                 <div style="flex:1; min-width:140px; background:${bilansPryw >= 0 ? 'rgba(34,197,94,0.05)' : 'rgba(239,68,68,0.05)'}; border:1px solid ${bilansColor}; padding:12px; border-radius:12px;">
                     <span style="font-size:0.65rem; color:${bilansColor}; text-transform:uppercase;">🤝 Prywatne (Bilans)</span><br>
@@ -298,24 +304,18 @@ window.rHome = function() {
                 }
 
                 // ==========================
-                // WIDOK BNPL (ODROCZONE)
+                // WIDOK 1: ODROCZONE (BNPL)
                 // ==========================
                 if(isBNPL) {
                     detailsHtml = `<div style="margin-top:15px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                     
                     if(!l.isConverted) {
-                        // FAZA 1: Czyste odroczenie 30 dni
+                        // Faza 1: Czyste odroczenie 30 dni (bez rat i kosztów)
                         let deadline = new Date(l.startDate || new Date());
                         deadline.setDate(deadline.getDate() + 30); 
                         let daysLeft = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24));
                         let daysText = daysLeft >= 0 ? `Zostało ${daysLeft} dni` : `Opóźnienie ${Math.abs(daysLeft)} dni!`;
                         let dlColor = daysLeft >= 0 ? 'var(--success)' : 'var(--danger)';
-                        
-                        detailsHtml += `
-                        <div style="background:rgba(34,197,94,0.05); padding:12px; border-radius:10px; margin-bottom:20px; border:1px dashed rgba(34,197,94,0.3); text-align:center;">
-                            <span style="font-size:0.7rem; color:var(--success); text-transform:uppercase; font-weight:bold; display:block; margin-bottom:5px;">RRSO 0% - Brak Kosztów Odroczenia</span>
-                            <strong style="color:var(--success); font-size:0.9rem;">Spłać całość w ciągu 30 dni by uniknąć prowizji!</strong>
-                        </div>`;
 
                         detailsHtml += `
                         <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
@@ -325,28 +325,36 @@ window.rHome = function() {
                         </div>`;
                         
                         detailsHtml += `
-                        <button style="background:var(--info); color:#fff; width:100%; padding:15px; border-radius:14px; font-weight:bold; font-size:0.9rem; border:none; box-shadow:0 6px 15px rgba(14,165,233,0.2); cursor:pointer; margin-bottom:10px;" onclick="window.hOpenPayLoanModal('${l.id}')">💸 SPŁAĆ CAŁOŚĆ (0 ZŁ KOSZTÓW)</button>
+                        <button style="background:var(--success); color:#fff; width:100%; padding:15px; border-radius:14px; font-weight:bold; font-size:0.9rem; border:none; box-shadow:0 6px 15px rgba(34,197,94,0.2); cursor:pointer; margin-bottom:10px;" onclick="window.hOpenPayLoanModal('${l.id}')">💸 SPŁAĆ CAŁOŚĆ BEZ KOSZTÓW</button>
                         <button style="background:rgba(255,255,255,0.05); color:#fff; width:100%; padding:15px; border-radius:14px; font-weight:bold; font-size:0.9rem; border:1px dashed rgba(255,255,255,0.2); cursor:pointer;" onclick="window.hOpenBNPLConvertModal('${l.id}')">✂️ ROZŁÓŻ NA RATY</button>
                         `;
 
                     } else {
-                        // FAZA 2: Po rozłożeniu na raty (Oś Czasu)
+                        // Faza 2: Po rozłożeniu na raty (Widzimy oś czasu i koszty)
                         let paidCount = totInst - instL;
                         pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
-                        let spłaconyKapitalJuz = paidCount * rat;
                         
+                        // Zabezpieczamy logikę wyliczeń, tak jak pokazałeś na screenie
                         let totalDebt = rat * totInst;
-                        let prowizja = totalDebt - bor; // Rzeczywista prowizja operatora
-                        let doZaplatyTeraz = bor - spłaconyKapitalJuz; // Wartość koszyka minus zapłacone raty
-                        if(doZaplatyTeraz < 0) doZaplatyTeraz = 0;
+                        let prowizja = totalDebt - bor; // Np. 345 - 300 = 45 zł kosztów
                         
-                        let oszczednosc = kap - doZaplatyTeraz; // Zysk z anulowania reszty rat
+                        let juzZaplaconyKapital = paidCount * rat;
+                        let doZaplatyNatychmiast = bor - juzZaplaconyKapital; 
+                        if(doZaplatyNatychmiast < 0) doZaplatyNatychmiast = 0;
+                        
+                        // Oszczędność to to co byś zapłacił w ratach do końca MINUS to co musisz zapłacić dziś z samej kwoty koszyka
+                        let kosztRatDoKonca = rat * instL;
+                        let oszczednoscDnia = kosztRatDoKonca - doZaplatyNatychmiast; 
+                        
+                        if(oszczednoscDnia > 0) {
+                            savingsHtml = `<div style="margin-top:8px; font-size:0.85rem; font-weight:bold;"><span style="color:var(--info)">Spłacając dziś, unikasz ${Number(oszczednoscDnia).toFixed(2)} zł opłat! 💸</span></div>`;
+                        }
                         
                         detailsHtml += `
                         <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
                             <div style="width:2px; background:var(--info); position:absolute; left:13px; top:28px; bottom:-18px;"></div>
                             <div style="width:28px; height:28px; border-radius:50%; background:var(--info); color:#000; display:flex; align-items:center; justify-content:center; font-size:0.85rem; z-index:1; flex-shrink:0;">🛍️</div>
-                            <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Wartość koszyka</strong><br><small style="color:var(--muted)">Data: ${l.startDate || '--'}</small></div>
+                            <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Wartość zakupu</strong><br><small style="color:var(--muted)">Data: ${l.startDate || '--'}</small></div>
                             <strong style="color:#fff; font-size:0.9rem; padding-top:2px;">${Number(bor).toFixed(2)} zł</strong>
                         </div>`;
 
@@ -380,23 +388,15 @@ window.rHome = function() {
                             </div>`;
                         }
                         
-                        if(oszczednosc > 0) {
-                            detailsHtml += `
-                            <div style="background:rgba(34,197,94,0.05); padding:12px; border-radius:10px; margin-top:20px; border:1px dashed rgba(34,197,94,0.3); text-align:center;">
-                                <span style="font-size:0.7rem; color:var(--success); text-transform:uppercase; font-weight:bold; display:block; margin-bottom:5px;">Oszczędność przy spłacie całości dziś:</span>
-                                <strong style="color:var(--success); font-size:1.1rem;">+${Number(oszczednosc).toFixed(2)} zł</strong>
-                            </div>`;
-                        }
-                        
                         detailsHtml += `<div style="display:flex; gap:10px; margin-top:15px;">
-                            <button style="background:var(--info); color:#fff; flex:1; padding:15px; border-radius:14px; font-weight:bold; font-size:0.8rem; border:none; cursor:pointer;" onclick="window.hOpenPayLoanModal('${l.id}')">💸 SPŁAĆ 1. RATĘ</button>
+                            <button style="background:var(--info); color:#fff; flex:1; padding:15px; border-radius:14px; font-weight:bold; font-size:0.8rem; border:none; cursor:pointer;" onclick="window.hOpenPayLoanModal('${l.id}')">💸 SPŁAĆ ${paidCount+1}. RATĘ</button>
                             <button style="background:transparent; color:var(--success); flex:1; padding:15px; border-radius:14px; font-weight:bold; font-size:0.8rem; border:1px solid var(--success); cursor:pointer;" onclick="window.hPayOffCompletely('${l.id}')">🏆 SPŁAĆ CAŁOŚĆ</button>
                         </div>`;
                     }
                     detailsHtml += `</div>`;
                 } 
                 // ==========================
-                // WIDOK POŻYCZKI PRYWATNEJ
+                // WIDOK 2: POŻYCZKA PRYWATNA
                 // ==========================
                 else if(isPryw) {
                     let paidKap = 0;
@@ -443,7 +443,7 @@ window.rHome = function() {
                     detailsHtml += `</div>`;
                 }
                 // ==========================
-                // WIDOK KREDYTU (POWRÓT DO WZORU)
+                // WIDOK 3: KREDYT BANKOWY (IDEALNA KOPIA TWOJEGO SCREENA)
                 // ==========================
                 else {
                     let paidKap = bor - kap; if(paidKap < 0) paidKap = 0; 
@@ -454,7 +454,7 @@ window.rHome = function() {
                     let savings = totalCostRemaining - kap;
                     
                     if (savings > 0 && rat > 0 && kap > 0) {
-                        savingsHtml = `<div style="margin-top:8px; font-size:0.8rem; font-weight:bold;"><span style="color:var(--success)">Spłacając dziś, unikasz ${Number(savings).toFixed(2)} zł odsetek! 💸</span></div>`;
+                        savingsHtml = `<div style="margin-top:10px; font-size:0.85rem; font-weight:bold; color:var(--success)">Spłacając dziś, unikasz ${Number(savings).toFixed(2)} zł odsetek! 💸</div>`;
                     }
                     
                     detailsHtml = `
@@ -474,7 +474,7 @@ window.rHome = function() {
                 let ratyStr = (totInst > instL && totInst > 0) ? `${instL} z ${totInst}` : `${instL}`;
 
                 if(!isCompact) {
-                    let mainTitle = isPrywInc ? 'OCZEKUJĘ ZWROTU:' : (isBNPL ? 'WARTOŚĆ ZAKUPU' : 'KAPITAŁ DO SPŁATY');
+                    let mainTitle = isPrywInc ? 'OCZEKUJĘ ZWROTU:' : (isBNPL ? 'WARTOŚĆ ZAKUPU / ZADŁUŻENIE' : 'KAPITAŁ DO SPŁATY');
                     let displayKap = isBNPL && !l.isConverted ? bor : kap;
                     
                     return `
@@ -524,7 +524,7 @@ window.rHome = function() {
                         ` : ''}
                     </div>`;
                 } else {
-                    let mainTitleCompact = isPrywInc ? 'Zostało wpłynąć' : (isBNPL ? 'Zakup (BNPL)' : 'Kapitał do spłaty');
+                    let mainTitleCompact = isPrywInc ? 'Zostało wpłynąć' : (isBNPL ? 'Wartość / Zadłużenie' : 'Kapitał do spłaty');
                     let rataTxt = (isPryw && l.prywMode === 'custom') ? '' : `Rata: <strong style="color:#fff">${Number(rat || 0).toFixed(2)} zł</strong>`;
                     let displayKap = isBNPL && !l.isConverted ? bor : kap;
 
