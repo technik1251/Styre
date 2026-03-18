@@ -198,10 +198,6 @@ window.rHome = function() {
         
         activeLoans.forEach(l => { 
             let k = parseFloat(l.kapital) || 0;
-            // Wymuszenie twardego wyliczenia dla PayPo dla podsumowania, gdyby w bazie była głupota
-            if(l.type === 'PayPo' && l.rata && l.installmentsLeft) {
-                k = parseFloat(l.rata) * parseInt(l.installmentsLeft);
-            }
 
             if(l.type === 'Kredyt' || l.type === 'Leasing') sumBanki += k;
             else if(l.type === 'PayPo') sumPayPo += k;
@@ -273,10 +269,6 @@ window.rHome = function() {
                 let bor = parseFloat(l.borrowed) || kap; 
                 let rat = parseFloat(l.rata) || 0; 
                 let instL = parseInt(l.installmentsLeft) || 0; 
-                
-                // Maska dla PayPo - Wymusza poprawny kapitał
-                if(isPayPo && rat > 0 && instL > 0) kap = rat * instL;
-
                 let totInst = parseInt(l.totalInst) || instL; 
                 if(totInst < instL) totInst = instL;
                 
@@ -293,19 +285,19 @@ window.rHome = function() {
                 }
 
                 if(isPayPo) {
-                    // --- PAYPO: ELEGANCKI WIDOK PREMIUM ---
+                    // --- PAYPO: ELEGANCKI WIDOK PREMIUM Z KAFELKIEM ---
                     let paidCount = totInst - instL;
                     pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
                     detailsHtml = `<div style="margin-top:15px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                     
                     let totalDebt = rat * totInst;
-                    let savings = (bor * 1.15) - totalDebt; // Symulacja RRSO 15% na koszyku
-                    if(savings < 0 || isNaN(savings)) savings = 27.50; // Fallback
+                    let simSavings = (bor * 1.15) - totalDebt; 
+                    if(simSavings < 0 || isNaN(simSavings)) simSavings = 27.50; 
                     
                     detailsHtml += `
                     <div style="background:rgba(14,165,233,0.05); padding:12px; border-radius:10px; margin-bottom:20px; border:1px dashed rgba(14,165,233,0.3); text-align:center;">
                         <span style="font-size:0.7rem; color:var(--info); text-transform:uppercase; font-weight:bold; display:block; margin-bottom:5px;">RRSO 0% - Zysk względem standardowych rat:</span>
-                        <strong style="color:var(--info); font-size:1.1rem;">+${Number(savings).toFixed(2)} zł</strong>
+                        <strong style="color:var(--info); font-size:1.1rem;">+${Number(simSavings).toFixed(2)} zł</strong>
                     </div>`;
 
                     detailsHtml += `
@@ -392,7 +384,7 @@ window.rHome = function() {
                     detailsHtml += `</div>`;
                 }
                 else {
-                    // --- KREDYT BANKOWY: POPRAWIONY WIDOK Z KAFELKIEM OSZCZĘDNOŚCI ---
+                    // --- KREDYT BANKOWY: ZIELONY KAFELEK OSZCZĘDNOŚCI ---
                     let paidKap = bor - kap; if(paidKap < 0) paidKap = 0; 
                     let paidPctKap = bor > 0 ? (paidKap / bor) * 100 : 0; 
                     pct = totInst > 0 ? ((totInst - instL) / totInst) * 100 : 0;
@@ -460,7 +452,7 @@ window.rHome = function() {
                     if(isPryw && l.prywMode === 'custom') {
                         rightInfo = `<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Typ</span><br><strong style="color:#fff; font-size:0.8rem;">Własne transze</strong>`;
                     } else {
-                        // FIX: Bezpieczny zapis "X z Y"
+                        // Kredyty/PayPo "X z Y" Maska
                         let ratyStr = (totInst > instL && totInst > 0) ? `${instL} z ${totInst}` : `${instL}`;
                         rightInfo = `<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Pozostało rat</span><br><strong style="color:#fff; font-size:0.9rem;">${ratyStr}</strong>`;
                     }
