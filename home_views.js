@@ -295,9 +295,21 @@ window.rHome = function() {
                     <div style="display:flex; gap:10px; margin-bottom:10px; position:relative;">
                         <div style="width:2px; background:var(--info); position:absolute; left:11px; top:25px; bottom:-15px;"></div>
                         <div style="width:24px; height:24px; border-radius:50%; background:var(--info); color:#000; display:flex; align-items:center; justify-content:center; font-size:0.8rem; z-index:1;">🛍️</div>
-                        <div style="flex:1;"><strong style="color:#fff; font-size:0.85rem;">Dokonujesz zakupu</strong><br><small style="color:var(--muted)">${l.startDate || 'Wartość bazowa'}</small></div>
+                        <div style="flex:1;"><strong style="color:#fff; font-size:0.85rem;">Wartość koszyka</strong><br><small style="color:var(--muted)">Data: ${l.startDate || '--'}</small></div>
                         <strong style="color:#fff; font-size:0.85rem;">${Number(bor).toFixed(2)} zł</strong>
                     </div>`;
+
+                    // Pokaż koszty operatora, jeśli Kwota Do Spłaty jest większa niż Wartość Zakupu
+                    let totalDebt = rat * totInst;
+                    if (totalDebt > bor && bor > 0) {
+                        detailsHtml += `
+                        <div style="display:flex; gap:10px; margin-bottom:10px; position:relative;">
+                            <div style="width:2px; background:var(--info); position:absolute; left:11px; top:25px; bottom:-15px;"></div>
+                            <div style="width:24px; height:24px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid var(--warning); color:var(--warning); display:flex; align-items:center; justify-content:center; font-size:0.8rem; z-index:1;">📈</div>
+                            <div style="flex:1;"><strong style="color:#fff; font-size:0.85rem;">Koszty operatora</strong></div>
+                            <strong style="color:var(--warning); font-size:0.85rem;">+${Number(totalDebt - bor).toFixed(2)} zł</strong>
+                        </div>`;
+                    }
                     
                     for(let i=1; i<=totInst; i++) {
                         let isPaid = i <= paidCount;
@@ -306,12 +318,12 @@ window.rHome = function() {
                         let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
                         let lineDisp = i === totInst ? 'none' : 'block';
                         
-                        // Obliczanie ewentualnej groszowej końcówki na żywo dla ostatniej raty!
+                        // Zawsze trzymaj równą ratę, a na koniec wyrównaj co do grosza różnice wynikające z nadpłat
                         let rataKwota = rat;
                         if(i === totInst && !isPaid) rataKwota = kap - (rat * (instL - 1));
                         if(rataKwota < 0) rataKwota = rat;
                         
-                        // Start Date Calculation for Timeline
+                        // Ustaw sztywny miesiąc do przodu
                         let stD = new Date(l.startDate || new Date());
                         stD.setMonth(stD.getMonth() + i);
                         let rdStr = stD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
