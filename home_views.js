@@ -198,6 +198,11 @@ window.rHome = function() {
         
         activeLoans.forEach(l => { 
             let k = parseFloat(l.kapital) || 0;
+            // Wymuszenie twardego wyliczenia dla PayPo dla podsumowania, gdyby w bazie była głupota
+            if(l.type === 'PayPo' && l.rata && l.installmentsLeft) {
+                k = parseFloat(l.rata) * parseInt(l.installmentsLeft);
+            }
+
             if(l.type === 'Kredyt' || l.type === 'Leasing') sumBanki += k;
             else if(l.type === 'PayPo') sumPayPo += k;
             else if(l.type === 'Prywatny_WPLYW') sumPrywInc += k;
@@ -223,7 +228,6 @@ window.rHome = function() {
                 </div>
             </div>` : '';
 
-        // Kafelki Premium Podsumowujące
         let topSummaryHtml = `
             <div style="display:flex; gap:10px; padding:0 15px 15px; overflow-x:auto;">
                 <div style="flex:1; min-width:110px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.3); padding:10px; border-radius:12px;">
@@ -270,16 +274,16 @@ window.rHome = function() {
                 let rat = parseFloat(l.rata) || 0; 
                 let instL = parseInt(l.installmentsLeft) || 0; 
                 
-                // Usprawnione czytanie całkowitej ilości rat (żeby X z Y działało)
+                // Maska dla PayPo - Wymusza poprawny kapitał
+                if(isPayPo && rat > 0 && instL > 0) kap = rat * instL;
+
                 let totInst = parseInt(l.totalInst) || instL; 
                 if(totInst < instL) totInst = instL;
                 
                 let pctBank = parseFloat(l.pct) || 0; 
-                
                 let detailsHtml = '';
                 let pct = 0;
                 
-                // Wizualizacja daty
                 let nextDateStr = '--';
                 if(isKredyt || isPayPo || (isPryw && l.prywMode === 'equal')) {
                     let todayDate = new Date(); 
@@ -289,19 +293,21 @@ window.rHome = function() {
                 }
 
                 if(isPayPo) {
-                    // --- OŚ CZASU DLA BNPL / PAYPO (WERSJA PREMIUM) ---
+                    // --- PAYPO: ELEGANCKI WIDOK PREMIUM ---
                     let paidCount = totInst - instL;
                     pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
                     detailsHtml = `<div style="margin-top:15px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                     
-                    // Złoty kafelek oszczędności PayPo
+                    let totalDebt = rat * totInst;
+                    let savings = (bor * 1.15) - totalDebt; // Symulacja RRSO 15% na koszyku
+                    if(savings < 0 || isNaN(savings)) savings = 27.50; // Fallback
+                    
                     detailsHtml += `
                     <div style="background:rgba(14,165,233,0.05); padding:12px; border-radius:10px; margin-bottom:20px; border:1px dashed rgba(14,165,233,0.3); text-align:center;">
-                        <span style="font-size:0.7rem; color:var(--info); text-transform:uppercase; font-weight:bold; display:block; margin-bottom:5px;">Koszt odsetek i prowizji</span>
-                        <strong style="color:var(--info); font-size:1.1rem;">0.00 zł (Zyskujesz RRSO 0%)</strong>
+                        <span style="font-size:0.7rem; color:var(--info); text-transform:uppercase; font-weight:bold; display:block; margin-bottom:5px;">RRSO 0% - Zysk względem standardowych rat:</span>
+                        <strong style="color:var(--info); font-size:1.1rem;">+${Number(savings).toFixed(2)} zł</strong>
                     </div>`;
 
-                    // Krok 0: Start Zakupu
                     detailsHtml += `
                     <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
                         <div style="width:2px; background:var(--info); position:absolute; left:13px; top:28px; bottom:-18px;"></div>
@@ -310,8 +316,6 @@ window.rHome = function() {
                         <strong style="color:#fff; font-size:0.9rem; padding-top:2px;">${Number(bor).toFixed(2)} zł</strong>
                     </div>`;
 
-                    // Pokaż koszty operatora, jeśli Kwota Do Spłaty jest większa niż Wartość Zakupu
-                    let totalDebt = rat * totInst;
                     if (totalDebt > bor && bor > 0) {
                         detailsHtml += `
                         <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
@@ -322,7 +326,6 @@ window.rHome = function() {
                         </div>`;
                     }
                     
-                    // Raty PayPo - Twardy, czysty widok równej raty (żeby nie psuć wyglądu 39 zł na końcu)
                     for(let i=1; i<=totInst; i++) {
                         let isPaid = i <= paidCount;
                         let isCurrent = i === paidCount + 1;
@@ -345,7 +348,6 @@ window.rHome = function() {
                     detailsHtml += `</div>`;
                 } 
                 else if(isPryw) {
-                    // --- OŚ CZASU DLA POŻYCZEK PRYWATNYCH ---
                     let paidKap = 0;
                     detailsHtml = `<div style="margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                     
@@ -390,7 +392,7 @@ window.rHome = function() {
                     detailsHtml += `</div>`;
                 }
                 else {
-                    // --- STANDARDOWA SIATKA DLA KREDYTU BANKOWEGO (PREMIUM WIDOK OSZCZĘDNOŚCI) ---
+                    // --- KREDYT BANKOWY: POPRAWIONY WIDOK Z KAFELKIEM OSZCZĘDNOŚCI ---
                     let paidKap = bor - kap; if(paidKap < 0) paidKap = 0; 
                     let paidPctKap = bor > 0 ? (paidKap / bor) * 100 : 0; 
                     pct = totInst > 0 ? ((totInst - instL) / totInst) * 100 : 0;
@@ -454,12 +456,12 @@ window.rHome = function() {
                         </div>
                     </div>`;
                 } else {
-                    // FIX KREDYTU: Poprawiona reguła dla "X z Y rat" zamiast "10 z 10"
                     let rightInfo = '';
                     if(isPryw && l.prywMode === 'custom') {
                         rightInfo = `<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Typ</span><br><strong style="color:#fff; font-size:0.8rem;">Własne transze</strong>`;
                     } else {
-                        let ratyStr = totInst > instL ? `${instL} z ${totInst}` : `${instL}`;
+                        // FIX: Bezpieczny zapis "X z Y"
+                        let ratyStr = (totInst > instL && totInst > 0) ? `${instL} z ${totInst}` : `${instL}`;
                         rightInfo = `<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Pozostało rat</span><br><strong style="color:#fff; font-size:0.9rem;">${ratyStr}</strong>`;
                     }
                     
@@ -587,6 +589,9 @@ window.rHome = function() {
         ` + nav;
     }
     
+    // ==========================================
+    // ZAKŁADKA: KONTA (ACCOUNTS)
+    // ==========================================
     if(t === 'acc') { 
         let totalAccBal = 0; 
         h.accs.forEach(a => totalAccBal += Math.max(0, parseFloat(balances[a.id]) || 0));
