@@ -30,6 +30,20 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ==========================================
+// INICJALIZACJA FIREBASE (SYNCHRONICZNA - BEZ OPÓŹNIEŃ!)
+// ==========================================
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    firebase.initializeApp({ 
+        apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o", 
+        authDomain: "styreos.firebaseapp.com", 
+        projectId: "styreos", 
+        storageBucket: "styreos.firebasestorage.app", 
+        messagingSenderId: "72578059548", 
+        appId: "1:72578059548:web:441ec96ed92d6f3f37bed9" 
+    });
+}
+
+// ==========================================
 // PLIK: app.js - GŁÓWNY SILNIK I LAUNCHER
 // ==========================================
 
@@ -45,7 +59,7 @@ if (savedLocal) {
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
 
-// 2. Wstrzykiwanie "Bezpieczników" do bazy (Struktura Premium)
+// 2. Wstrzykiwanie "Bezpieczników" do bazy
 window.patchDb = function(data) {
     let d = data || {};
     
@@ -94,7 +108,9 @@ window.save = function() {
     if (typeof window.db !== 'undefined') {
         window.db = window.patchDb(window.db); 
         localStorage.setItem('styre_v101_db', JSON.stringify(window.db));
-        if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser && window.db.setupDone) {
+        
+        // PANCERNE ZABEZPIECZENIE FIREBASE (Sprawdza, czy app.length > 0)
+        if (typeof firebase !== 'undefined' && firebase.apps.length > 0 && firebase.auth && firebase.auth().currentUser && window.db.setupDone) {
             if(firebase.firestore) {
                 firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).set(window.db).catch(e => console.log('Błąd zapisu w chmurze: ', e));
             }
@@ -104,7 +120,7 @@ window.save = function() {
 
 window.onerror = function(msg, url, lineNo) { 
     let fn = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; 
-    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger);">Błąd Kodu!</h2><div style="background:#000; padding:15px; border-radius:12px; text-align:left; font-family:monospace; font-size:0.8rem; color:#fff;">${msg}<br>Plik: ${fn}<br>Linia: ${lineNo}</div><button class="btn" style="background:rgba(255,255,255,0.1); margin-top:20px;" onclick="localStorage.clear();location.reload()">TWARDY RESET (CZYŚĆ PAMIĘĆ)</button><p style="color:var(--muted); font-size:0.7rem; margin-top:15px;">Jeśli masz konto Google, Twoje dane powrócą po ponownym logowaniu.</p></div>`; 
+    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger);">Błąd Kodu!</h2><div style="background:#000; padding:15px; border-radius:12px; text-align:left; font-family:monospace; font-size:0.8rem; color:#fff;">${msg}<br>Plik: ${fn}<br>Linia: ${lineNo}</div><button class="btn" style="background:rgba(255,255,255,0.1); margin-top:20px;" onclick="localStorage.clear();location.reload()">TWARDY RESET (CZYŚĆ PAMIĘĆ)</button><p style="color:var(--muted); font-size:0.7rem; margin-top:15px;">Twoje dane w chmurze Google są bezpieczne.</p></div>`; 
     return false; 
 };
 
@@ -311,9 +327,6 @@ window.loginWithGoogle = function() {
         if(window.sysAlert) return window.sysAlert('Brak połączenia', 'Zaczekaj sekundę na biblioteki Google.', 'warning');
         return alert("Poczekaj...");
     }
-    if (!firebase.apps.length) {
-        firebase.initializeApp({ apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o", authDomain: "styreos.firebaseapp.com", projectId: "styreos", storageBucket: "styreos.firebasestorage.app", messagingSenderId: "72578059548", appId: "1:72578059548:web:441ec96ed92d6f3f37bed9" });
-    }
     const provider = new firebase.auth.GoogleAuthProvider();
     firebase.auth().signInWithPopup(provider).then((result) => {
         const user = result.user;
@@ -374,7 +387,6 @@ window.resolveConflict = function(choice) {
 }
 
 window.rWiz = function() {
-    let isLogged = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser);
     let uName = window.db.userName || '';
 
     APP.innerHTML = `
@@ -415,15 +427,15 @@ window.rWiz = function() {
     `;
 }
 
-if (typeof firebase !== 'undefined') {
-    setTimeout(() => {
-        if (!firebase.apps.length) {
-            firebase.initializeApp({ apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o", authDomain: "styreos.firebaseapp.com", projectId: "styreos", storageBucket: "styreos.firebasestorage.app", messagingSenderId: "72578059548", appId: "1:72578059548:web:441ec96ed92d6f3f37bed9" });
-        }
-        if(firebase.auth) {
-            firebase.auth().onAuthStateChanged((user) => { let wiz = document.getElementById('w-main'); if (user && wiz && wiz.classList.contains('active')) { window.render(); } });
-        }
-    }, 1000);
+// Nasłuchuj zmian logowania, by np. zaktualizować interfejs
+if (typeof firebase !== 'undefined' && firebase.auth) {
+    firebase.auth().onAuthStateChanged((user) => { 
+        let wiz = document.getElementById('w-main'); 
+        if (user && wiz && wiz.classList.contains('active')) { 
+            window.render(); 
+        } 
+    });
 }
 
+// Uruchomienie aplikacji
 window.render();
