@@ -152,7 +152,7 @@ window.hToggleLoanFields = function() {
     else if(isPryw) lblBor.innerText = 'Całkowita kwota pożyczki (zł)';
     else lblBor.innerText = 'Początkowa Kwota Umowy (zł)';
 
-    document.getElementById('lbl-kapital').innerText = isCard ? 'Bieżące Zadłużenie na Karcie (zł)' : 'Kwota pozostała do spłaty NA DZIŚ (zł)';
+    document.getElementById('lbl-kapital').innerText = isCard ? 'Bieżące Zadłużenie na Karcie (zł)' : 'Całkowita kwota do spłaty NA DZIŚ (zł)';
 
     // Pokazywanie/Ukrywanie sekcji
     document.getElementById('row-rates-1').style.display = isKredyt ? 'flex' : 'none'; // Oprocentowanie tylko dla Kredytu
@@ -223,6 +223,18 @@ window.hCalcCustomTotal = function() {
     }
 };
 
+window.hCalcBNPL = function() {
+    let type = document.getElementById('ml-type').value;
+    if(type === 'PayPo' || type === 'Kredyt' || type === 'Leasing') {
+        let r = parseFloat(document.getElementById('ml-rata').value) || 0;
+        let i = parseInt(document.getElementById('ml-left-inst').value) || 0;
+        if(r > 0 && i > 0) {
+            document.getElementById('ml-kapital').value = (r * i).toFixed(2);
+            window.hCalcCustomTotal(); // odśwież ewentualne inne weryfikacje
+        }
+    }
+};
+
 window.hOpenLoanModal = function(id = null, forceCard = false) {
     window.hInitDb();
     let ln = id ? window.db.home.loans.find(x => x.id == id) : null; 
@@ -249,17 +261,17 @@ window.hOpenLoanModal = function(id = null, forceCard = false) {
         <div class="inp-group" style="margin-bottom:12px;"><label>Nazwa (np. Maciek, Karta, PayPo)</label><input type="text" id="ml-n" value="${ln?ln.n:''}"></div>
         <div class="inp-group" style="margin-bottom:12px;"><label>Konto powiązane ze spłatą/wpływem</label><select id="ml-acc" style="background:#09090b;">${window.db.home.accs.map(a => `<option value="${a.id}" ${a.id==(ln?ln.accId:'')?'selected':''}>${a.n}</option>`).join('')}</select></div>
         
-        <div class="inp-group" style="margin-bottom:12px; border:1px solid var(--success); padding:10px; border-radius:12px; background:rgba(34,197,94,0.05);"><label id="lbl-borrowed" style="color:var(--success);">Wartość bazowa</label><input type="number" step="0.01" id="ml-borrowed" value="${ln?(parseFloat(ln.borrowed)||0):''}" placeholder="np. 1000" style="color:var(--success); font-weight:bold;" oninput="window.hCalcCustomTotal()"></div>
+        <div class="inp-group" style="margin-bottom:12px; border:1px solid var(--success); padding:10px; border-radius:12px; background:rgba(34,197,94,0.05);"><label id="lbl-borrowed" style="color:var(--success);">Wartość początkowa zakupu (zł)</label><input type="number" step="0.01" id="ml-borrowed" value="${ln?(parseFloat(ln.borrowed)||0):''}" placeholder="np. 237" style="color:var(--success); font-weight:bold;" oninput="window.hCalcCustomTotal()"></div>
         
-        <div class="inp-group" style="margin-bottom:15px;"><label id="lbl-kapital">Kwota pozostająca NA DZIŚ (zł)</label><input type="number" step="0.01" id="ml-kapital" value="${ln?(ln.kapital||''):''}" style="border-color:var(--danger); color:var(--danger); background:rgba(239,68,68,0.05);" oninput="window.hCalcCustomTotal()"></div>
+        <div id="row-rates-2" class="inp-row" style="margin-bottom:12px; display:flex;"><div class="inp-group" id="group-rata"><label>Kwota JEDNEJ raty (zł)</label><input type="number" step="0.01" id="ml-rata" value="${ln?(ln.rata||''):''}" oninput="window.hCalcBNPL()"></div><div class="inp-group"><label>Ile rat zostało?</label><input type="number" id="ml-left-inst" value="${ln?(ln.installmentsLeft||''):''}" oninput="window.hCalcBNPL()"></div></div>
+
+        <div class="inp-group" style="margin-bottom:15px;"><label id="lbl-kapital">Całkowita kwota do spłaty na dziś (zł)</label><input type="number" step="0.01" id="ml-kapital" value="${ln?(ln.kapital||''):''}" style="border-color:var(--danger); color:var(--danger); background:rgba(239,68,68,0.05);" oninput="window.hCalcCustomTotal()"></div>
 
         <div id="paypo-dates" class="inp-row" style="margin-bottom:12px; display:none;">
             <div class="inp-group"><label>Data zakupu (Start)</label><input type="date" id="ml-pp-start" value="${ln&&ln.startDate?ln.startDate:today}" style="background:#09090b;"></div>
         </div>
 
         <div id="row-rates-1" class="inp-row" style="margin-bottom:12px; display:none;"><div class="inp-group"><label>RRSO (%)</label><input type="number" step="0.01" id="ml-pct" value="${ln?(ln.pct||0):0}"></div><div class="inp-group"><label>Typ Oprocentowania</label><select id="ml-int-type" style="background:#09090b;"><option value="Stałe" ${ln&&ln.intType==='Stałe'?'selected':''}>Stałe</option><option value="Zmienne" ${ln&&ln.intType==='Zmienne'?'selected':''}>Zmienne</option></select></div></div>
-        
-        <div id="row-rates-2" class="inp-row" style="margin-bottom:12px; display:flex;"><div class="inp-group" id="group-rata"><label>Kwota JEDNEJ raty</label><input type="number" step="0.01" id="ml-rata" value="${ln?(ln.rata||''):''}"></div><div class="inp-group"><label>Ile rat zostało?</label><input type="number" id="ml-left-inst" value="${ln?(ln.installmentsLeft||''):''}"></div></div>
         
         <div id="pryw-typ-splaty" style="display:none; margin-bottom:15px;">
             <label>Zasady spłaty pożyczki prywatnej</label>
