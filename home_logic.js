@@ -70,9 +70,10 @@ window.hGetBal = function() {
     return b;
 };
 
-// Generowanie harmonogramów (Kredyty, Karty i Automaty)
+// Generowanie harmonogramów (Kredyty, Karty i Automaty) w Kalendarzu
 window.hSyncSchedule = function() {
     window.hInitDb();
+    // Czyścimy stare planowane wiersze systemowe
     window.db.home.trans = window.db.home.trans.filter(x => !(x.isPlanned && (x.loanId || x.recId)));
     let n = new Date(); 
     let y = n.getFullYear(); 
@@ -103,12 +104,15 @@ window.hSyncSchedule = function() {
         }
     }
 
-    // 2. Kredyty i Karty Kredytowe
+    // 2. Kredyty, Karty, PayPo i Pożyczki Prywatne
     if(window.db.home.loans) {
         window.db.home.loans.filter(l => !l.isClosed).forEach(l => {
             let isCard = (l.type === 'Karta');
+            let isPrywWplyw = (l.type === 'Prywatny_WPLYW');
+            let isPrywWydatek = (l.type === 'Prywatny_WYDATEK');
+            let isPryw = isPrywWplyw || isPrywWydatek;
             
-            // Logika dla KARTY KREDYTOWEJ
+            // A) Logika dla KARTY KREDYTOWEJ
             if (isCard) {
                 let kap = parseFloat(l.kapital) || 0;
                 if (kap > 0) {
@@ -138,28 +142,63 @@ window.hSyncSchedule = function() {
                     }
                 }
             } 
-            // Logika dla KREDYTÓW / LEASINGÓW
+            // B) Logika dla POŻYCZEK PRYWATNYCH (Własny harmonogram)
+            else if (isPryw && l.prywMode === 'custom' && l.customSchedule) {
+                let expOrInc = isPrywWplyw ? 'inc' : 'exp';
+                let catName = isPrywWplyw ? 'Inne Wpływy' : 'Inne Wydatki';
+                
+                l.customSchedule.forEach((cs, idx) => {
+                    if (!cs.isPaid) {
+                        let dObj = new Date(cs.date);
+                        dObj.setHours(12, 0, 0);
+                        
+                        window.db.home.trans.push({ 
+                            id: 'loan_'+l.id+'_cs_'+idx, 
+                            type: expOrInc, 
+                            cat: catName, 
+                            acc: l.accId || window.db.home.accs[0].id, 
+                            d: (isPrywWplyw ? 'Wpływ: ' : 'Wydatek: ') + l.n, 
+                            v: parseFloat(cs.amt) || 0, 
+                            who: 'System', 
+                            dt: dObj.toLocaleDateString('pl-PL'), 
+                            rD: dObj.toISOString(), 
+                            isPlanned: true, 
+                            loanId: l.id 
+                        });
+                    }
+                });
+            }
+            // C) Logika dla KREDYTÓW, LEASINGÓW, PAYPO i PRYWATNYCH (Równe raty)
             else {
                 let generated = 0;
                 let instLeft = parseInt(l.installmentsLeft) || 0;
+                let expOrInc = isPrywWplyw ? 'inc' : 'exp';
+                let catName = isPrywWplyw ? 'Inne Wpływy' : 'Kredyt / Leasing';
+                
+                // Dla PayPo / Kredytów daty startują od daty "StartDate"
+                let startDateObj = l.startDate ? new Date(l.startDate) : new Date();
+                
                 for(let i=0; i<24 && generated < instLeft; i++) {
-                    let curD = new Date(y, m+i, 1);
+                    let curD = new Date(startDateObj.getFullYear(), startDateObj.getMonth() + generated + 1, l.day || startDateObj.getDate());
+                    
                     let curMStr = curD.getFullYear() + '-' + String(curD.getMonth()+1).padStart(2,'0');
+                    if(l.holidayMonth === curMStr) {
+                        startDateObj.setMonth(startDateObj.getMonth() + 1); // Przesuń cały kalendarz
+                        continue;
+                    }
 
-                    if(l.holidayMonth === curMStr) continue;
-
-                    let dObj = new Date(curD.getFullYear(), curD.getMonth(), l.day || 10, 12, 0, 0);
-                    if(dObj > n || (generated===0 && dObj.getDate() >= n.getDate())) {
+                    curD.setHours(12, 0, 0);
+                    if(curD > n || (generated===0 && curD.getDate() >= n.getDate())) {
                          window.db.home.trans.push({ 
                              id: 'loan_'+l.id+'_'+i, 
-                             type: 'exp', 
-                             cat: 'Kredyt / Leasing', 
+                             type: expOrInc, 
+                             cat: catName, 
                              acc: l.accId || window.db.home.accs[0].id, 
                              d: 'Rata: ' + l.n, 
                              v: parseFloat(l.rata) || 0, 
                              who: 'System', 
-                             dt: dObj.toLocaleDateString('pl-PL'), 
-                             rD: dObj.toISOString(), 
+                             dt: curD.toLocaleDateString('pl-PL'), 
+                             rD: curD.toISOString(), 
                              isPlanned: true, 
                              loanId: l.id 
                          });
@@ -170,10 +209,11 @@ window.hSyncSchedule = function() {
         });
     }
 
+    // Sortowanie od najnowszych
     window.db.home.trans.sort((a,b) => new Date(b.rD) - new Date(a.rD));
 };
 
-// Sprawdzanie i księgowanie zeszłych automatów
+// Sprawdzanie i księgowanie zeszłych automatów (przy uruchomieniu apki)
 window.hCheckAuto = function() {
     window.hInitDb();
     let n = new Date(); 
