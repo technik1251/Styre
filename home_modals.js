@@ -139,66 +139,42 @@ window.hSaveEditTrans = function(id) {
 window.hToggleLoanFields = function() {
     let type = document.getElementById('ml-type').value; 
     let isCard = (type === 'Karta');
-    let isPayPo = (type === 'PayPo');
+    let isBNPL = (type === 'PayPo'); // Używamy "PayPo" w kodzie dla zachowania bazy, ale w UI to BNPL
     let isPrywWplyw = (type === 'Prywatny_WPLYW');
     let isPrywWydatek = (type === 'Prywatny_WYDATEK');
     let isPryw = isPrywWplyw || isPrywWydatek;
     let isKredyt = (type === 'Kredyt' || type === 'Leasing');
 
     let lblBor = document.getElementById('lbl-borrowed');
-    let lblKap = document.getElementById('lbl-kapital');
-    let mlKapital = document.getElementById('ml-kapital');
 
+    // Logika wyświetlania pól w zależności od typu
     if(isCard) {
         lblBor.innerText = 'Przyznany Limit Karty (zł)';
-        lblKap.innerText = 'Bieżące Zadłużenie na Karcie (zł)';
-        mlKapital.disabled = false;
-        mlKapital.style.opacity = '1';
     }
-    else if(isPayPo) {
+    else if(isBNPL) {
         lblBor.innerText = 'Wartość Koszyka (zł)';
-        lblKap.innerText = 'Całkowity Koszt do Spłaty na Dziś (zł) - Auto';
-        mlKapital.disabled = true; // ZABLOKOWANE - Liczy system!
-        mlKapital.style.opacity = '0.5';
     }
     else if(isPryw) {
         lblBor.innerText = 'Całkowita kwota pożyczki (zł)';
-        lblKap.innerText = 'Całkowita kwota do spłaty NA DZIŚ (zł)';
-        mlKapital.disabled = false;
-        mlKapital.style.opacity = '1';
     }
     else {
         lblBor.innerText = 'Początkowa Kwota Umowy (zł)';
-        lblKap.innerText = 'Całkowita kwota do spłaty NA DZIŚ (zł)';
-        mlKapital.disabled = false;
-        mlKapital.style.opacity = '1';
     }
 
     // Pokaż / Ukryj Sekcje
-    document.getElementById('row-rates-1').style.display = isKredyt ? 'flex' : 'none'; 
-    document.getElementById('row-card-opts').style.display = isCard ? 'flex' : 'none'; 
+    document.getElementById('group-kapital').style.display = isBNPL ? 'none' : 'block'; // BNPL nie podaje kapitału na start
+    document.getElementById('row-rates-1').style.display = isKredyt ? 'flex' : 'none'; // RRSO tylko kredyt
+    document.getElementById('row-card-opts').style.display = isCard ? 'flex' : 'none'; // Opcje karty
+    document.getElementById('row-rates-2').style.display = isKredyt ? 'flex' : 'none'; // Raty tylko dla kredytu na start (BNPL rozkłada później)
+    document.getElementById('paypo-dates').style.display = isBNPL ? 'flex' : 'none'; // Data zakupu dla BNPL
+    document.getElementById('group-day').style.display = (isKredyt || isCard) ? 'block' : 'none'; // Dzień spłaty
+    document.getElementById('custom-schedule-box').style.display = isPryw ? 'block' : 'none'; // Transze prywatne
+    document.getElementById('pryw-typ-splaty').style.display = isPryw ? 'block' : 'none'; // Tryb prywatny
     
-    // Trik dla PayPo - wyłączamy wpisywanie ręcznej kwoty raty
-    document.getElementById('group-rata').style.display = isKredyt ? 'block' : 'none';
-    
-    // Pokaż dodatkowe koszty (Prowizja PayPo)
-    document.getElementById('paypo-koszty').style.display = isPayPo ? 'block' : 'none';
-    document.getElementById('row-rates-2').style.display = (isKredyt || isPayPo) ? 'flex' : 'none'; 
-    
-    document.getElementById('paypo-dates').style.display = isPayPo ? 'flex' : 'none'; 
-    document.getElementById('group-day').style.display = (isKredyt || isCard) ? 'block' : 'none'; 
-    
-    document.getElementById('custom-schedule-box').style.display = isPryw ? 'block' : 'none';
-    document.getElementById('pryw-typ-splaty').style.display = isPryw ? 'block' : 'none';
+    // Pokaż teaser PRO dla BNPL
+    document.getElementById('bnpl-pro-teaser').style.display = isBNPL ? 'flex' : 'none';
 
-    if(isCard || isPryw) { 
-        document.getElementById('ml-rata').value = 0; 
-        document.getElementById('ml-left-inst').value = 0; 
-    }
-    if(!isKredyt) document.getElementById('ml-pct').value = 0;
-    
     window.hTogglePrywType(); 
-    window.hCalcBNPL(); // Przelicz przy zmianie zakładki
 };
 
 window.hTogglePrywType = function() {
@@ -246,17 +222,6 @@ window.hCalcCustomTotal = function() {
     }
 };
 
-window.hCalcBNPL = function() {
-    let type = document.getElementById('ml-type').value;
-    if(type === 'PayPo') {
-        let koszyk = parseFloat(document.getElementById('ml-borrowed').value) || 0;
-        let koszty = parseFloat(document.getElementById('ml-pp-koszt').value) || 0;
-        
-        let total = koszyk + koszty;
-        document.getElementById('ml-kapital').value = total > 0 ? total.toFixed(2) : '';
-    }
-};
-
 window.hOpenLoanModal = function(id = null, forceCard = false) {
     window.hInitDb();
     let ln = id ? window.db.home.loans.find(x => x.id == id) : null; 
@@ -265,44 +230,40 @@ window.hOpenLoanModal = function(id = null, forceCard = false) {
     let dPay = ln && ln.declaredPay ? ln.declaredPay : '100';
     let today = window.getLocalYMD().substring(0,10);
     
-    // Oblicz koszty jeśli to paypo do edycji
-    let extKoszty = 0;
-    if(ln && ln.type === 'PayPo') {
-        extKoszty = (parseFloat(ln.totalInst)*parseFloat(ln.rata)) - parseFloat(ln.borrowed);
-        if(extKoszty < 0 || isNaN(extKoszty)) extKoszty = 0;
-    }
-
     let html = `<div id="m-loan" class="modal-overlay"><div class="panel" style="width:100%; max-width:380px; background:#18181b; border:1px solid rgba(255,255,255,0.1); max-height:90vh; overflow-y:auto;">
         <h3 style="margin-top:0; color:#fff; display:flex; align-items:center; gap:10px;">${ln ? '✏️ Edytuj Zobowiązanie' : '🏦 Nowe Zobowiązanie'}</h3>
         
         <div class="inp-group" style="margin-bottom:12px;"><label>Typ zobowiązania</label>
             <select id="ml-type" onchange="window.hToggleLoanFields()" style="background:#09090b; border-color:var(--info); color:var(--info); font-weight:bold;" ${ln ? 'disabled' : ''}>
-                <option value="PayPo" ${(!ln && !isC) || (ln&&ln.type==='PayPo')?'selected':''}>🛍️ Odroczone / PayPo / BNPL</option>
-                <option value="Prywatny_WPLYW" ${ln&&ln.type==='Prywatny_WPLYW'?'selected':''}>🟢 Pożyczka Prywatna (Ktoś MI wisi / Wpływ)</option>
-                <option value="Prywatny_WYDATEK" ${ln&&ln.type==='Prywatny_WYDATEK'?'selected':''}>🔴 Pożyczka Prywatna (Ja KOMUŚ wiszę / Wydatek)</option>
+                <option value="PayPo" ${(!ln && !isC) || (ln&&ln.type==='PayPo')?'selected':''}>🛍️ Odroczone / BNPL (0 zł na start)</option>
                 <option value="Kredyt" ${ln&&ln.type==='Kredyt'?'selected':''}>🏦 Kredyt Gotówkowy / Hipoteka</option>
                 <option value="Leasing" ${ln&&ln.type==='Leasing'?'selected':''}>🚗 Leasing</option>
+                <option value="Prywatny_WPLYW" ${ln&&ln.type==='Prywatny_WPLYW'?'selected':''}>🟢 Pożyczka Prywatna (Ktoś MI wisi / Wpływ)</option>
+                <option value="Prywatny_WYDATEK" ${ln&&ln.type==='Prywatny_WYDATEK'?'selected':''}>🔴 Pożyczka Prywatna (Ja KOMUŚ wiszę / Wydatek)</option>
                 <option value="Karta" ${isC?'selected':''}>💳 Karta Kredytowa</option>
             </select>
             ${ln ? `<small style="color:var(--muted); font-size:0.65rem; display:block; margin-top:4px;">Typu nie można zmienić po utworzeniu.</small>` : ''}
         </div>
 
+        <div id="bnpl-pro-teaser" style="display:none; align-items:center; gap:10px; background:linear-gradient(145deg, rgba(139, 92, 246, 0.15), rgba(14, 165, 233, 0.15)); border:1px dashed rgba(139, 92, 246, 0.4); padding:10px; border-radius:12px; margin-bottom:15px; cursor:pointer;" onclick="window.sysAlert('Integracja BNPL (PRO)', 'W wersji StyreOS PRO połączysz aplikację bezpośrednio z PayPo, Klarna czy Allegro Pay. System sam pobierze Twoje koszyki, prowizje i terminy spłat! 🛍️🤖', 'info')">
+            <span style="font-size:1.5rem;">🔗</span>
+            <div><strong style="color:#c084fc; font-size:0.8rem;">Zintegruj z operatorem (PRO)</strong><br><small style="color:var(--muted); font-size:0.7rem;">Automatyczne pobieranie zakupów</small></div>
+        </div>
+
         <div class="inp-group" style="margin-bottom:12px;"><label>Nazwa (np. Maciek, Karta, PayPo)</label><input type="text" id="ml-n" value="${ln?ln.n:''}"></div>
         <div class="inp-group" style="margin-bottom:12px;"><label>Konto powiązane ze spłatą/wpływem</label><select id="ml-acc" style="background:#09090b;">${window.db.home.accs.map(a => `<option value="${a.id}" ${a.id==(ln?ln.accId:'')?'selected':''}>${a.n}</option>`).join('')}</select></div>
         
-        <div class="inp-group" style="margin-bottom:12px; border:1px solid var(--success); padding:10px; border-radius:12px; background:rgba(34,197,94,0.05);"><label id="lbl-borrowed" style="color:var(--success);">Wartość początkowa zakupu (zł)</label><input type="number" step="0.01" id="ml-borrowed" value="${ln?(parseFloat(ln.borrowed)||0):''}" placeholder="np. 237" style="color:var(--success); font-weight:bold;" oninput="window.hCalcBNPL()"></div>
+        <div class="inp-group" style="margin-bottom:12px; border:1px solid var(--success); padding:10px; border-radius:12px; background:rgba(34,197,94,0.05);"><label id="lbl-borrowed" style="color:var(--success);">Wartość początkowa</label><input type="number" step="0.01" id="ml-borrowed" value="${ln?(parseFloat(ln.borrowed)||0):''}" placeholder="np. 237" style="color:var(--success); font-weight:bold;" oninput="window.hCalcCustomTotal()"></div>
         
-        <div class="inp-group" id="paypo-koszty" style="margin-bottom:12px; display:none;"><label style="color:var(--warning);">Koszty operatora (Prowizja PayPo)</label><input type="number" step="0.01" id="ml-pp-koszt" value="${extKoszty}" placeholder="0" style="color:var(--warning);" oninput="window.hCalcBNPL()"></div>
-        
+        <div class="inp-group" id="group-kapital" style="margin-bottom:15px;"><label>Całkowita kwota do spłaty na dziś (zł)</label><input type="number" step="0.01" id="ml-kapital" value="${ln?(ln.kapital||''):''}" style="border-color:var(--danger); color:var(--danger); background:rgba(239,68,68,0.05);" oninput="window.hCalcCustomTotal()"></div>
+
         <div id="row-rates-2" class="inp-row" style="margin-bottom:12px; display:flex;">
             <div class="inp-group" id="group-rata"><label>Kwota JEDNEJ raty (zł)</label><input type="number" step="0.01" id="ml-rata" value="${ln?(ln.rata||''):''}"></div>
             <div class="inp-group" style="flex:1;"><label>Z ilu rat został wzięty?</label><input type="number" id="ml-left-inst" value="${ln?(ln.installmentsLeft||''):''}"></div>
         </div>
 
-        <div class="inp-group" style="margin-bottom:15px;"><label id="lbl-kapital">Całkowita kwota do spłaty na dziś (zł)</label><input type="number" step="0.01" id="ml-kapital" value="${ln?(ln.kapital||''):''}" style="border-color:var(--danger); color:var(--danger); background:rgba(239,68,68,0.05);"></div>
-
         <div id="paypo-dates" class="inp-row" style="margin-bottom:12px; display:none;">
-            <div class="inp-group"><label>Data zakupu (Start)</label><input type="date" id="ml-pp-start" value="${ln&&ln.startDate?ln.startDate:today}" style="background:#09090b;"></div>
+            <div class="inp-group"><label>Data zakupu (Odroczenie 30 dni)</label><input type="date" id="ml-pp-start" value="${ln&&ln.startDate?ln.startDate:today}" style="background:#09090b;"></div>
         </div>
 
         <div id="row-rates-1" class="inp-row" style="margin-bottom:12px; display:none;"><div class="inp-group"><label>RRSO (%)</label><input type="number" step="0.01" id="ml-pct" value="${ln?(ln.pct||0):0}"></div><div class="inp-group"><label>Typ Oprocentowania</label><select id="ml-int-type" style="background:#09090b;"><option value="Stałe" ${ln&&ln.intType==='Stałe'?'selected':''}>Stałe</option><option value="Zmienne" ${ln&&ln.intType==='Zmienne'?'selected':''}>Zmienne</option></select></div></div>
@@ -357,24 +318,16 @@ window.hSaveLoan = function(id) {
     let type = document.getElementById('ml-type').value; 
     
     let isCard = (type === 'Karta');
-    let isPayPo = (type === 'PayPo');
+    let isBNPL = (type === 'PayPo'); // W bazie trzymamy pod kluczem PayPo
     let isKredyt = (type === 'Kredyt' || type === 'Leasing');
     let isPryw = (type === 'Prywatny_WPLYW' || type === 'Prywatny_WYDATEK');
     
-    let r = (isPayPo || isKredyt) ? (parseFloat(document.getElementById('ml-rata').value)||0) : 0; 
-    let i = (isPayPo || isKredyt) ? (parseInt(document.getElementById('ml-left-inst').value)||0) : 0;
     let bor = parseFloat(document.getElementById('ml-borrowed').value) || 0; 
+    let k = isBNPL ? bor : (parseFloat(document.getElementById('ml-kapital').value) || 0); 
+    let r = isKredyt ? (parseFloat(document.getElementById('ml-rata').value)||0) : (isBNPL ? bor : 0); 
+    let i = isKredyt ? (parseInt(document.getElementById('ml-left-inst').value)||0) : (isBNPL ? 1 : 0);
 
-    // POTĘŻNE WYLICZENIE KAPITAŁU
-    let k = parseFloat(document.getElementById('ml-kapital').value) || 0; 
-    
-    if (isPayPo) {
-        let koszty = parseFloat(document.getElementById('ml-pp-koszt').value) || 0;
-        k = bor + koszty; // Kapitał PayPo = Koszyk + Prowizja
-        if(i > 0) r = k / i; // System sam dzieli ratę, żeby była RÓWNA co do grosza
-    }
-
-    if (bor === 0) bor = k;
+    if (bor === 0 && k > 0) bor = k;
     
     let d = parseInt(document.getElementById('ml-day').value) || 10;
     if (isPryw && document.getElementById('pryw-mode').value === 'equal') {
@@ -384,7 +337,7 @@ window.hSaveLoan = function(id) {
     let p = isKredyt ? (parseFloat(document.getElementById('ml-pct').value) || 0) : 0; 
     
     let startDate = window.getLocalYMD().substring(0,10);
-    if (isPayPo) startDate = document.getElementById('ml-pp-start') ? document.getElementById('ml-pp-start').value : startDate;
+    if (isBNPL) startDate = document.getElementById('ml-pp-start') ? document.getElementById('ml-pp-start').value : startDate;
     
     let prywMode = isPryw ? document.getElementById('pryw-mode').value : null;
     if(isPryw && prywMode === 'equal') {
@@ -392,8 +345,6 @@ window.hSaveLoan = function(id) {
         if(i > 0) r = k / i; 
     }
     
-    let ti = i; // TotalInst zabezpieczone
-
     let minPay = isCard ? (parseFloat(document.getElementById('ml-min-pay').value) || 5) : 0; 
     let decPay = isCard ? document.getElementById('ml-dec-pay').value : '100';
 
@@ -414,18 +365,18 @@ window.hSaveLoan = function(id) {
     if(id) { 
         let ln = window.db.home.loans.find(x => x.id == id); 
         if(ln) { 
-            ln.n = n; ln.accId = accId; ln.kapital = k; ln.pct = p; ln.rata = r; 
-            ln.installmentsLeft = i; ln.day = d; ln.borrowed = bor; ln.type = type; 
-            ln.minPayPct = minPay; ln.declaredPay = decPay; ln.startDate = startDate;
+            ln.n = n; ln.accId = accId; ln.kapital = k; ln.pct = p; ln.borrowed = bor;
+            if(!isBNPL || !ln.isConverted) { ln.rata = r; ln.installmentsLeft = i; } // Nie nadpisuj rat po konwersji BNPL
+            ln.day = d; ln.type = type; ln.minPayPct = minPay; ln.declaredPay = decPay; ln.startDate = startDate;
             if(isPryw) { ln.customSchedule = customSch; ln.prywMode = prywMode; }
             if(!ln.totalInst || ln.totalInst < ln.installmentsLeft) ln.totalInst = ln.installmentsLeft;
         } 
     } else { 
         let newLoan = {
             id: Date.now(), n: n, accId: accId, kapital: k, pct: p, rata: r, 
-            totalInst: ti, installmentsLeft: i, day: d, isClosed: false, 
+            totalInst: i, installmentsLeft: i, day: d, isClosed: false, 
             intType: 'Stałe', instType: 'Równe', borrowed: bor, type: type, 
-            minPayPct: minPay, declaredPay: decPay, startDate: startDate
+            minPayPct: minPay, declaredPay: decPay, startDate: startDate, isConverted: false
         };
         if(isPryw) { newLoan.customSchedule = customSch; newLoan.prywMode = prywMode; }
         window.db.home.loans.push(newLoan); 
@@ -433,6 +384,56 @@ window.hSaveLoan = function(id) {
     
     window.hSyncSchedule(); window.save(); window.render(); 
     document.getElementById('m-loan').remove();
+};
+
+// --- OKIENKO KONWERSJI BNPL (ROZŁÓŻ NA RATY) ---
+window.hOpenBNPLConvertModal = function(id) {
+    let ln = window.db.home.loans.find(x => x.id == id); if(!ln) return;
+    
+    let html = `<div id="m-bnpl-convert" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--info);">
+        <h3 style="margin-top:0; color:var(--info);">✂️ Rozłóż na raty</h3>
+        <p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">Wpisz warunki rat podane w aplikacji operatora.</p>
+        
+        <div class="inp-group" style="margin-bottom:12px;">
+            <label style="color:var(--danger)">Całkowity koszt do spłaty (z prowizją)</label>
+            <input type="number" step="0.01" id="bnpl-c" placeholder="np. 272.56" class="big-inp" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:var(--danger);">
+        </div>
+        <div class="inp-row" style="margin-bottom:20px;">
+            <div class="inp-group" style="flex:1;">
+                <label>Kwota raty (zł)</label>
+                <input type="number" step="0.01" id="bnpl-r" placeholder="np. 68.14" style="background:rgba(0,0,0,0.5);">
+            </div>
+            <div class="inp-group" style="flex:1;">
+                <label>Ilość rat</label>
+                <input type="number" id="bnpl-i" placeholder="np. 4" style="background:rgba(0,0,0,0.5);">
+            </div>
+        </div>
+        
+        <button class="btn" style="background:var(--info); color:#fff;" onclick="window.hExecBNPLConvert('${id}')">ZATWIERDŹ RATY</button>
+        <button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-bnpl-convert').remove()">ANULUJ</button>
+    </div></div>`; 
+    document.body.insertAdjacentHTML('beforeend', html);
+};
+
+window.hExecBNPLConvert = function(id) {
+    let ln = window.db.home.loans.find(x => x.id == id);
+    let c = parseFloat(document.getElementById('bnpl-c').value);
+    let r = parseFloat(document.getElementById('bnpl-r').value);
+    let i = parseInt(document.getElementById('bnpl-i').value);
+    
+    if(c > 0 && r > 0 && i > 0) {
+        ln.kapital = c; 
+        ln.rata = r; 
+        ln.installmentsLeft = i; 
+        ln.totalInst = i; 
+        ln.isConverted = true;
+        
+        window.hSyncSchedule(); window.save(); window.render();
+        if(window.sysAlert) window.sysAlert("Sukces!", "Zakup został rozłożony na raty.", "success");
+        document.getElementById('m-bnpl-convert').remove();
+    } else {
+        if(window.sysAlert) window.sysAlert("Błąd", "Wypełnij poprawnie wszystkie pola.", "error");
+    }
 };
 
 window.hDelLoan = function(id) { 
@@ -464,11 +465,24 @@ window.hCreditHoliday = function(loanId) {
 
 window.hPayOffCompletely = function(loanId) { 
     let ln = window.db.home.loans.find(x => x.id == loanId); if(!ln) return; 
+    
+    // Obliczanie kwoty do zapłaty przy natychmiastowej spłacie (z uwzględnieniem odpuszczenia kosztów operatora w BNPL)
+    let spłaconyKapitalJuz = (parseFloat(ln.totalInst) - parseFloat(ln.installmentsLeft)) * parseFloat(ln.rata);
+    if(isNaN(spłaconyKapitalJuz)) spłaconyKapitalJuz = 0;
+    
+    let realKwotaDoZaplaty = ln.kapital; // Domyślnie cały kapitał z odsetkami
+    
+    if (ln.type === 'PayPo' && ln.isConverted) {
+        // Jeśli to BNPL na raty, przy całkowitej spłacie płacisz tylko to co zostało z "Wartości koszyka"
+        realKwotaDoZaplaty = parseFloat(ln.borrowed) - spłaconyKapitalJuz; 
+        if (realKwotaDoZaplaty < 0) realKwotaDoZaplaty = 0;
+    }
+
     if(window.sysConfirm) {
-        window.sysConfirm("Całkowita Spłata 🏆", `Opłacić całość (${Number(ln.kapital).toFixed(2)} zł) na dziś?`, () => { 
+        window.sysConfirm("Całkowita Spłata 🏆", `Opłacić całość (${Number(realKwotaDoZaplaty).toFixed(2)} zł) na dziś?`, () => { 
             let expOrInc = ln.type === 'Prywatny_WPLYW' ? 'inc' : 'exp'; 
             window.db.home.trans.unshift({ 
-                id: Date.now(), type: expOrInc, cat: 'Kredyt / Leasing', v: ln.kapital, 
+                id: Date.now(), type: expOrInc, cat: 'Kredyt / Leasing', v: realKwotaDoZaplaty, 
                 d: 'Spłata całości: ' + ln.n, dt: new Date().toLocaleDateString('pl-PL'), 
                 rD: new Date().toISOString(), isPlanned: false, acc: ln.accId || window.db.home.accs[0].id, 
                 loanAction: 'close', loanId: ln.id, principalPaid: ln.kapital, instReduced: ln.installmentsLeft 
@@ -494,7 +508,10 @@ window.hOpenPayLoanModal = function(loanId, transId = null) {
         defVal = (ln.declaredPay === 'min') ? minP : ln.kapital;
         subText = `Zadłużenie: <strong>${Number(ln.kapital||0).toFixed(2)} zł</strong><br>Min. spłata: <strong>${Number(minP||0).toFixed(2)} zł</strong>`;
     } else if (ln.type === 'PayPo') {
-        if(ln.installmentsLeft === 1) defVal = ln.kapital; 
+        if(!ln.isConverted) {
+            defVal = ln.kapital; // Przed ratami spłacamy całość koszyka
+            subText = `Spłacasz całość zakupu bez odsetek.`;
+        }
     } else if (ln.type === 'Prywatny_WYDATEK' || ln.type === 'Prywatny_WPLYW') {
         if (ln.prywMode === 'custom') {
             let unpaid = ln.customSchedule ? ln.customSchedule.find(cs => !cs.isPaid) : null;
@@ -527,6 +544,7 @@ window.hExecPayLoan = function(loanId, transId) {
         } else if (ln.type === 'PayPo' || ln.type === 'Prywatny_WPLYW' || ln.type === 'Prywatny_WYDATEK') {
             principalPaid = val; 
         } else {
+            // Ręczna, wczorajsza logika kredytu: spłata raty zjada kawałek kapitału, a reszta to odsetki
             interest = (ln.kapital * (ln.pct / 100)) / 12; 
             principalPaid = val - interest; 
         }
