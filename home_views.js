@@ -318,9 +318,12 @@ window.rHome = function() {
                         let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
                         let lineDisp = i === totInst ? 'none' : 'block';
                         
-                        // Zawsze trzymaj równą ratę, a na koniec wyrównaj co do grosza różnice wynikające z nadpłat
+                        // Zabezpieczenie matematyczne dla precyzji zmiennoprzecinkowej i nadpłat
                         let rataKwota = rat;
-                        if(i === totInst && !isPaid) rataKwota = kap - (rat * (instL - 1));
+                        if(i === totInst && !isPaid) {
+                            rataKwota = kap - (rat * (instL - 1));
+                            rataKwota = Math.round(rataKwota * 100) / 100; // Usunięcie błędu float
+                        }
                         if(rataKwota < 0) rataKwota = rat;
                         
                         // Ustaw sztywny miesiąc do przodu
@@ -344,7 +347,7 @@ window.rHome = function() {
                     detailsHtml = `<div style="margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                     
                     if(l.prywMode === 'equal') {
-                        // Traktuj jak zwykły harmonogram (PayPo/Kredyt)
+                        // Traktuj jak zwykły harmonogram
                         let paidCount = totInst - instL;
                         pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
                         for(let i=1; i<=totInst; i++) {
