@@ -45,7 +45,7 @@ if (savedLocal) {
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
 
-// 2. Wstrzykiwanie "Bezpieczników" do bazy
+// 2. Wstrzykiwanie "Bezpieczników" do bazy (Struktura Premium)
 window.patchDb = function(data) {
     let d = data || {};
     
@@ -60,6 +60,14 @@ window.patchDb = function(data) {
     if(!Array.isArray(d.home.members)) d.home.members = [];
     if(d.home.members.length === 0) d.home.members.push(d.userName || 'Domownik');
     
+    // Aktualizacja starych pożyczek do wersji Premium
+    d.home.loans.forEach(l => {
+        if(l.totalInst === undefined) l.totalInst = l.installmentsLeft || 0;
+        if(l.startDate === undefined) l.startDate = new Date().toISOString().substring(0,10);
+        if(l.minPayPct === undefined) l.minPayPct = 5;
+        if(l.declaredPay === undefined) l.declaredPay = '100';
+    });
+
     // Bezpieczniki Panelu Taxi
     if(!d.drv) d.drv = { trans: [], shifts: [], clients: [], fuel: [], exp: [], h: [], cfg: { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 }, q: {s: 8, w: 60, t1: 3.5, t2: 4.5, t3: 6, t4: 8} };
     if(!d.drv.cfg) d.drv.cfg = { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 };
@@ -96,7 +104,7 @@ window.save = function() {
 
 window.onerror = function(msg, url, lineNo) { 
     let fn = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; 
-    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger);">Błąd Kodu!</h2><div style="background:#000; padding:15px; border-radius:12px; text-align:left; font-family:monospace; font-size:0.8rem; color:#fff;">${msg}<br>Plik: ${fn}<br>Linia: ${lineNo}</div><button class="btn" style="background:rgba(255,255,255,0.1); margin-top:20px;" onclick="localStorage.clear();location.reload()">RESTART (CZYŚĆ PAMIĘĆ)</button></div>`; 
+    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger);">Błąd Kodu!</h2><div style="background:#000; padding:15px; border-radius:12px; text-align:left; font-family:monospace; font-size:0.8rem; color:#fff;">${msg}<br>Plik: ${fn}<br>Linia: ${lineNo}</div><button class="btn" style="background:rgba(255,255,255,0.1); margin-top:20px;" onclick="localStorage.clear();location.reload()">TWARDY RESET (CZYŚĆ PAMIĘĆ)</button><p style="color:var(--muted); font-size:0.7rem; margin-top:15px;">Jeśli masz konto Google, Twoje dane powrócą po ponownym logowaniu.</p></div>`; 
     return false; 
 };
 
