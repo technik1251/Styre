@@ -328,17 +328,17 @@ window.hSaveLoan = function(id) {
     let isKredyt = (type === 'Kredyt' || type === 'Leasing');
     let isPryw = (type === 'Prywatny_WPLYW' || type === 'Prywatny_WYDATEK');
     
-    // Pobieramy podstawowe wartości
+    // Pobieramy podstawowe wartości z zabezpieczeniem przed NaN
     let r = (isPayPo || isKredyt) ? (parseFloat(document.getElementById('ml-rata').value)||0) : 0; 
     let i = (isPayPo || isKredyt) ? (parseInt(document.getElementById('ml-left-inst').value)||0) : 0;
     let bor = parseFloat(document.getElementById('ml-borrowed').value) || 0; 
 
-    // OSTATECZNY FIX KAPITAŁU DLA PAYPO
+    // OSTATECZNY FIX KAPITAŁU
     let k = parseFloat(document.getElementById('ml-kapital').value) || 0; 
     if (isPayPo && r > 0 && i > 0) {
-        k = r * i; // Wymuszenie twardej logiki: 4 raty * 66 zł = 264 zł
+        k = r * i; // Wymuszenie twardej logiki dla BNPL
     }
-    if (bor === 0) bor = k; // Zabezpieczenie na wypadek braku wpisania kwoty początkowej
+    if (bor === 0) bor = k; // Zabezpieczenie, by bor nigdy nie było 0 jeśli kapitał istnieje
     
     let d = parseInt(document.getElementById('ml-day').value) || 10;
     if (isPryw && document.getElementById('pryw-mode').value === 'equal') {
@@ -347,24 +347,23 @@ window.hSaveLoan = function(id) {
     
     let p = isKredyt ? (parseFloat(document.getElementById('ml-pct').value) || 0) : 0; 
     
-    // Obsługa logiki dat rozpoczęcia rat (sztywny harmonogram)
     let startDate = window.getLocalYMD().substring(0,10);
     if (isPayPo) startDate = document.getElementById('ml-pp-start') ? document.getElementById('ml-pp-start').value : startDate;
     
     let prywMode = isPryw ? document.getElementById('pryw-mode').value : null;
     if(isPryw && prywMode === 'equal') {
         i = parseInt(document.getElementById('ml-pryw-inst').value) || 0;
-        if(i > 0) r = k / i; // Obliczamy ratę z kapitału
+        if(i > 0) r = k / i; 
     }
     
-    let ti = i; // Nowe wpisy zakładają, że total = left inst.
+    let ti = i; // Zapisuje całkowitą ilość rat jako ilość początkową (nie zmienia się)
 
     let minPay = isCard ? (parseFloat(document.getElementById('ml-min-pay').value) || 5) : 0; 
     let decPay = isCard ? document.getElementById('ml-dec-pay').value : '100';
 
     if(!n) return window.sysAlert ? window.sysAlert("Błąd", "Podaj nazwę!") : alert("Brak nazwy");
 
-    // Zbieranie i sortowanie własnego harmonogramu
+    // Zbieranie transz
     let customSch = [];
     if(isPryw && prywMode === 'custom') {
         document.querySelectorAll('.cs-row').forEach(row => {
@@ -384,6 +383,8 @@ window.hSaveLoan = function(id) {
             ln.installmentsLeft = i; ln.day = d; ln.borrowed = bor; ln.type = type; 
             ln.minPayPct = minPay; ln.declaredPay = decPay; ln.startDate = startDate;
             if(isPryw) { ln.customSchedule = customSch; ln.prywMode = prywMode; }
+            // Upewnienie się, że totalInst nie znika przy edycji:
+            if(!ln.totalInst || ln.totalInst < ln.installmentsLeft) ln.totalInst = ln.installmentsLeft;
         } 
     } else { 
         let newLoan = {
@@ -431,7 +432,7 @@ window.hPayOffCompletely = function(loanId) {
     let ln = window.db.home.loans.find(x => x.id == loanId); if(!ln) return; 
     if(window.sysConfirm) {
         window.sysConfirm("Całkowita Spłata 🏆", `Opłacić całość (${Number(ln.kapital).toFixed(2)} zł) na dziś?`, () => { 
-            let expOrInc = ln.type === 'Prywatny_WPLYW' ? 'inc' : 'exp'; // Zabezpieczenie typu akcji
+            let expOrInc = ln.type === 'Prywatny_WPLYW' ? 'inc' : 'exp'; 
             window.db.home.trans.unshift({ 
                 id: Date.now(), type: expOrInc, cat: 'Kredyt / Leasing', v: ln.kapital, 
                 d: 'Spłata całości: ' + ln.n, dt: new Date().toLocaleDateString('pl-PL'), 
@@ -490,21 +491,20 @@ window.hExecPayLoan = function(loanId, transId) {
             if(ln.declaredPay === '100') { principalPaid = val; } 
             else { interest = (ln.kapital * (ln.pct / 100)) / 12; principalPaid = val - interest; }
         } else if (ln.type === 'PayPo' || ln.type === 'Prywatny_WPLYW' || ln.type === 'Prywatny_WYDATEK') {
-            principalPaid = val; // BNPL i prywatne to czysty kapitał
+            principalPaid = val; 
         } else {
             interest = (ln.kapital * (ln.pct / 100)) / 12; 
             principalPaid = val - interest; 
         }
         if(principalPaid < 0) principalPaid = 0; 
 
-        // Logika transz dla pożyczki prywatnej
         let activeTranszaId = null;
         if((ln.type === 'Prywatny_WPLYW' || ln.type === 'Prywatny_WYDATEK') && ln.customSchedule) {
             let unpaid = ln.customSchedule.find(cs => !cs.isPaid);
             if(unpaid) { unpaid.isPaid = true; unpaid.paidDate = new Date().toISOString(); activeTranszaId = unpaid.id; }
         }
 
-        let expOrInc = ln.type === 'Prywatny_WPLYW' ? 'inc' : 'exp'; // Zabezpieczenie kierunku przelewu
+        let expOrInc = ln.type === 'Prywatny_WPLYW' ? 'inc' : 'exp'; 
         let katName = ln.type === 'Prywatny_WPLYW' ? 'Inne Wpływy' : (ln.type === 'Prywatny_WYDATEK' ? 'Inne Wydatki' : 'Kredyt / Leasing');
 
         window.db.home.trans.unshift({ 
