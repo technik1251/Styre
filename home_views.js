@@ -223,6 +223,7 @@ window.rHome = function() {
                 </div>
             </div>` : '';
 
+        // Kafelki Premium Podsumowujące
         let topSummaryHtml = `
             <div style="display:flex; gap:10px; padding:0 15px 15px; overflow-x:auto;">
                 <div style="flex:1; min-width:110px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.3); padding:10px; border-radius:12px;">
@@ -268,7 +269,9 @@ window.rHome = function() {
                 let bor = parseFloat(l.borrowed) || kap; 
                 let rat = parseFloat(l.rata) || 0; 
                 let instL = parseInt(l.installmentsLeft) || 0; 
-                let totInst = parseInt(l.totalInst) || instL; // FIX: Poprawna ilość całkowitych rat
+                
+                // Usprawnione czytanie całkowitej ilości rat (żeby X z Y działało)
+                let totInst = parseInt(l.totalInst) || instL; 
                 if(totInst < instL) totInst = instL;
                 
                 let pctBank = parseFloat(l.pct) || 0; 
@@ -276,6 +279,7 @@ window.rHome = function() {
                 let detailsHtml = '';
                 let pct = 0;
                 
+                // Wizualizacja daty
                 let nextDateStr = '--';
                 if(isKredyt || isPayPo || (isPryw && l.prywMode === 'equal')) {
                     let todayDate = new Date(); 
@@ -285,10 +289,19 @@ window.rHome = function() {
                 }
 
                 if(isPayPo) {
+                    // --- OŚ CZASU DLA BNPL / PAYPO (WERSJA PREMIUM) ---
                     let paidCount = totInst - instL;
                     pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
                     detailsHtml = `<div style="margin-top:15px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                     
+                    // Złoty kafelek oszczędności PayPo
+                    detailsHtml += `
+                    <div style="background:rgba(14,165,233,0.05); padding:12px; border-radius:10px; margin-bottom:20px; border:1px dashed rgba(14,165,233,0.3); text-align:center;">
+                        <span style="font-size:0.7rem; color:var(--info); text-transform:uppercase; font-weight:bold; display:block; margin-bottom:5px;">Koszt odsetek i prowizji</span>
+                        <strong style="color:var(--info); font-size:1.1rem;">0.00 zł (Zyskujesz RRSO 0%)</strong>
+                    </div>`;
+
+                    // Krok 0: Start Zakupu
                     detailsHtml += `
                     <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
                         <div style="width:2px; background:var(--info); position:absolute; left:13px; top:28px; bottom:-18px;"></div>
@@ -297,6 +310,7 @@ window.rHome = function() {
                         <strong style="color:#fff; font-size:0.9rem; padding-top:2px;">${Number(bor).toFixed(2)} zł</strong>
                     </div>`;
 
+                    // Pokaż koszty operatora, jeśli Kwota Do Spłaty jest większa niż Wartość Zakupu
                     let totalDebt = rat * totInst;
                     if (totalDebt > bor && bor > 0) {
                         detailsHtml += `
@@ -308,19 +322,13 @@ window.rHome = function() {
                         </div>`;
                     }
                     
+                    // Raty PayPo - Twardy, czysty widok równej raty (żeby nie psuć wyglądu 39 zł na końcu)
                     for(let i=1; i<=totInst; i++) {
                         let isPaid = i <= paidCount;
                         let isCurrent = i === paidCount + 1;
                         let sColor = isPaid ? 'var(--info)' : (isCurrent ? 'var(--warning)' : 'var(--muted)');
                         let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
                         let lineDisp = i === totInst ? 'none' : 'block';
-                        
-                        let rataKwota = rat;
-                        if(i === totInst && !isPaid) {
-                            rataKwota = kap - (rat * (instL - 1));
-                            rataKwota = Math.round(rataKwota * 100) / 100; 
-                        }
-                        if(rataKwota < 0) rataKwota = rat;
                         
                         let stD = new Date(l.startDate || new Date());
                         stD.setMonth(stD.getMonth() + i);
@@ -331,12 +339,13 @@ window.rHome = function() {
                             <div style="display:${lineDisp}; width:2px; background:${isPaid?'var(--info)':'rgba(255,255,255,0.1)'}; position:absolute; left:13px; top:28px; bottom:-18px;"></div>
                             <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.7rem; z-index:1; flex-shrink:0;">${isPaid?sIcon:i}</div>
                             <div style="flex:1; padding-top:2px;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem;">Rata nr ${i}</strong><br><small style="color:var(--muted)">${isPaid?'Opłacona':(isCurrent?`Spłać do: ${rdStr}`:`Planowana: ${rdStr}`)}</small></div>
-                            <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem; padding-top:2px; text-decoration:${isPaid?'line-through':'none'};">${Number(rataKwota).toFixed(2)} zł</strong>
+                            <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem; padding-top:2px; text-decoration:${isPaid?'line-through':'none'};">${Number(rat).toFixed(2)} zł</strong>
                         </div>`;
                     }
                     detailsHtml += `</div>`;
                 } 
                 else if(isPryw) {
+                    // --- OŚ CZASU DLA POŻYCZEK PRYWATNYCH ---
                     let paidKap = 0;
                     detailsHtml = `<div style="margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                     
@@ -381,7 +390,7 @@ window.rHome = function() {
                     detailsHtml += `</div>`;
                 }
                 else {
-                    // FIX: Kredyt z oszczędnościami i prawidłowymi ratami
+                    // --- STANDARDOWA SIATKA DLA KREDYTU BANKOWEGO (PREMIUM WIDOK OSZCZĘDNOŚCI) ---
                     let paidKap = bor - kap; if(paidKap < 0) paidKap = 0; 
                     let paidPctKap = bor > 0 ? (paidKap / bor) * 100 : 0; 
                     pct = totInst > 0 ? ((totInst - instL) / totInst) * 100 : 0;
@@ -392,11 +401,9 @@ window.rHome = function() {
                     let savingsHtml = '';
                     if (savings > 0 && rat > 0 && kap > 0) {
                         savingsHtml = `
-                        <div style="background:rgba(34,197,94,0.05); padding:12px; border-radius:10px; grid-column: span 2; border:1px dashed rgba(34,197,94,0.3); margin-top:5px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span style="font-size:0.7rem; color:var(--success); text-transform:uppercase; font-weight:bold;">Zaoszczędzisz na spłacie całości:</span>
-                                <strong style="color:var(--success); font-size:1.1rem;">+${Number(savings).toFixed(2)} zł</strong>
-                            </div>
+                        <div style="background:rgba(34,197,94,0.05); padding:15px; border-radius:12px; grid-column: span 2; border:1px dashed rgba(34,197,94,0.4); margin-top:5px; text-align:center;">
+                            <span style="font-size:0.75rem; color:var(--success); text-transform:uppercase; font-weight:bold; display:block; margin-bottom:5px;">Zaoszczędzisz na spłacie całości dzisiaj:</span>
+                            <strong style="color:var(--success); font-size:1.4rem;">+${Number(savings).toFixed(2)} zł</strong>
                         </div>`;
                     }
                     
@@ -447,10 +454,14 @@ window.rHome = function() {
                         </div>
                     </div>`;
                 } else {
-                    // FIX: Poprawny wskaźnik ilości rat w widoku kompaktowym
+                    // FIX KREDYTU: Poprawiona reguła dla "X z Y rat" zamiast "10 z 10"
                     let rightInfo = '';
-                    if(isPryw && l.prywMode === 'custom') rightInfo = `<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Typ</span><br><strong style="color:#fff; font-size:0.8rem;">Własne transze</strong>`;
-                    else rightInfo = `<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Pozostało rat</span><br><strong style="color:#fff; font-size:0.9rem;">${instL} z ${totInst}</strong>`;
+                    if(isPryw && l.prywMode === 'custom') {
+                        rightInfo = `<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Typ</span><br><strong style="color:#fff; font-size:0.8rem;">Własne transze</strong>`;
+                    } else {
+                        let ratyStr = totInst > instL ? `${instL} z ${totInst}` : `${instL}`;
+                        rightInfo = `<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Pozostało rat</span><br><strong style="color:#fff; font-size:0.9rem;">${ratyStr}</strong>`;
+                    }
                     
                     let mainTitleCompact = isPrywInc ? 'Zostało wpłynąć' : 'Kapitał do spłaty';
                     let rataTxt = (isPryw && l.prywMode === 'custom') ? '' : `Rata: <strong style="color:#fff">${Number(rat || 0).toFixed(2)} zł</strong>`;
@@ -576,9 +587,6 @@ window.rHome = function() {
         ` + nav;
     }
     
-    // ==========================================
-    // ZAKŁADKA: KONTA (ACCOUNTS)
-    // ==========================================
     if(t === 'acc') { 
         let totalAccBal = 0; 
         h.accs.forEach(a => totalAccBal += Math.max(0, parseFloat(balances[a.id]) || 0));
