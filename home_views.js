@@ -73,9 +73,6 @@ window.rHome = function() {
         }
     });
 
-    // ==========================================
-    // ZAKŁADKA: DASHBOARD (PRZEGLĄD)
-    // ==========================================
     if(t === 'dash') {
         let topCatName = Object.keys(dashCats).sort((a,b) => dashCats[b] - dashCats[a])[0];
         let insightsHtml = '';
@@ -206,7 +203,6 @@ window.rHome = function() {
                 sumBankiRaty += r;
             }
             else if(l.type === 'PayPo') {
-                // Dla podsumowania BNPL liczymy faktyczne zadłużenie na dziś (Kapitał z rat lub cały koszyk jeśli brak rat)
                 sumBNPL += k;
             }
             else if(l.type === 'Prywatny_WPLYW') sumPrywInc += k;
@@ -232,7 +228,6 @@ window.rHome = function() {
                 </div>
             </div>` : '';
 
-        // Główny panel Kredytów z Twojego screena zintegrowany z nowym widokiem
         let topSummaryHtml = `
             <div style="margin: 0 15px 15px; border:1px solid var(--danger); border-radius:16px; padding:20px; background:linear-gradient(145deg, rgba(239,68,68,0.05), #09090b);">
                 <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
@@ -273,6 +268,7 @@ window.rHome = function() {
         } else {
             let mappedLoans = activeLoans.map(l => {
                 let isBNPL = l.type === 'PayPo';
+                let isCard = l.type === 'Karta';
                 let isPrywInc = l.type === 'Prywatny_WPLYW';
                 let isPrywExp = l.type === 'Prywatny_WYDATEK';
                 let isPryw = isPrywInc || isPrywExp;
@@ -293,7 +289,47 @@ window.rHome = function() {
                 let pctBank = parseFloat(l.pct) || 0; 
                 let detailsHtml = '';
                 let pct = 0;
-                let savingsHtml = '';
+                
+                let savingsMsg = '';
+                let savingsColor = 'var(--success)';
+
+                // ANALIZA FINANSOWA (DORADZTWO)
+                if (isKredyt) {
+                    let totalCostRemaining = rat * instL; 
+                    let oszczednosc = totalCostRemaining - kap;
+                    if (oszczednosc > 0 && rat > 0 && kap > 0) {
+                        savingsMsg = `Spłacając dziś, unikasz ${Number(oszczednosc).toFixed(2)} zł odsetek! 💸`;
+                        savingsColor = 'var(--success)';
+                    }
+                } else if (isBNPL) {
+                    if (!l.isConverted) {
+                        savingsMsg = `Spłać do 30 dni, by ominąć prowizje! 🛡️`;
+                        savingsColor = 'var(--success)';
+                    } else {
+                        let paidCount = totInst - instL;
+                        let splaconyKapitalJuz = paidCount * rat;
+                        let doZaplatyNatychmiast = bor - splaconyKapitalJuz;
+                        if(doZaplatyNatychmiast < 0) doZaplatyNatychmiast = 0;
+                        let oszczednoscDnia = (rat * instL) - doZaplatyNatychmiast; 
+                        
+                        if(oszczednoscDnia > 0) {
+                            savingsMsg = `Spłacając dziś, unikasz ${Number(oszczednoscDnia).toFixed(2)} zł opłat! 🛍️`;
+                            savingsColor = 'var(--info)';
+                        }
+                    }
+                } else if (isCard && kap > 0) {
+                    if (l.declaredPay === '100') {
+                        savingsMsg = `💡 Omijasz odsetki bankowe!`;
+                        savingsColor = 'var(--success)';
+                    } else {
+                        let monthlyInt = (kap * (pctBank / 100)) / 12;
+                        savingsMsg = `⚠️ Tracisz ok. ${Number(monthlyInt).toFixed(2)} zł/m-c na odsetkach!`;
+                        savingsColor = 'var(--danger)';
+                    }
+                }
+
+                let savingsHtmlCompact = savingsMsg ? `<div style="font-size:0.75rem; color:${savingsColor}; font-weight:bold; margin-bottom:8px;">${savingsMsg}</div>` : '';
+                let savingsHtmlDetailed = savingsMsg ? `<div style="margin-top:5px; font-size:0.85rem; font-weight:bold; color:${savingsColor};">${savingsMsg}</div>` : '';
                 
                 let nextDateStr = '--';
                 if(isKredyt || isBNPL || (isPryw && l.prywMode === 'equal')) {
@@ -303,24 +339,19 @@ window.rHome = function() {
                     nextDateStr = nextD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                 }
 
-                // ==========================
-                // WIDOK 1: ODROCZONE (BNPL)
-                // ==========================
                 if(isBNPL) {
                     detailsHtml = `<div style="margin-top:15px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                     
                     if(!l.isConverted) {
-                        // Faza 1: Czyste odroczenie 30 dni (bez rat i kosztów)
                         let deadline = new Date(l.startDate || new Date());
                         deadline.setDate(deadline.getDate() + 30); 
                         let daysLeft = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24));
-                        let daysText = daysLeft >= 0 ? `Zostało ${daysLeft} dni` : `Opóźnienie ${Math.abs(daysLeft)} dni!`;
                         let dlColor = daysLeft >= 0 ? 'var(--success)' : 'var(--danger)';
 
                         detailsHtml += `
                         <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
                             <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${dlColor}; color:${dlColor}; display:flex; align-items:center; justify-content:center; font-size:0.85rem; z-index:1; flex-shrink:0;">⏳</div>
-                            <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Spłata całości</strong><br><small style="color:${dlColor}">${daysText} (do ${deadline.toLocaleDateString('pl-PL')})</small></div>
+                            <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Spłata całości</strong><br><small style="color:${dlColor}">Do ${deadline.toLocaleDateString('pl-PL')}</small></div>
                             <strong style="color:#fff; font-size:0.9rem; padding-top:2px;">${Number(bor).toFixed(2)} zł</strong>
                         </div>`;
                         
@@ -330,25 +361,10 @@ window.rHome = function() {
                         `;
 
                     } else {
-                        // Faza 2: Po rozłożeniu na raty (Widzimy oś czasu i koszty)
                         let paidCount = totInst - instL;
                         pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
-                        
-                        // Zabezpieczamy logikę wyliczeń, tak jak pokazałeś na screenie
                         let totalDebt = rat * totInst;
-                        let prowizja = totalDebt - bor; // Np. 345 - 300 = 45 zł kosztów
-                        
-                        let juzZaplaconyKapital = paidCount * rat;
-                        let doZaplatyNatychmiast = bor - juzZaplaconyKapital; 
-                        if(doZaplatyNatychmiast < 0) doZaplatyNatychmiast = 0;
-                        
-                        // Oszczędność to to co byś zapłacił w ratach do końca MINUS to co musisz zapłacić dziś z samej kwoty koszyka
-                        let kosztRatDoKonca = rat * instL;
-                        let oszczednoscDnia = kosztRatDoKonca - doZaplatyNatychmiast; 
-                        
-                        if(oszczednoscDnia > 0) {
-                            savingsHtml = `<div style="margin-top:8px; font-size:0.85rem; font-weight:bold;"><span style="color:var(--info)">Spłacając dziś, unikasz ${Number(oszczednoscDnia).toFixed(2)} zł opłat! 💸</span></div>`;
-                        }
+                        let prowizja = totalDebt - bor; 
                         
                         detailsHtml += `
                         <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
@@ -395,9 +411,6 @@ window.rHome = function() {
                     }
                     detailsHtml += `</div>`;
                 } 
-                // ==========================
-                // WIDOK 2: POŻYCZKA PRYWATNA
-                // ==========================
                 else if(isPryw) {
                     let paidKap = 0;
                     detailsHtml = `<div style="margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
@@ -442,20 +455,10 @@ window.rHome = function() {
                     }
                     detailsHtml += `</div>`;
                 }
-                // ==========================
-                // WIDOK 3: KREDYT BANKOWY (IDEALNA KOPIA TWOJEGO SCREENA)
-                // ==========================
                 else {
                     let paidKap = bor - kap; if(paidKap < 0) paidKap = 0; 
                     let paidPctKap = bor > 0 ? (paidKap / bor) * 100 : 0; 
                     pct = totInst > 0 ? ((totInst - instL) / totInst) * 100 : 0;
-                    
-                    let totalCostRemaining = rat * instL; 
-                    let savings = totalCostRemaining - kap;
-                    
-                    if (savings > 0 && rat > 0 && kap > 0) {
-                        savingsHtml = `<div style="margin-top:10px; font-size:0.85rem; font-weight:bold; color:var(--success)">Spłacając dziś, unikasz ${Number(savings).toFixed(2)} zł odsetek! 💸</div>`;
-                    }
                     
                     detailsHtml = `
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">
@@ -470,7 +473,6 @@ window.rHome = function() {
                     </div>`;
                 }
 
-                if(pct > 100) pct = 100; if(pct < 0) pct = 0;
                 let ratyStr = (totInst > instL && totInst > 0) ? `${instL} z ${totInst}` : `${instL}`;
 
                 if(!isCompact) {
@@ -500,7 +502,7 @@ window.rHome = function() {
                                     <div style="font-size:1.1rem; font-weight:900; color:#fff;">${ratyStr}</div>
                                 </div>
                             </div>
-                            ${savingsHtml}
+                            ${savingsHtmlDetailed}
                             <div style="width:100%; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; margin-top:10px;">
                                 <div style="width:${pct}%; background:var(--success); height:100%;"></div>
                             </div>
@@ -544,6 +546,7 @@ window.rHome = function() {
                             <div><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">${mainTitleCompact}</span><strong style="color:#fff; font-size:1.3rem; line-height:1.2; display:block;">${Number(displayKap || 0).toFixed(2)} zł</strong></div>
                             <div style="text-align:right;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Pozostało rat</span><br><strong style="color:#fff; font-size:0.9rem;">${ratyStr}</strong></div>
                         </div>
+                        ${savingsHtmlCompact}
                         <div style="width:100%; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; margin-bottom:8px;">
                             <div style="width:${pct}%; background:var(--success); height:100%;"></div>
                         </div>
