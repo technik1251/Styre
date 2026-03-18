@@ -328,8 +328,17 @@ window.hSaveLoan = function(id) {
     let isKredyt = (type === 'Kredyt' || type === 'Leasing');
     let isPryw = (type === 'Prywatny_WPLYW' || type === 'Prywatny_WYDATEK');
     
+    // Pobieramy podstawowe wartości
+    let r = (isPayPo || isKredyt) ? (parseFloat(document.getElementById('ml-rata').value)||0) : 0; 
+    let i = (isPayPo || isKredyt) ? (parseInt(document.getElementById('ml-left-inst').value)||0) : 0;
+    let bor = parseFloat(document.getElementById('ml-borrowed').value) || 0; 
+
+    // OSTATECZNY FIX KAPITAŁU DLA PAYPO
     let k = parseFloat(document.getElementById('ml-kapital').value) || 0; 
-    let bor = parseFloat(document.getElementById('ml-borrowed').value) || k; 
+    if (isPayPo && r > 0 && i > 0) {
+        k = r * i; // Wymuszenie twardej logiki: 4 raty * 66 zł = 264 zł
+    }
+    if (bor === 0) bor = k; // Zabezpieczenie na wypadek braku wpisania kwoty początkowej
     
     let d = parseInt(document.getElementById('ml-day').value) || 10;
     if (isPryw && document.getElementById('pryw-mode').value === 'equal') {
@@ -337,8 +346,6 @@ window.hSaveLoan = function(id) {
     }
     
     let p = isKredyt ? (parseFloat(document.getElementById('ml-pct').value) || 0) : 0; 
-    let r = (isPayPo || isKredyt) ? (parseFloat(document.getElementById('ml-rata').value)||0) : 0; 
-    let i = (isPayPo || isKredyt) ? (parseInt(document.getElementById('ml-left-inst').value)||0) : 0;
     
     // Obsługa logiki dat rozpoczęcia rat (sztywny harmonogram)
     let startDate = window.getLocalYMD().substring(0,10);
