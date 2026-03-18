@@ -223,7 +223,6 @@ window.rHome = function() {
                 </div>
             </div>` : '';
 
-        // Kafelki Premium Podsumowujące
         let topSummaryHtml = `
             <div style="display:flex; gap:10px; padding:0 15px 15px; overflow-x:auto;">
                 <div style="flex:1; min-width:110px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.3); padding:10px; border-radius:12px;">
@@ -265,17 +264,18 @@ window.rHome = function() {
                 let cBg = isPayPo ? 'rgba(14,165,233,0.1)' : (isPrywInc ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)');
                 let cBorder = isPayPo ? 'rgba(14,165,233,0.3)' : (isPrywInc ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)');
                 
-                let kap = parseFloat(l.kapital); if(isNaN(kap)) kap = parseFloat(l.left) || 0; 
-                let bor = parseFloat(l.borrowed); if(isNaN(bor)) bor = parseFloat(l.total) || 0; 
+                let kap = parseFloat(l.kapital) || 0; 
+                let bor = parseFloat(l.borrowed) || kap; 
                 let rat = parseFloat(l.rata) || 0; 
                 let instL = parseInt(l.installmentsLeft) || 0; 
-                let totInst = parseInt(l.totalInst) || 0; 
+                let totInst = parseInt(l.totalInst) || instL; // FIX: Poprawna ilość całkowitych rat
+                if(totInst < instL) totInst = instL;
+                
                 let pctBank = parseFloat(l.pct) || 0; 
                 
                 let detailsHtml = '';
                 let pct = 0;
                 
-                // Wizualizacja daty
                 let nextDateStr = '--';
                 if(isKredyt || isPayPo || (isPryw && l.prywMode === 'equal')) {
                     let todayDate = new Date(); 
@@ -285,29 +285,26 @@ window.rHome = function() {
                 }
 
                 if(isPayPo) {
-                    // --- OŚ CZASU DLA BNPL / PAYPO ---
                     let paidCount = totInst - instL;
                     pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
-                    detailsHtml = `<div style="margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
+                    detailsHtml = `<div style="margin-top:15px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                     
-                    // Krok 0: Start Zakupu
                     detailsHtml += `
-                    <div style="display:flex; gap:10px; margin-bottom:10px; position:relative;">
-                        <div style="width:2px; background:var(--info); position:absolute; left:11px; top:25px; bottom:-15px;"></div>
-                        <div style="width:24px; height:24px; border-radius:50%; background:var(--info); color:#000; display:flex; align-items:center; justify-content:center; font-size:0.8rem; z-index:1;">🛍️</div>
-                        <div style="flex:1;"><strong style="color:#fff; font-size:0.85rem;">Wartość koszyka</strong><br><small style="color:var(--muted)">Data: ${l.startDate || '--'}</small></div>
-                        <strong style="color:#fff; font-size:0.85rem;">${Number(bor).toFixed(2)} zł</strong>
+                    <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
+                        <div style="width:2px; background:var(--info); position:absolute; left:13px; top:28px; bottom:-18px;"></div>
+                        <div style="width:28px; height:28px; border-radius:50%; background:var(--info); color:#000; display:flex; align-items:center; justify-content:center; font-size:0.85rem; z-index:1; flex-shrink:0;">🛍️</div>
+                        <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Wartość koszyka</strong><br><small style="color:var(--muted)">Data: ${l.startDate || '--'}</small></div>
+                        <strong style="color:#fff; font-size:0.9rem; padding-top:2px;">${Number(bor).toFixed(2)} zł</strong>
                     </div>`;
 
-                    // Pokaż koszty operatora, jeśli Kwota Do Spłaty jest większa niż Wartość Zakupu
                     let totalDebt = rat * totInst;
                     if (totalDebt > bor && bor > 0) {
                         detailsHtml += `
-                        <div style="display:flex; gap:10px; margin-bottom:10px; position:relative;">
-                            <div style="width:2px; background:var(--info); position:absolute; left:11px; top:25px; bottom:-15px;"></div>
-                            <div style="width:24px; height:24px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid var(--warning); color:var(--warning); display:flex; align-items:center; justify-content:center; font-size:0.8rem; z-index:1;">📈</div>
-                            <div style="flex:1;"><strong style="color:#fff; font-size:0.85rem;">Koszty operatora</strong></div>
-                            <strong style="color:var(--warning); font-size:0.85rem;">+${Number(totalDebt - bor).toFixed(2)} zł</strong>
+                        <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
+                            <div style="width:2px; background:var(--info); position:absolute; left:13px; top:28px; bottom:-18px;"></div>
+                            <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid var(--warning); color:var(--warning); display:flex; align-items:center; justify-content:center; font-size:0.85rem; z-index:1; flex-shrink:0;">📈</div>
+                            <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Koszty operatora</strong></div>
+                            <strong style="color:var(--warning); font-size:0.9rem; padding-top:2px;">+${Number(totalDebt - bor).toFixed(2)} zł</strong>
                         </div>`;
                     }
                     
@@ -318,36 +315,32 @@ window.rHome = function() {
                         let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
                         let lineDisp = i === totInst ? 'none' : 'block';
                         
-                        // Zabezpieczenie matematyczne dla precyzji zmiennoprzecinkowej i nadpłat
                         let rataKwota = rat;
                         if(i === totInst && !isPaid) {
                             rataKwota = kap - (rat * (instL - 1));
-                            rataKwota = Math.round(rataKwota * 100) / 100; // Usunięcie błędu float
+                            rataKwota = Math.round(rataKwota * 100) / 100; 
                         }
                         if(rataKwota < 0) rataKwota = rat;
                         
-                        // Ustaw sztywny miesiąc do przodu
                         let stD = new Date(l.startDate || new Date());
                         stD.setMonth(stD.getMonth() + i);
                         let rdStr = stD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                         
                         detailsHtml += `
-                        <div style="display:flex; gap:10px; margin-bottom:10px; position:relative;">
-                            <div style="display:${lineDisp}; width:2px; background:${isPaid?'var(--info)':'rgba(255,255,255,0.1)'}; position:absolute; left:11px; top:25px; bottom:-15px;"></div>
-                            <div style="width:24px; height:24px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.6rem; z-index:1;">${isPaid?sIcon:i}</div>
-                            <div style="flex:1;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.85rem;">Rata nr ${i}</strong><br><small style="color:var(--muted)">${isPaid?'Opłacona':(isCurrent?`Spłać do: ${rdStr}`:`Planowana: ${rdStr}`)}</small></div>
-                            <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.85rem; text-decoration:${isPaid?'line-through':'none'};">${Number(rataKwota).toFixed(2)} zł</strong>
+                        <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
+                            <div style="display:${lineDisp}; width:2px; background:${isPaid?'var(--info)':'rgba(255,255,255,0.1)'}; position:absolute; left:13px; top:28px; bottom:-18px;"></div>
+                            <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.7rem; z-index:1; flex-shrink:0;">${isPaid?sIcon:i}</div>
+                            <div style="flex:1; padding-top:2px;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem;">Rata nr ${i}</strong><br><small style="color:var(--muted)">${isPaid?'Opłacona':(isCurrent?`Spłać do: ${rdStr}`:`Planowana: ${rdStr}`)}</small></div>
+                            <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem; padding-top:2px; text-decoration:${isPaid?'line-through':'none'};">${Number(rataKwota).toFixed(2)} zł</strong>
                         </div>`;
                     }
                     detailsHtml += `</div>`;
                 } 
                 else if(isPryw) {
-                    // --- OŚ CZASU DLA POŻYCZEK PRYWATNYCH ---
                     let paidKap = 0;
                     detailsHtml = `<div style="margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                     
                     if(l.prywMode === 'equal') {
-                        // Traktuj jak zwykły harmonogram
                         let paidCount = totInst - instL;
                         pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
                         for(let i=1; i<=totInst; i++) {
@@ -358,11 +351,11 @@ window.rHome = function() {
                             let lineDisp = i === totInst ? 'none' : 'block';
                             
                             detailsHtml += `
-                            <div style="display:flex; gap:10px; margin-bottom:10px; position:relative;">
-                                <div style="display:${lineDisp}; width:2px; background:${isPaid?cTheme:'rgba(255,255,255,0.1)'}; position:absolute; left:11px; top:25px; bottom:-15px;"></div>
-                                <div style="width:24px; height:24px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.6rem; z-index:1;">${isPaid?sIcon:i}</div>
-                                <div style="flex:1;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.85rem;">Rata nr ${i}</strong></div>
-                                <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.85rem; text-decoration:${isPaid?'line-through':'none'};">${Number(rat).toFixed(2)} zł</strong>
+                            <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
+                                <div style="display:${lineDisp}; width:2px; background:${isPaid?cTheme:'rgba(255,255,255,0.1)'}; position:absolute; left:13px; top:28px; bottom:-18px;"></div>
+                                <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.7rem; z-index:1; flex-shrink:0;">${isPaid?sIcon:i}</div>
+                                <div style="flex:1; padding-top:2px;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem;">Rata nr ${i}</strong></div>
+                                <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem; padding-top:2px; text-decoration:${isPaid?'line-through':'none'};">${Number(rat).toFixed(2)} zł</strong>
                             </div>`;
                         }
                     } else if(l.customSchedule && l.customSchedule.length > 0) {
@@ -374,11 +367,11 @@ window.rHome = function() {
                             let lineDisp = idx === l.customSchedule.length - 1 ? 'none' : 'block';
                             
                             detailsHtml += `
-                            <div style="display:flex; gap:10px; margin-bottom:10px; position:relative;">
-                                <div style="display:${lineDisp}; width:2px; background:${isPaid?cTheme:'rgba(255,255,255,0.1)'}; position:absolute; left:11px; top:25px; bottom:-15px;"></div>
-                                <div style="width:24px; height:24px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.6rem; z-index:1;">${sIcon}</div>
-                                <div style="flex:1;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.85rem;">Transza ${idx+1}</strong><br><small style="color:var(--muted)">Planowana: ${cs.date}</small></div>
-                                <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.85rem; text-decoration:${isPaid?'line-through':'none'};">${Number(cs.amt).toFixed(2)} zł</strong>
+                            <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
+                                <div style="display:${lineDisp}; width:2px; background:${isPaid?cTheme:'rgba(255,255,255,0.1)'}; position:absolute; left:13px; top:28px; bottom:-18px;"></div>
+                                <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.7rem; z-index:1; flex-shrink:0;">${sIcon}</div>
+                                <div style="flex:1; padding-top:2px;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem;">Transza ${idx+1}</strong><br><small style="color:var(--muted)">Planowana: ${cs.date}</small></div>
+                                <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem; padding-top:2px; text-decoration:${isPaid?'line-through':'none'};">${Number(cs.amt).toFixed(2)} zł</strong>
                             </div>`;
                         });
                         pct = bor > 0 ? (paidKap / bor) * 100 : 0;
@@ -388,13 +381,24 @@ window.rHome = function() {
                     detailsHtml += `</div>`;
                 }
                 else {
-                    // --- STANDARDOWA SIATKA DLA KREDYTU BANKOWEGO ---
+                    // FIX: Kredyt z oszczędnościami i prawidłowymi ratami
                     let paidKap = bor - kap; if(paidKap < 0) paidKap = 0; 
                     let paidPctKap = bor > 0 ? (paidKap / bor) * 100 : 0; 
                     pct = totInst > 0 ? ((totInst - instL) / totInst) * 100 : 0;
                     
                     let totalCostRemaining = rat * instL; 
-                    let isError = (totalCostRemaining < kap) && (rat > 0); 
+                    let savings = totalCostRemaining - kap;
+                    
+                    let savingsHtml = '';
+                    if (savings > 0 && rat > 0 && kap > 0) {
+                        savingsHtml = `
+                        <div style="background:rgba(34,197,94,0.05); padding:12px; border-radius:10px; grid-column: span 2; border:1px dashed rgba(34,197,94,0.3); margin-top:5px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:0.7rem; color:var(--success); text-transform:uppercase; font-weight:bold;">Zaoszczędzisz na spłacie całości:</span>
+                                <strong style="color:var(--success); font-size:1.1rem;">+${Number(savings).toFixed(2)} zł</strong>
+                            </div>
+                        </div>`;
+                    }
                     
                     detailsHtml = `
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">
@@ -406,7 +410,7 @@ window.rHome = function() {
                             <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">✅ Spłacony Kapitał</span><strong style="color:var(--success); font-size:0.85rem;">${Number(paidKap || 0).toFixed(2)} zł (${Number(paidPctKap || 0).toFixed(1)}%)</strong></div>
                             <div style="width:100%; height:4px; background:rgba(255,255,255,0.05); border-radius:2px;"><div style="width:${paidPctKap}%; background:var(--success); height:100%;"></div></div>
                         </div>
-                        ${isError ? `<div style="background:rgba(239,68,68,0.05); padding:10px; border-radius:10px; grid-column: span 2; border:1px solid rgba(239,68,68,0.2);"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:0.7rem; color:var(--danger); text-transform:uppercase; font-weight:bold;">Całkowity Koszt do końca</span><strong style="color:var(--danger); font-size:1rem;">${Number(totalCostRemaining || 0).toFixed(2)} zł</strong></div></div>` : ''}
+                        ${savingsHtml}
                     </div>`;
                 }
 
@@ -418,7 +422,7 @@ window.rHome = function() {
                     let mainBtnColor = isPrywInc ? '#000' : '#fff';
                     
                     return `
-                    <div class="panel" style="flex: 0 0 85%; min-width: 280px; max-width: 320px; scroll-snap-align: center; padding:0; border:1px solid #27272a; border-radius:24px; overflow:hidden; margin-bottom:0; background:#18181b;">
+                    <div class="panel" style="flex: 0 0 85%; min-width: 280px; max-width: 340px; scroll-snap-align: center; padding:0; border:1px solid #27272a; border-radius:24px; overflow:hidden; margin-bottom:0; background:#18181b;">
                         <div style="padding:20px 20px 10px; text-align:center; position:relative;">
                             <div style="position:absolute; right:15px; top:15px; display:flex; gap:5px;">
                                 <button style="background:transparent; border:none; color:var(--muted); font-size:1.2rem; cursor:pointer;" onclick="window.hOpenLoanModal('${l.id}')">✏️</button>
@@ -443,6 +447,7 @@ window.rHome = function() {
                         </div>
                     </div>`;
                 } else {
+                    // FIX: Poprawny wskaźnik ilości rat w widoku kompaktowym
                     let rightInfo = '';
                     if(isPryw && l.prywMode === 'custom') rightInfo = `<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Typ</span><br><strong style="color:#fff; font-size:0.8rem;">Własne transze</strong>`;
                     else rightInfo = `<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Pozostało rat</span><br><strong style="color:#fff; font-size:0.9rem;">${instL} z ${totInst}</strong>`;
@@ -486,7 +491,6 @@ window.rHome = function() {
             loansHtml = hideScrollStyle + `<div class="hide-scroll" style="display:flex; overflow-x:auto; gap:15px; scroll-snap-type: x mandatory; padding-bottom:15px; width:100%; margin:0; padding: 0 15px;">${mappedLoans}</div>`;
         }
 
-        // --- LEGACY DŁUGI (Wsteczna kompatybilność) ---
         let legacyDebtsHtml = '';
         if(h.debts && h.debts.filter(d => !d.isClosed).length > 0) {
             legacyDebtsHtml = `
