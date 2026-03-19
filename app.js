@@ -14,12 +14,13 @@ document.addEventListener('keydown', function(e) {
 // INICJALIZACJA FIREBASE
 // ==========================================
 const firebaseConfig = {
-    apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o", 
-    authDomain: "styreos.firebaseapp.com", 
-    projectId: "styreos", 
-    storageBucket: "styreos.firebasestorage.app", 
-    messagingSenderId: "72578059548", 
-    appId: "1:72578059548:web:441ec96ed92d6f3f37bed9" 
+  apiKey: "AIzaSyADA7FPv6xEZNg0_WI_Nl8iZLpYYv-g61o",
+  authDomain: "styreos.firebaseapp.com",
+  projectId: "styreos",
+  storageBucket: "styreos.firebasestorage.app",
+  messagingSenderId: "72578059548",
+  appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
+};
 };
 
 // Pancerna Inicjalizacja
