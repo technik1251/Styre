@@ -33,9 +33,45 @@ window.rHomeOps = function(h, t, nav, hdr) {
             }
         });
 
+        // ALERTY LIMITÓW - ASYSTENT STYREOS
+        let limitAlertsHtml = '';
+        if (h.budgets && Object.keys(h.budgets).length > 0) {
+            Object.keys(h.budgets).forEach(k => {
+                let limit = h.budgets[k];
+                let spent = dashCats[k] || 0;
+                let pct = limit > 0 ? (spent / limit) * 100 : 0;
+                
+                if (pct >= 75) {
+                    let isDanger = pct >= 95;
+                    let cTheme = isDanger ? 'var(--danger)' : 'var(--warning)';
+                    let cBg = isDanger ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)';
+                    let icon = isDanger ? '🚨' : '⚠️';
+                    let msg = isDanger ? 'Przekraczasz limit!' : 'Zbliżasz się do limitu.';
+                    
+                    limitAlertsHtml += `
+                    <div style="margin: 15px 15px 0; background:${cBg}; border:1px solid ${cTheme}; padding:12px; border-radius:12px; display:flex; gap:12px; align-items:center;">
+                        <div style="font-size:1.5rem;">${icon}</div>
+                        <div style="flex:1;">
+                            <strong style="color:${cTheme}; font-size:0.8rem; display:block; text-transform:uppercase; margin-bottom:4px;">${msg} (${k})</strong>
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
+                                <span style="color:#fff;">Wydano: ${Number(spent).toFixed(0)} zł</span>
+                                <span style="color:var(--muted);">Limit: ${limit} zł</span>
+                            </div>
+                            <div style="width:100%; height:4px; background:rgba(0,0,0,0.5); border-radius:2px; overflow:hidden; margin-top:6px;">
+                                <div style="width:${Math.min(pct, 100)}%; background:${cTheme}; height:100%;"></div>
+                            </div>
+                        </div>
+                        <button style="background:transparent; border:none; color:${cTheme}; font-size:1.2rem; cursor:pointer; padding:5px;" onclick="window.sysConfirm('Usuwanie limitu', 'Chcesz wyłączyć limit dla tej kategorii?', () => { delete window.db.home.budgets['${k}']; window.save(); window.render(); })">✖</button>
+                    </div>`;
+                }
+            });
+        }
+
         let topCatName = Object.keys(dashCats).sort((a,b) => dashCats[b] - dashCats[a])[0];
         let insightsHtml = '';
-        if (currExp > 0) { 
+        
+        // Pokazuj zwykłą podpowiedź Asystenta TYLKO, gdy nie ma krytycznych alertów
+        if (currExp > 0 && limitAlertsHtml === '') { 
             insightsHtml = `
             <div style="background:rgba(139, 92, 246, 0.1); border:1px solid rgba(139, 92, 246, 0.3); padding:12px; border-radius:12px; margin: 15px 15px 0; text-align:left; display:flex; gap:12px; align-items:center; cursor:pointer;" onclick="window.switchTab('stats')">
                 <div style="font-size:1.8rem;">💡</div>
@@ -45,6 +81,8 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 </div>
             </div>`; 
         }
+
+        let finalInsights = limitAlertsHtml + insightsHtml;
         
         let miniPiggyHtml = '';
         if (window.db.home.piggy && window.db.home.piggy.length > 0) { 
@@ -134,7 +172,7 @@ window.rHomeOps = function(h, t, nav, hdr) {
                     </div>
                 </div>
             </div>
-            ${insightsHtml}
+            ${finalInsights}
             ${upcomingHtml}
             ${miniPiggyHtml}
             <div class="section-lbl" style="color:#fff; border-color:rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; margin-top:20px;">Ostatnie operacje</div>
