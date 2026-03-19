@@ -212,24 +212,8 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                 <div class="inp-row">
                     <div class="inp-group"><label>Miesięczny Limit (zł)</label><input type="number" id="hb-val" placeholder="np. 500"></div>
                 </div>
-                <button class="btn" style="background:var(--plan); color:#fff; padding:15px;" onclick="window.hSetBudget()">USTAW LIMIT KATEGORII</button>
-                <div style="margin-top:20px;">
-                    ${Object.keys(h.budgets || {}).map(k => { 
-                        let limit = h.budgets[k]; 
-                        let spent = 0; 
-                        let now = new Date(); 
-                        h.trans.forEach(x => { 
-                            if(!x.isPlanned && x.type==='exp' && x.cat===k && new Date(x.rD).getMonth()===now.getMonth()) spent += parseFloat(x.v)||0; 
-                        }); 
-                        let pct = Math.min((spent / limit) * 100, 100); 
-                        let color = pct > 90 ? 'var(--danger)' : (pct > 70 ? 'var(--warning)' : 'var(--success)'); 
-                        return `
-                        <div style="margin-bottom:15px;">
-                            <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:5px;"><span>${k}</span><span style="color:${color}">Wydano: ${Number(spent||0).toFixed(2)} / ${limit} zł</span></div>
-                            <div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;"><div style="width:${pct}%; background:${color}; height:100%;"></div></div>
-                        </div>`; 
-                    }).join('')}
-                </div>
+                <button class="btn" style="background:var(--plan); color:#fff; padding:15px; margin-bottom:10px;" onclick="window.hSetBudget()">ZAPISZ LIMIT</button>
+                <p style="font-size:0.7rem; color:var(--muted); text-align:center; line-height:1.4; margin:0;">Asystent AI powiadomi Cię na ekranie głównym (Przegląd), gdy przekroczysz 75% wydatków na wyznaczony limit.</p>
             </div>
         
             <div class="section-lbl" style="color:#ffdd00; border-color:#ffdd00; margin-top:30px;">☕ Wsparcie projektu StyreOS</div>
