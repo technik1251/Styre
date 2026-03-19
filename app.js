@@ -1,56 +1,36 @@
 // ==========================================
-// ZABEZPIECZENIA ANTYPIRACKIE
+// PLIK: app.js - GŁÓWNY SILNIK I LAUNCHER
 // ==========================================
 
-// 1. Blokada prawego przycisku myszy
+// 1. Zabezpieczenia Antypirackie
 document.addEventListener('contextmenu', event => event.preventDefault());
-
-// 2. Blokada skrótów klawiszowych (F12, Zbadaj Element, Źródło)
 document.addEventListener('keydown', function(e) {
-    // Blokada F12
-    if (e.keyCode === 123) {
-        e.preventDefault();
-        return false;
-    }
-    // Blokada Ctrl+Shift+I (Narzędzia deweloperskie)
-    if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
-        e.preventDefault();
-        return false;
-    }
-    // Blokada Ctrl+Shift+J (Konsola)
-    if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
-        e.preventDefault();
-        return false;
-    }
-    // Blokada Ctrl+U (Wyświetl źródło)
-    if (e.ctrlKey && e.keyCode === 85) {
-        e.preventDefault();
-        return false;
+    if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && e.keyCode === 73) || (e.ctrlKey && e.shiftKey && e.keyCode === 74) || (e.ctrlKey && e.keyCode === 85)) {
+        e.preventDefault(); return false;
     }
 });
 
 // ==========================================
-// INICJALIZACJA FIREBASE (SYNCHRONICZNA - BEZ OPÓŹNIEŃ!)
+// INICJALIZACJA FIREBASE
 // ==========================================
-if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-    firebase.initializeApp({ 
-        apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o", 
-        authDomain: "styreos.firebaseapp.com", 
-        projectId: "styreos", 
-        storageBucket: "styreos.firebasestorage.app", 
-        messagingSenderId: "72578059548", 
-        appId: "1:72578059548:web:441ec96ed92d6f3f37bed9" 
-    });
+const firebaseConfig = {
+    apiKey: "AIzaSyADA7FPv6xEZNg0_WI_NlBiZLpYYv-g61o", 
+    authDomain: "styreos.firebaseapp.com", 
+    projectId: "styreos", 
+    storageBucket: "styreos.firebasestorage.app", 
+    messagingSenderId: "72578059548", 
+    appId: "1:72578059548:web:441ec96ed92d6f3f37bed9" 
+};
+
+// Pancerna Inicjalizacja
+if (typeof firebase !== 'undefined') {
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
 }
 
-// ==========================================
-// PLIK: app.js - GŁÓWNY SILNIK I LAUNCHER
-// ==========================================
-
-// 1. Zabezpieczenie bazy lokalnej (Anti-Amnezja)
-if (typeof window.db === 'undefined') {
-    window.db = {};
-}
+// 2. Zabezpieczenie bazy lokalnej (Anti-Amnezja)
+if (typeof window.db === 'undefined') window.db = {};
 let savedLocal = localStorage.getItem('styre_v101_db');
 if (savedLocal) {
     try { window.db = JSON.parse(savedLocal); } catch(e) { window.db = {}; }
@@ -59,7 +39,7 @@ if (savedLocal) {
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
 
-// 2. Wstrzykiwanie "Bezpieczników" do bazy
+// 3. Wstrzykiwanie "Bezpieczników" do bazy
 window.patchDb = function(data) {
     let d = data || {};
     
@@ -74,7 +54,6 @@ window.patchDb = function(data) {
     if(!Array.isArray(d.home.members)) d.home.members = [];
     if(d.home.members.length === 0) d.home.members.push(d.userName || 'Domownik');
     
-    // Aktualizacja starych pożyczek do wersji Premium
     d.home.loans.forEach(l => {
         if(l.totalInst === undefined) l.totalInst = l.installmentsLeft || 0;
         if(l.startDate === undefined) l.startDate = new Date().toISOString().substring(0,10);
@@ -89,14 +68,13 @@ window.patchDb = function(data) {
     if(d.drv.plat === undefined) d.drv.plat = 'apps';
     if(d.drv.carType === undefined) d.drv.carType = 'rent';
     
-    // Globalne zmienne użytkownika
     if(!d.userName) d.userName = "Użytkownik";
     if (d.init && d.setupDone === undefined) d.setupDone = true;
 
     return d;
 };
 
-// 3. Narzędzia Pomocnicze
+// 4. Narzędzia Pomocnicze
 window.safeVal = function(id, def=0) {
     let el = document.getElementById(id);
     if(!el) return def;
@@ -109,7 +87,6 @@ window.save = function() {
         window.db = window.patchDb(window.db); 
         localStorage.setItem('styre_v101_db', JSON.stringify(window.db));
         
-        // PANCERNE ZABEZPIECZENIE FIREBASE (Sprawdza, czy app.length > 0)
         if (typeof firebase !== 'undefined' && firebase.apps.length > 0 && firebase.auth && firebase.auth().currentUser && window.db.setupDone) {
             if(firebase.firestore) {
                 firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).set(window.db).catch(e => console.log('Błąd zapisu w chmurze: ', e));
@@ -125,7 +102,7 @@ window.onerror = function(msg, url, lineNo) {
 };
 
 // ==========================================
-// 4. GLOBALNE FUNKCJE NAWIGACYJNE
+// 5. GLOBALNE FUNKCJE NAWIGACYJNE
 // ==========================================
 
 window.switchTab = function(t) { 
@@ -166,7 +143,7 @@ window.logoutToLauncher = function() {
 };
 
 // ==========================================
-// 5. GŁÓWNY ROUTER (RENDER)
+// 6. GŁÓWNY ROUTER (RENDER)
 // ==========================================
 
 window.render = function() { 
@@ -200,7 +177,7 @@ window.render = function() {
 }
 
 // ==========================================
-// 6. EKRAN LAUNCHERA I KREATORA (WIZARD)
+// 7. EKRAN LAUNCHERA I KREATORA (WIZARD)
 // ==========================================
 
 window.rLauncher = function() {
@@ -323,11 +300,15 @@ window.finishSetup = function(fromTaxi = true) {
 
 // --- GOOGLE LOGIN ---
 window.loginWithGoogle = function() {
-    if (typeof firebase === 'undefined') {
-        if(window.sysAlert) return window.sysAlert('Brak połączenia', 'Zaczekaj sekundę na biblioteki Google.', 'warning');
-        return alert("Poczekaj...");
+    if (typeof firebase === 'undefined' || !firebase.auth) {
+        if(window.sysAlert) return window.sysAlert('Brak połączenia', 'Zaczekaj sekundę na biblioteki Google lub sprawdź internet.', 'warning');
+        return alert("Poczekaj na wczytanie bibliotek...");
     }
+    
+    // Wymuszamy domyślnego providera
     const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    
     firebase.auth().signInWithPopup(provider).then((result) => {
         const user = result.user;
         if (typeof firebase.firestore !== 'undefined') {
@@ -427,7 +408,6 @@ window.rWiz = function() {
     `;
 }
 
-// Nasłuchuj zmian logowania, by np. zaktualizować interfejs
 if (typeof firebase !== 'undefined' && firebase.auth) {
     firebase.auth().onAuthStateChanged((user) => { 
         let wiz = document.getElementById('w-main'); 
@@ -437,5 +417,4 @@ if (typeof firebase !== 'undefined' && firebase.auth) {
     });
 }
 
-// Uruchomienie aplikacji
 window.render();
