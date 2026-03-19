@@ -52,7 +52,9 @@ window.patchDb = function(data) {
     if(!d.home.debts) d.home.debts = [];
     if(!d.home.recurring) d.home.recurring = [];
     if(!Array.isArray(d.home.members)) d.home.members = [];
-    if(d.home.members.length === 0) d.home.members.push(d.userName || 'Domownik');
+    
+    // POPRAWKA: Zmiana "Domownika" na "Ja"
+    if(d.home.members.length === 0) d.home.members.push(d.userName || 'Ja');
     
     d.home.loans.forEach(l => {
         if(l.totalInst === undefined) l.totalInst = l.installmentsLeft || 0;
