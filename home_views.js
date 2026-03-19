@@ -331,11 +331,16 @@ window.rHome = function() {
                 let savingsHtmlCompact = savingsMsg ? `<div style="font-size:0.75rem; color:${savingsColor}; font-weight:bold; margin-bottom:8px;">${savingsMsg}</div>` : '';
                 let savingsHtmlDetailed = savingsMsg ? `<div style="margin-top:5px; font-size:0.85rem; font-weight:bold; color:${savingsColor};">${savingsMsg}</div>` : '';
                 
+                // POPRAWIONA LOGIKA DATY: Przesuwa się w oparciu o liczbę SPŁACONYCH rat!
                 let nextDateStr = '--';
-                if(isKredyt || isBNPL || (isPryw && l.prywMode === 'equal')) {
-                    let todayDate = new Date(); 
-                    let nextD = new Date(todayDate.getFullYear(), todayDate.getMonth(), l.day || 10); 
-                    if(todayDate.getDate() > (l.day || 10)) nextD.setMonth(nextD.getMonth() + 1); 
+                if (instL <= 0) {
+                    nextDateStr = 'Spłacone 🎉';
+                } else if (isKredyt || isBNPL || (isPryw && l.prywMode === 'equal')) {
+                    let stD = new Date(l.startDate || new Date());
+                    let paidCount = totInst - instL;
+                    if (paidCount < 0) paidCount = 0;
+                    // Obliczamy datę na podstawie: Data startu + liczba spłaconych rat + 1 m-c
+                    let nextD = new Date(stD.getFullYear(), stD.getMonth() + paidCount + 1, l.day || 10);
                     nextDateStr = nextD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                 }
 
