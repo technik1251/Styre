@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: home_tab_acc_set.js - Zakładki Konta i Ustawienia
+// PLIK: home_tab_acc_set.js - Zakładki Konta i Ustawienia (Wersja Premium Czysta)
 // ==========================================
 
 window.rHomeAccSet = function(h, t, nav, hdr) {
@@ -62,7 +62,7 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                     if (c.declaredPay === '100') {
                         motivation = `<div style="font-size:0.7rem; color:var(--success); margin-top:10px; font-weight:bold; text-align:center; background:rgba(34,197,94,0.1); padding:8px; border-radius:8px; border:1px solid rgba(34,197,94,0.2);">💡 Spłacasz całość w okresie bezodsetkowym. Używasz pieniędzy banku za darmo! 🚀</div>`;
                     } else {
-                        motivation = `<div style="font-size:0.7rem; color:var(--danger); margin-top:10px; font-weight:bold; text-align:center; background:rgba(239,68,68,0.1); padding:8px; border-radius:8px; border:1px solid rgba(239,68,68,0.2);">⚠️ Spłacając tylko minimum, w tym miesiącu zapłacisz bankowi ok. <strong>${Number(monthlyInt || 0).toFixed(2)} zł</strong> odsetek!</div>`;
+                        motivation = `<div style="font-size:0.7rem; color:var(--danger); margin-top:10px; font-weight:bold; text-align:center; background:rgba(239,68,68,0.1); padding:8px; border-radius:8px; border:1px solid rgba(239,68,68,0.2);">⚠️ Spłacając tylko minimum, w tym miesiącu zapłacisz bankowi ok. <strong style="color:var(--danger);">${Number(monthlyInt || 0).toFixed(2)} zł</strong> odsetek!</div>`;
                     }
                 } else {
                     motivation = `<div style="font-size:0.7rem; color:var(--success); margin-top:10px; font-weight:bold; text-align:center;">Świetnie! Karta jest w pełni spłacona. 🏆</div>`;
@@ -155,13 +155,18 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
     // ZAKŁADKA: USTAWIENIA (SETTINGS)
     // ==========================================
     if(t === 'set') { 
-        let catSrcSet = window.hRecType === 'exp' ? C_EXP : C_INC; 
-        if(!catSrcSet[window.hRecCat]) window.hRecCat = Object.keys(catSrcSet)[0]; 
-        let accOptionsSet = h.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join(''); 
+        let isCloud = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser);
         
-        let cloudStatusHtml = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) ? 
-            `<div style="background:rgba(34,197,94,0.1); border:1px solid var(--success); padding:15px; border-radius:12px; margin-bottom:20px; text-align:center;"><strong style="color:var(--success); font-size:1.1rem;">☁️ Połączono z chmurą Google</strong><br><span style="font-size:0.8rem; color:var(--success); opacity:0.8;">Zalogowano jako: ${firebase.auth().currentUser.displayName || window.db.userName}</span></div>` : 
-            `<div style="background:rgba(239,68,68,0.1); border:1px solid var(--danger); padding:15px; border-radius:12px; margin-bottom:20px; text-align:center;"><strong style="color:var(--danger); font-size:1.1rem;">🚫 Tryb Offline</strong><br><span style="font-size:0.8rem; color:var(--muted);">Dane zapisywane tylko na telefonie</span></div>`;
+        let cloudStatusHtml = isCloud ? 
+            `<div style="background:rgba(34,197,94,0.1); border:1px solid var(--success); padding:15px; border-radius:12px; margin-bottom:20px; text-align:center;">
+                <strong style="color:var(--success); font-size:1.1rem;">☁️ Połączono z chmurą Google</strong><br>
+                <span style="font-size:0.8rem; color:var(--success); opacity:0.8;">Zalogowano jako: ${firebase.auth().currentUser.displayName || window.db.userName}</span>
+            </div>` : 
+            `<div style="background:rgba(239,68,68,0.1); border:1px solid var(--danger); padding:15px; border-radius:12px; margin-bottom:20px; text-align:center;">
+                <strong style="color:var(--danger); font-size:1.1rem;">🚫 Tryb Offline (Gość)</strong><br>
+                <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:10px;">Twoje dane są tylko na tym urządzeniu. Zabezpiecz je!</span>
+                <button class="btn" style="background:#fff; color:#000; border:none; padding:12px; font-weight:900; box-shadow:0 4px 15px rgba(255,255,255,0.2);" onclick="window.loginWithGoogle()">G ZALOGUJ PRZEZ GOOGLE</button>
+            </div>`;
 
         let dataSecurityHtml = `
         <div class="section-lbl" style="color:var(--info); border-color:var(--info); margin-top:10px;">💾 Status Konta i Bezpieczeństwo</div>
@@ -169,7 +174,7 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
         <button class="btn" style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:15px; width:100%; margin-bottom:20px; font-weight:bold;" onclick="window.logoutToLauncher()">⚙️ WRÓĆ DO EKRANU STARTOWEGO</button>
         
         <div class="panel" style="border-color:var(--info);">
-            <p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">Twoje dane są zapisane tylko w tym telefonie (100% Prywatności). Zrób kopię zapasową, aby przenieść profil na inne urządzenie lub zabezpieczyć się przed wyczyszczeniem przeglądarki!</p>
+            <p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">Możesz w każdej chwili zrobić ręczną kopię zapasową pliku z bazą danych.</p>
             <div style="display:flex; gap:10px;">
                 <button class="btn" style="flex:1; background:rgba(255,255,255,0.05); color:var(--info); border:1px dashed var(--info); font-size:0.8rem; padding:12px; margin:0;" onclick="window.hExportData()">📥 POBIERZ PLIK</button>
                 <button class="btn" style="flex:1; background:rgba(255,255,255,0.05); color:var(--danger); border:1px dashed var(--danger); font-size:0.8rem; padding:12px; margin:0;" onclick="window.hImportTrigger()">📤 PRZYWRÓĆ PLIK</button>
@@ -182,41 +187,6 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
             appContainer.innerHTML = hdr + `
             <div class="dash-hero" style="padding-bottom:10px;"><p>USTAWIENIA BUDŻETU</p></div>
             ${dataSecurityHtml}
-            <div class="section-lbl" style="color:var(--info); border-color:var(--info);">⚙️ Automatyzacja (Stałe Koszty i Wpływy)</div>
-            <div class="panel" style="border-color:var(--info);">
-                <p style="font-size:0.75rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">Dodaj tu rachunki lub wpływy, a system sam doda je wybranego dnia każdego miesiąca!</p>
-                <div class="mode-switch" style="background:rgba(0,0,0,0.5); margin-bottom:15px;">
-                    <div class="m-btn ${window.hRecType==='exp'?'active':''}" style="${window.hRecType==='exp'?'background:var(--danger);color:#fff;':''}" onclick="window.hRecType='exp';window.render()">WYDATEK</div>
-                    <div class="m-btn ${window.hRecType==='inc'?'active':''}" style="${window.hRecType==='inc'?'background:var(--success);color:#fff;':''}" onclick="window.hRecType='inc';window.render()">WPŁYW</div>
-                </div>
-                <div class="inp-row">
-                    <div class="inp-group"><label>Nazwa</label><input type="text" id="hr-name" placeholder="np. Czynsz" style="background:#000;"></div>
-                    <div class="inp-group"><label>Kwota</label><input type="number" id="hr-val" placeholder="np. 2000" style="background:#000;"></div>
-                </div>
-                <div class="inp-row" style="margin-bottom:10px;">
-                    <div class="inp-group" style="flex:2;"><label>Kategoria</label><select onchange="window.hRecCat=this.value" style="background:#000;">${Object.keys(catSrcSet).map(k => `<option value="${k}" ${window.hRecCat===k?'selected':''}>${k}</option>`).join('')}</select></div>
-                    <div class="inp-group" style="flex:1;"><label>Dzień m-ca</label><input type="number" id="hr-day" value="1" min="1" max="31" placeholder="1-31" style="background:#000;"></div>
-                </div>
-                <div class="inp-group" style="margin-bottom:15px;">
-                    <label>Konto docelowe</label>
-                    <select id="hr-acc" onchange="window.hRecAcc=this.value" style="background:#000;">${accOptionsSet}</select>
-                </div>
-                <button class="btn" style="background:var(--info); color:#fff; padding:15px; margin-bottom:20px;" onclick="window.hAddRecurring()">DODAJ DO AUTOMATU</button>
-                <div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">
-                    <span style="font-size:0.75rem; color:var(--muted); font-weight:bold; text-transform:uppercase; margin-bottom:10px; display:block;">Twoje automaty (${h.recurring.length}):</span>
-                    ${h.recurring.map(r => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px 15px; border-radius:12px; margin-bottom:10px; border-left:4px solid ${r.t === 'exp' ? 'var(--danger)' : 'var(--success)'};">
-                        <div>
-                            <strong style="color:#fff; font-size:1rem;">${r.n}</strong>
-                            <span style="font-size:0.7rem; color:var(--muted); display:block;">${r.c} <strong style="color:#fff;">(Dzień: ${r.day||1})</strong></span>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:15px;">
-                            <strong style="color:${r.t === 'exp' ? 'var(--danger)' : 'var(--success)'};">${Number(r.v||0).toFixed(2)} zł</strong>
-                            <button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; padding:6px 10px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="window.hDelRecurring(${r.id})">USUŃ</button>
-                        </div>
-                    </div>`).join('') || '<div style="color:var(--muted); font-size:0.8rem;">Brak skonfigurowanych automatów.</div>'}
-                </div>
-            </div>
             
             <div class="section-lbl" style="color:var(--life); border-color:var(--life);">👥 Członkowie Rodziny</div>
             <div class="panel" style="border-color:rgba(20,184,166,0.3);">
@@ -270,11 +240,6 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                 <a href="https://buycoffee.to/styreos" target="_blank" style="background:#ffdd00; color:#000; font-weight:900; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:10px; padding:15px; border-radius:12px; box-shadow: 0 4px 15px rgba(255, 221, 0, 0.2);">
                     <span style="font-size:1.5rem;">☕</span> POSTAW MI KAWĘ
                 </a>
-            </div>
-
-            <div class="section-lbl" style="color:var(--danger); border-color:var(--danger);">⚠️ Strefa Niebezpieczna</div>
-            <div class="panel" style="border-color:rgba(239,68,68,0.4)">
-                <button class="btn btn-danger" style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; box-shadow:none;" onclick="window.hardReset()">TWARDY RESET APLIKACJI</button>
             </div>
             ` + nav; 
         }
