@@ -43,6 +43,9 @@ window.wData = window.wData || {};
 window.patchDb = function(data) {
     let d = data || {};
     
+    // NAJPIERW USTALAMY NAZWĘ, ŻEBY NIE BYŁO DUPLIKATÓW
+    if(!d.userName) d.userName = "Użytkownik";
+    
     // Bezpieczniki Budżetu Domowego
     if(!d.home) d.home = { trans: [], accs: [{id:'acc_1', n:'Portfel Głów.', c:'#22c55e', i:'💵', startBal:0}], budgets: {}, recurring: [], piggy: [], loans: [], debts: [], members: [] };
     if(!d.home.trans) d.home.trans = [];
@@ -53,8 +56,8 @@ window.patchDb = function(data) {
     if(!d.home.recurring) d.home.recurring = [];
     if(!Array.isArray(d.home.members)) d.home.members = [];
     
-    // POPRAWKA: Zmiana "Domownika" na "Ja"
-    if(d.home.members.length === 0) d.home.members.push(d.userName || 'Ja');
+    // Jeśli pusta lista, dajemy tylko jedną osobę - Ciebie (userName)!
+    if(d.home.members.length === 0) d.home.members.push(d.userName);
     
     d.home.loans.forEach(l => {
         if(l.totalInst === undefined) l.totalInst = l.installmentsLeft || 0;
@@ -70,7 +73,6 @@ window.patchDb = function(data) {
     if(d.drv.plat === undefined) d.drv.plat = 'apps';
     if(d.drv.carType === undefined) d.drv.carType = 'rent';
     
-    if(!d.userName) d.userName = "Użytkownik";
     if (d.init && d.setupDone === undefined) d.setupDone = true;
 
     return d;
