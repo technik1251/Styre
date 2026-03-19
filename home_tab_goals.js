@@ -137,15 +137,34 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             let savingsHtmlCompact = savingsMsg ? `<div style="font-size:0.75rem; color:${savingsColor}; font-weight:bold; margin-bottom:8px;">${savingsMsg}</div>` : '';
             let savingsHtmlDetailed = savingsMsg ? `<div style="margin-top:5px; font-size:0.85rem; font-weight:bold; color:${savingsColor};">${savingsMsg}</div>` : '';
             
-            // NAPRAWIONA LOGIKA DATY: Sprawdza jaki jest dzisiaj miesiąc i dopasowuje najbliższą datę
+            // ========================================================
+            // NOWA, KULOODPORNA LOGIKA OBLICZANIA DATY RATY
+            // ========================================================
             let nextDateStr = '--';
+            let baseNextD = new Date();
+            let paidCount = totInst - instL;
+            if (paidCount < 0) paidCount = 0;
+
             if (instL <= 0) {
                 nextDateStr = 'Spłacone 🎉';
             } else if (isKredyt || isBNPL || (isPryw && l.prywMode === 'equal')) {
-                let todayDate = new Date(); 
-                let nextD = new Date(todayDate.getFullYear(), todayDate.getMonth(), l.day || 10); 
-                if(todayDate.getDate() > (l.day || 10)) nextD.setMonth(nextD.getMonth() + 1); 
-                nextDateStr = nextD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
+                let stD = new Date(l.startDate || new Date());
+                let payDay = l.day || 10;
+                
+                baseNextD = new Date(stD.getFullYear(), stD.getMonth(), payDay);
+                // Jeśli dzień startu był po dniu płatności, pierwsza rata wypada na kolejny miesiąc
+                if (stD.getDate() > payDay) {
+                    baseNextD.setMonth(baseNextD.getMonth() + 1);
+                }
+                
+                // Magia StyreOS: Sprawdzamy, ile razy KLIKNĄŁEŚ "Spłać" w aplikacji dla tego kredytu
+                // Ignorujemy historyczne raty sprzed dodania apki
+                let styreOsPayments = h.trans.filter(x => x.loanId === l.id && !x.isPlanned).length;
+                
+                // Przesuwamy datę o tyle miesięcy, ile rat zapłaciłeś w aplikacji!
+                baseNextD.setMonth(baseNextD.getMonth() + styreOsPayments);
+                
+                nextDateStr = baseNextD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
             }
 
             if(isBNPL) {
@@ -170,7 +189,6 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     `;
 
                 } else {
-                    let paidCount = totInst - instL;
                     pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
                     let totalDebt = rat * totInst;
                     let prowizja = totalDebt - bor; 
@@ -200,15 +218,16 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                         let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
                         let lineDisp = i === totInst ? 'none' : 'block';
                         
-                        let stD = new Date(); // Zmiana na baze z dzisiejszej daty do pokazania historii
-                        stD.setMonth(stD.getMonth() + (i - paidCount));
-                        let rdStr = stD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        // Dopasowanie dat harmonogramu do poprawnego punktu odniesienia (baseNextD)
+                        let instDate = new Date(baseNextD);
+                        instDate.setMonth(instDate.getMonth() + (i - (paidCount + 1)));
+                        let rdStr = instDate.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                         
                         detailsHtml += `
                         <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
                             <div style="display:${lineDisp}; width:2px; background:${isPaid?'var(--info)':'rgba(255,255,255,0.1)'}; position:absolute; left:13px; top:28px; bottom:-18px;"></div>
                             <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.7rem; z-index:1; flex-shrink:0;">${isPaid?sIcon:i}</div>
-                            <div style="flex:1; padding-top:2px;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem;">Rata nr ${i}</strong><br><small style="color:var(--muted)">${isPaid?'Opłacona':(isCurrent?`Spłać do: ${nextDateStr}`:`Planowana`)}</small></div>
+                            <div style="flex:1; padding-top:2px;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem;">Rata nr ${i}</strong><br><small style="color:var(--muted)">${isPaid?'Opłacona':(isCurrent?`Spłać do: ${nextDateStr}`:`Planowana: ${rdStr}`)}</small></div>
                             <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem; padding-top:2px; text-decoration:${isPaid?'line-through':'none'};">${Number(rat).toFixed(2)} zł</strong>
                         </div>`;
                     }
@@ -225,7 +244,6 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                 detailsHtml = `<div style="margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                 
                 if(l.prywMode === 'equal') {
-                    let paidCount = totInst - instL;
                     pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
                     for(let i=1; i<=totInst; i++) {
                         let isPaid = i <= paidCount;
