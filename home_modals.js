@@ -708,3 +708,55 @@ window.hSetBudget = function() {
     if(val > 0) window.db.home.budgets[cat] = val; else delete window.db.home.budgets[cat]; 
     window.save(); window.render(); if(window.sysAlert) window.sysAlert("Sukces", "Zapisano limit.", "success"); 
 };
+// ==========================================
+// ZARZĄDZANIE KONTAMI I PORTFELAMI
+// ==========================================
+
+window.hOpenAccModal = function(id = null) {
+    window.hInitDb();
+    let acc = id ? window.db.home.accs.find(a => a.id == id) : null;
+    let html = `<div id="m-acc" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--life);"><h3 style="margin-top:0; color:var(--life);">${acc ? '✏️ Edytuj Konto' : '🏦 Nowe Konto'}</h3><div class="inp-group" style="margin-bottom:15px;"><label>Nazwa Konta</label><input type="text" id="m-acc-n" value="${acc ? acc.n : ''}" placeholder="np. mBank, Gotówka" style="background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:15px;"><label>Początkowe Saldo (zł)</label><input type="number" step="0.01" id="m-acc-bal" value="${acc ? (acc.startBal||0) : 0}" style="background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:20px;"><label>Kolor identyfikacyjny</label><input type="color" id="m-acc-c" value="${acc ? acc.c : '#22c55e'}" style="width:100%; height:40px; border:none; background:transparent; cursor:pointer;"></div><button class="btn" style="background:var(--life); color:#000; font-weight:bold;" onclick="window.hSaveAcc('${id || ''}')">ZAPISZ KONTO</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-acc').remove()">ANULUJ</button></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+};
+
+window.hSaveAcc = function(id) {
+    let n = document.getElementById('m-acc-n').value.trim();
+    let bal = parseFloat(document.getElementById('m-acc-bal').value) || 0;
+    let c = document.getElementById('m-acc-c').value;
+    if(!n) return window.sysAlert ? window.sysAlert("Błąd", "Podaj nazwę konta!", "error") : alert("Podaj nazwę!");
+    
+    if(id) {
+        let acc = window.db.home.accs.find(a => a.id == id);
+        if(acc) { acc.n = n; acc.startBal = bal; acc.c = c; }
+    } else {
+        window.db.home.accs.push({id: 'acc_'+Date.now(), n: n, startBal: bal, c: c, i: '💳'});
+    }
+    window.save(); window.render();
+    document.getElementById('m-acc').remove();
+    if(window.sysAlert) window.sysAlert("Sukces", "Zapisano konto.", "success");
+};
+
+window.hDelAcc = function(id) {
+    if(window.db.home.accs.length <= 1) {
+        if(window.sysAlert) window.sysAlert("Odmowa", "Musisz mieć przynajmniej jedno aktywne konto!", "error");
+        return;
+    }
+    if(window.sysConfirm) {
+        window.sysConfirm("Usuwanie Konta", "Na pewno usunąć to konto? Możesz stracić przypisanie w historii transakcji.", () => {
+            window.db.home.accs = window.db.home.accs.filter(a => a.id != id);
+            window.save(); window.render();
+            window.sysAlert("Usunięto", "Konto zostało wykasowane.", "success");
+        });
+    } else if(confirm("Usunąć konto?")) {
+        window.db.home.accs = window.db.home.accs.filter(a => a.id != id);
+        window.save(); window.render();
+    }
+};
+
+window.hShowIconPicker = function(id) {
+    let icon = prompt("Wklej jedno emoji jako ikonę konta (np. 🏦, 💳, 🐖, 🪙):", "💳");
+    if(icon && icon.trim() !== "") {
+        let acc = window.db.home.accs.find(a => a.id == id);
+        if(acc) { acc.i = icon.trim(); window.save(); window.render(); }
+    }
+};
