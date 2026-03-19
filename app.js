@@ -21,7 +21,6 @@ const firebaseConfig = {
   messagingSenderId: "72578059548",
   appId: "1:72578059548:web:441ec96ed92d6f3f37bed9"
 };
-};
 
 // Pancerna Inicjalizacja
 if (typeof firebase !== 'undefined') {
