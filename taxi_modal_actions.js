@@ -1,6 +1,42 @@
 // ==========================================
-// PLIK: taxi_modal_actions.js - Garaż, Historia, Klienci
+// PLIK: taxi_modal_actions.js - Garaż, Historia, Klienci, Backup
 // ==========================================
+
+// --- BACKUP DANYCH ---
+window.dExport = function() { 
+    let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.db)); 
+    let dlAnchorElem = document.createElement('a'); 
+    dlAnchorElem.setAttribute("href", dataStr); 
+    dlAnchorElem.setAttribute("download", "styreos_taxi_backup_" + window.getLocalYMD() + ".json"); 
+    dlAnchorElem.click(); 
+    if(window.sysAlert) window.sysAlert("Pobrano!", "Plik kopii zapasowej został pobrany na urządzenie.", "success"); 
+};
+
+window.dImport = function(event) { 
+    let file = event.target.files[0]; 
+    if(!file) return; 
+    let reader = new FileReader(); 
+    reader.onload = function(e) { 
+        try { 
+            let importedDb = JSON.parse(e.target.result); 
+            if(importedDb && importedDb.drv) { 
+                if(window.sysConfirm) { 
+                    window.sysConfirm("Uwaga", "To nadpisze obecne dane z tego telefonu. Kontynuować?", () => { 
+                        localStorage.setItem('styre_v101_db', JSON.stringify(importedDb)); 
+                        window.sysAlert("Sukces!", "Dane przywrócone. Trwa restart...", "success"); 
+                        setTimeout(() => location.reload(), 1500); 
+                    }); 
+                } else { 
+                    localStorage.setItem('styre_v101_db', JSON.stringify(importedDb)); 
+                    location.reload(); 
+                } 
+            } else throw new Error("Błędny plik"); 
+        } catch(err) { 
+            if(window.sysAlert) window.sysAlert("Błąd", "Nieprawidłowy plik kopii zapasowej."); 
+        } 
+    }; 
+    reader.readAsText(file); 
+};
 
 // --- GARAŻ (TANKOWANIA I WYDATKI) ---
 window.dAF = function() {
