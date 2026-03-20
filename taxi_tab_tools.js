@@ -1,293 +1,299 @@
 // ==========================================
-// PLIK: taxi_tab_tools.js - Narzędzia (Wycena, Garaż, Fuelio Algorytm)
+// PLIK: taxi_tab_set.js - Zakładka Opcje (UI)
 // ==========================================
 
-// --- NOWY ALGORYTM FUELIO (Z PODZIAŁEM NA PALIWA) ---
-window.calcFuelioStats = function() {
-    let fList = (window.db.drv.fuel || []).slice().sort((a, b) => a.o - b.o);
-
-    // Koszyki dla różnych rodzajów zasilania
-    let s = {
-        lpg: { name: 'LPG', d: 0, l: 0, c: 0, last: null, tL: 0, tC: 0, u: 'L' },
-        pb:  { name: 'Benzyna', d: 0, l: 0, c: 0, last: null, tL: 0, tC: 0, u: 'L' },
-        on:  { name: 'Diesel', d: 0, l: 0, c: 0, last: null, tL: 0, tC: 0, u: 'L' },
-        ev:  { name: 'Prąd', d: 0, l: 0, c: 0, last: null, tL: 0, tC: 0, u: 'kWh' }
+window.rDrvSet = function(d, t, nav, hdr) {
+    let goal = (d.cfg && d.cfg.goal) ? d.cfg.goal : 350;
+    let city = (d.cfg && d.cfg.defCity) ? d.cfg.defCity : 'Szczecin';
+    let fuelSource = (d.cfg && d.cfg.fuelSource) ? d.cfg.fuelSource : 'garage';
+    let fTypes = (d.cfg && d.cfg.fTypes) ? d.cfg.fTypes : ['pb']; 
+    
+    // Pobranie ręcznych ryczałtów (lub domyślnych, jeśli puste)
+    let mF = (d.cfg && d.cfg.mFuel) ? d.cfg.mFuel : {
+        pb: {c: 7.0, p: 6.50},
+        on: {c: 6.0, p: 6.00},
+        lpg: {c: 10.0, p: 3.00},
+        ev: {c: 15.0, p: 1.00}
     };
+    
+    let plat = d.plat || 'apps';
+    let corpBaseC = (d.cfg && d.cfg.bC) ? d.cfg.bC : 0;
+    let corpPeriod = (d.cfg && d.cfg.bPeriod) ? d.cfg.bPeriod : 'month';
+    
+    let carType = d.carType || 'rent';
+    let carC = (d.cfg && d.cfg.cC) ? d.cfg.cC : 0;
+    let carPer = (d.cfg && d.cfg.cType) ? d.cfg.cType : 'month';
+    
+    let emp = d.emp || 'partner';
+    let empType = (d.cfg && d.cfg.eType) ? d.cfg.eType : 'flat';
+    let empC = (d.cfg && d.cfg.eC) ? d.cfg.eC : 0;
+    let empPct = (d.cfg && d.cfg.ePct) ? d.cfg.ePct * 100 : 0;
+    let empPer = (d.cfg && d.cfg.ePeriod) ? d.cfg.ePeriod : 'week';
+    
+    let insC = (d.cfg && d.cfg.iC) ? d.cfg.iC : 0;
+    let insPer = (d.cfg && d.cfg.iPeriod) ? d.cfg.iPeriod : 'month';
+    let uC = (d.cfg && d.cfg.uC) ? d.cfg.uC : 0;
+    let uType = (d.cfg && d.cfg.uType) ? d.cfg.uType : 'corp';
+    
+    let tax = (d.cfg && d.cfg.tax) ? d.cfg.tax * 100 : 8.5;
+    let cardF = (d.cfg && d.cfg.cardF) ? d.cfg.cardF * 100 : 1.5;
+    let vouchF = (d.cfg && d.cfg.voucherF) ? d.cfg.voucherF * 100 : 0;
 
-    let minOdo = null;
-    let maxOdo = null;
-    let totalCostAll = 0;
+    let q = d.q || {s:9, w:39, t1:3.2, t2:4, t3:6.4, t4:8};
 
-    for(let i=0; i<fList.length; i++) {
-        let f = fList[i];
-        let type = 'pb'; // Domyślnie benzyna dla starych wpisów
+    APP.innerHTML = `
+    ${hdr}
+    <div class="dash-hero" style="padding-bottom: 5px;">
+        <p>KONFIGURACJA PROFILI</p>
+        <h1 style="color:var(--info); font-size:3.2rem; letter-spacing:-1px; text-transform:uppercase;">⚙️ OPCJE</h1>
+    </div>
+    
+    <div class="panel" style="border-color:rgba(217, 70, 239, 0.3); background:linear-gradient(145deg, #1e0a2d, #09090b);">
+        <div class="p-title" style="color:#d946ef;">🧮 USTAWIENIA TARYFIKATORA (WYCENA)</div>
+        <div class="inp-row">
+            <div class="inp-group"><label>OPŁATA POCZĄTKOWA (ZŁ)</label><input type="number" id="q-cfg-s" value="${q.s}" style="background:rgba(0,0,0,0.5);"></div>
+            <div class="inp-group"><label>1H POSTOJU (ZŁ/H)</label><input type="number" id="q-cfg-w" value="${q.w}" style="background:rgba(0,0,0,0.5);"></div>
+        </div>
+        <div class="grid-4" style="padding:0; margin-top:10px;">
+            <div class="inp-group"><label>T1</label><input type="number" step="0.1" id="q-cfg-t1" value="${q.t1}" style="background:rgba(0,0,0,0.5);"></div>
+            <div class="inp-group"><label>T2</label><input type="number" step="0.1" id="q-cfg-t2" value="${q.t2}" style="background:rgba(0,0,0,0.5);"></div>
+            <div class="inp-group"><label>T3</label><input type="number" step="0.1" id="q-cfg-t3" value="${q.t3}" style="background:rgba(0,0,0,0.5);"></div>
+            <div class="inp-group"><label>T4</label><input type="number" step="0.1" id="q-cfg-t4" value="${q.t4}" style="background:rgba(0,0,0,0.5);"></div>
+        </div>
+    </div>
+
+    <div class="panel" style="border-color:rgba(255,255,255,0.05); background:linear-gradient(145deg, #0f172a, #09090b);">
+        <div class="p-title" style="color:var(--success);">👤 PERSONALIZACJA I MIASTO</div>
+        <div class="inp-row">
+            <div class="inp-group"><label>TWOJE IMIĘ</label><input type="text" id="us-name" value="${window.db.userName || ''}" placeholder="np. Mateusz" style="background:rgba(0,0,0,0.5);"></div>
+            <div class="inp-group"><label>CEL DZIENNY (ZŁ)</label><input type="number" id="us-goal" value="${goal}" style="background:rgba(0,0,0,0.5);"></div>
+        </div>
+        <div class="inp-group" style="margin-bottom:10px;">
+            <label>DOMYŚLNE MIASTO (DLA MAP)</label>
+            <input type="text" id="us-city" value="${city}" placeholder="np. Szczecin" style="background:rgba(0,0,0,0.5);">
+        </div>
+    </div>
+    
+    <div class="panel" style="border-color:rgba(245,158,11,0.2); background:linear-gradient(145deg, #2a1600, #09090b);">
+        <div class="p-title" style="color:var(--fuel);">⛽ KOSZTY PALIWA NA KM</div>
         
-        if (f.isF === 1 || f.isF === '1' || f.isF === 'part') {
-            type = 'pb'; 
-        } else if (typeof f.isF === 'string') {
-            if (f.isF.startsWith('lpg')) type = 'lpg';
-            else if (f.isF.startsWith('pb')) type = 'pb';
-            else if (f.isF.startsWith('on')) type = 'on';
-            else if (f.isF.startsWith('ev')) type = 'ev';
-        }
+        <div class="inp-group" style="margin-bottom:15px; border-bottom:1px dashed rgba(255,255,255,0.1); padding-bottom:15px;">
+            <label style="color:var(--fuel);">JAKIMI PALIWAMI ZASILANE JEST AUTO?</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
+                    <input type="checkbox" id="cb-ftype-pb" value="pb" ${fTypes.includes('pb')?'checked':''} onchange="window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:18px; height:18px;"> Benzyna
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
+                    <input type="checkbox" id="cb-ftype-on" value="on" ${fTypes.includes('on')?'checked':''} onchange="window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:18px; height:18px;"> Diesel
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
+                    <input type="checkbox" id="cb-ftype-lpg" value="lpg" ${fTypes.includes('lpg')?'checked':''} onchange="window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:18px; height:18px;"> Gaz (LPG)
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
+                    <input type="checkbox" id="cb-ftype-ev" value="ev" ${fTypes.includes('ev')?'checked':''} onchange="window.toggleManualFuelBoxes()" style="accent-color:var(--info); width:18px; height:18px;"> Prąd (EV)
+                </label>
+            </div>
+            <div style="font-size:0.65rem; color:var(--muted); margin-top:8px;">Zaznacz zasilanie auta. Garaż i Ryczałt pokażą tylko wybrane opcje.</div>
+        </div>
 
-        let isFull = (f.isF === 1 || f.isF === '1' || (typeof f.isF === 'string' && f.isF.includes('full')));
+        <div class="inp-group" style="margin-bottom:5px;">
+            <label style="color:var(--fuel);">SKĄD BRAĆ DANE O KOSZTACH?</label>
+            <select id="us-fuel-src" onchange="window.toggleManualFuelBoxes()" style="background:#000; border-color:rgba(245,158,11,0.3);">
+                <option value="garage" ${fuelSource==='garage'?'selected':''}>Dziennik Garażu (Zalecane / Dokładne)</option>
+                <option value="manual" ${fuelSource==='manual'?'selected':''}>Z ryczałtu wpisanego poniżej</option>
+            </select>
+        </div>
 
-        if (minOdo === null || f.o < minOdo) minOdo = f.o;
-        if (maxOdo === null || f.o > maxOdo) maxOdo = f.o;
-        totalCostAll += (parseFloat(f.v) || 0);
+        <div id="manual-fuel-wrapper" style="display:${fuelSource==='manual'?'block':'none'}; margin-top:15px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">
+            <p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-bottom:15px;">Podaj parametry dla zaznaczonych paliw. Aplikacja automatycznie je zsumuje i wyliczy średni łączny koszt na 1 KM.</p>
+            
+            <div class="grid-2" style="margin-bottom:5px; padding:0 5px;">
+                <div style="font-size:0.6rem; color:var(--muted); text-align:center; font-weight:bold;">ŚREDNIE SPALANIE</div>
+                <div style="font-size:0.6rem; color:var(--muted); text-align:center; font-weight:bold;">CENA (ZŁ/L lub kWh)</div>
+            </div>
 
-        let b = s[type];
-        if (b.last === null) {
-            if (isFull) b.last = f.o; 
-        } else {
-            b.tL += (parseFloat(f.l) || 0);
-            b.tC += (parseFloat(f.v) || 0);
-            if (isFull) {
-                let dist = f.o - b.last;
-                if (dist > 0) {
-                    b.d += dist;
-                    b.l += b.tL;
-                    b.c += b.tC;
-                }
-                b.last = f.o; 
-                b.tL = 0; 
-                b.tC = 0;
-            }
-        }
-    }
+            <div id="mf-box-pb" style="display:${fTypes.includes('pb')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="color:var(--fuel); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⛽ Benzyna</div>
+                <div class="inp-row" style="margin:0;">
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-pb" value="${mF.pb.c}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-pb" value="${mF.pb.p}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                </div>
+            </div>
 
-    let totalDistAll = (maxOdo !== null && minOdo !== null) ? (maxOdo - minOdo) : 0;
-    let globalCk = totalDistAll > 0 ? (totalCostAll / totalDistAll) : 0;
+            <div id="mf-box-on" style="display:${fTypes.includes('on')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="color:var(--fuel); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⛽ Diesel</div>
+                <div class="inp-row" style="margin:0;">
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-on" value="${mF.on.c}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-on" value="${mF.on.p}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                </div>
+            </div>
 
-    let results = [];
-    for (let k in s) {
-        if (s[k].d > 0) {
-            results.push({
-                name: s[k].name,
-                unit: s[k].u,
-                l100: (s[k].l / s[k].d) * 100,
-                ck: (s[k].c / s[k].d),
-                dist: s[k].d
-            });
-        }
-    }
+            <div id="mf-box-lpg" style="display:${fTypes.includes('lpg')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="color:var(--fuel); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⛽ Gaz (LPG)</div>
+                <div class="inp-row" style="margin:0;">
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-lpg" value="${mF.lpg.c}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-lpg" value="${mF.lpg.p}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                </div>
+            </div>
 
-    return { list: results, ck: globalCk, td: totalDistAll, totalCost: totalCostAll };
-};
-
-// --- RENDER ZAKŁADEK NARZĘDZIOWYCH ---
-window.rDrvTools = function(d, t, nav, hdr) {
-    if (t === 'quote') {
-        let cOpts = (d.clients||[]).map(c => `<option value="${c.d}" data-n="${c.n}">${c.n} (-${c.d}%)</option>`).join('');
+            <div id="mf-box-ev" style="display:${fTypes.includes('ev')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="color:var(--info); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⚡ Prąd (EV)</div>
+                <div class="inp-row" style="margin:0;">
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-ev" value="${mF.ev.c}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-ev" value="${mF.ev.p}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel" style="border-color:rgba(255,255,255,0.05); background:linear-gradient(145deg, #1e1b4b, #09090b);">
+        <div class="p-title" style="color:var(--driver);">🚗 KOSZTY AUTA I BAZY</div>
         
-        APP.innerHTML = `
-        ${hdr}
-        <div class="dash-hero" style="padding-bottom:10px;">
-            <p>KALKULATOR</p>
-            <h1 style="color:#d946ef; font-size:3.2rem; letter-spacing:-1.5px; text-transform:uppercase; text-shadow:0 0 20px rgba(217, 70, 239, 0.4);">🧮 WYCENA</h1>
+        <div class="inp-row" style="margin-top:10px;">
+            <div class="inp-group">
+                <label>System</label>
+                <input type="text" value="${plat==='apps'?'Aplikacje':'Korporacja'}" disabled style="color:var(--muted); background:rgba(0,0,0,0.3);">
+            </div>
+            ${plat === 'corp' ? `
+                <div class="inp-group"><label>Baza / Korpo (zł)</label><input type="number" id="us-bc" value="${corpBaseC}" style="background:rgba(0,0,0,0.5);"></div>
+                <div class="inp-group"><label>Okres</label>
+                    <select id="us-b-period" style="background:#000;">
+                        <option value="week" ${corpPeriod==='week'?'selected':''}>Tydzień</option>
+                        <option value="month" ${corpPeriod==='month'?'selected':''}>Miesiąc</option>
+                    </select>
+                </div>
+            ` : ''}
         </div>
         
-        <div class="panel" style="border-color:rgba(217, 70, 239, 0.3); background:linear-gradient(145deg, #1e0a2d, #09090b); padding-bottom:5px;">
-            <div class="inp-group" style="margin-bottom:10px;">
-                <label style="color:var(--success);">🟢 ADRES POCZĄTKOWY</label>
-                <input type="text" id="dq-start" placeholder="np. Dworzec Główny" style="border-color:var(--success); background:#000;">
+        <div class="inp-row" style="margin-top:10px;">
+            <div class="inp-group">
+                <label>Rodzaj Auta</label>
+                <input type="text" value="${carType==='own'?'Własne':carType==='lease'?'Leasing':'Wynajem'}" disabled style="color:var(--muted); background:rgba(0,0,0,0.3);">
             </div>
-            <div class="inp-group" style="margin-bottom:15px;">
-                <label style="color:var(--danger);">🔴 ADRES DOCELOWY</label>
-                <input type="text" id="dq-end" placeholder="np. Powstańców Warszawy 1" style="border-color:var(--danger); background:#000;">
+            ${carType !== 'own' ? `
+                <div class="inp-group"><label>Rata / Wynajem (zł)</label><input type="number" id="us-cc" value="${carC}" style="background:rgba(0,0,0,0.5);"></div>
+                <div class="inp-group"><label>Okres</label>
+                    <select id="us-ctype" style="background:#000;">
+                        <option value="week" ${carPer==='week'?'selected':''}>Tydzień</option>
+                        <option value="month" ${carPer==='month'?'selected':''}>Miesiąc</option>
+                    </select>
+                </div>
+            ` : ''}
+        </div>
+        
+        <div class="inp-row" style="margin-top:15px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.1);">
+            <div class="inp-group"><label>Księgowa / Inne (zł)</label><input type="number" id="us-uc" value="${uC}" style="background:rgba(0,0,0,0.5);"></div>
+            <div class="inp-group"><label>Okres</label>
+                <select id="us-utype" style="background:#000;">
+                    <option value="week" ${uType==='week'?'selected':''}>Tydzień</option>
+                    <option value="month" ${uType==='month'?'selected':''}>Miesiąc</option>
+                </select>
             </div>
-            <button id="btn-route-calc" class="btn" style="background:#d946ef; color:#fff; font-weight:900;" onclick="window.calculateRouteAuto()">🔍 WYZNACZ TRASĘ I CENĘ</button>
-            
-            <div id="map-container" style="display:none; margin-top:20px;">
-                <div id="map" style="height:250px; border-radius:14px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.1);"></div>
-                
-                <div class="grid-2" style="margin-bottom:15px;">
-                    <div style="text-align:center;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; font-weight:bold;">DYSTANS</span><br><strong style="font-size:1.4rem;" id="res-km">0.0 km</strong></div>
-                    <div style="text-align:center;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; font-weight:bold;">CZAS JAZDY</span><br><strong style="font-size:1.4rem;" id="res-min">0 min</strong></div>
-                </div>
-                
-                <div class="mode-switch" style="margin-bottom:15px;">
-                    <div class="m-btn active" id="btn-tar-day" onclick="window.dQN=false; this.classList.add('active'); this.style.border='1px solid #d946ef'; document.getElementById('btn-tar-night').classList.remove('active'); document.getElementById('btn-tar-night').style.border='1px solid transparent'; window.updateRoutePrice();" style="border:1px solid #d946ef;">Dzień (T1/T3)</div>
-                    <div class="m-btn" id="btn-tar-night" onclick="window.dQN=true; this.classList.add('active'); this.style.border='1px solid #d946ef'; document.getElementById('btn-tar-day').classList.remove('active'); document.getElementById('btn-tar-day').style.border='1px solid transparent'; window.updateRoutePrice();">Noc/Święto (T2/T4)</div>
-                </div>
-                
-                <div style="background:rgba(0,0,0,0.5); border-radius:12px; padding:15px; margin-bottom:15px;">
-                    <label style="font-size:0.75rem; color:var(--info); display:block; text-align:center; margin-bottom:10px; font-weight:bold;">PRZESUŃ DO GRANICY MIASTA</label>
-                    <input type="range" id="zone-slider" min="0" max="100" value="100" step="0.1" style="width:100%; accent-color:var(--info);" oninput="window.updateZoneSplit()">
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-top:8px;">
-                        <span style="color:var(--info);">Miasto: <strong id="val-in">0.0</strong> km</span>
-                        <span style="color:var(--warning);">Poza miastem: <strong id="val-out">0.0</strong> km</span>
+        </div>
+        
+        <div class="inp-row" style="margin-top:15px;">
+            <div class="inp-group"><label>ZUS Ubezp. Auto (zł)</label><input type="number" id="us-ic" value="${insC}" style="background:rgba(0,0,0,0.5);"></div>
+            <div class="inp-group"><label>Okres</label>
+                <select id="us-i-period" style="background:#000;">
+                    <option value="week" ${insPer==='week'?'selected':''}>Tydzień</option>
+                    <option value="month" ${insPer==='month'?'selected':''}>Miesiąc</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel" style="border-color:rgba(255,255,255,0.05); background:linear-gradient(145deg, #0c4a6e, #09090b);">
+        <div class="p-title" style="color:var(--info);">⚖️ PODATKI I PROWIZJE PŁATNOŚCI</div>
+        
+        <div class="inp-row" style="margin-top:10px;">
+            <div class="inp-group">
+                <label>Zatrudnienie</label>
+                <input type="text" value="${emp==='partner'?'U Partnera':'JDG'}" disabled style="color:var(--muted); background:rgba(0,0,0,0.3);">
+            </div>
+            <div class="inp-group">
+                <label>Rodzaj Rozliczenia</label>
+                <select id="us-etype" onchange="window.dCheckEPct()" style="background:#000;">
+                    <option value="flat" ${empType==='flat'?'selected':''}>Kwota Stała (ZUS/Umowa)</option>
+                    <option value="pct" ${empType==='pct'?'selected':''}>Procent Utargu</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="us-ep-box">
+            ${empType === 'pct' ? `
+                <div class="inp-group"><label>PROWIZJA partnera (%)</label><input type="number" id="us-epct" value="${empPct}" style="background:rgba(0,0,0,0.5);"></div>
+            ` : `
+                <div class="inp-row">
+                    <div class="inp-group"><label>Kwota stała (ZUS/Umowa) (zł)</label><input type="number" id="us-ec" value="${empC}" style="background:rgba(0,0,0,0.5);"></div>
+                    <div class="inp-group"><label>Okres</label>
+                        <select id="us-e-period" style="background:#000;">
+                            <option value="week" ${empPer==='week'?'selected':''}>Tydzień</option>
+                            <option value="month" ${empPer==='month'?'selected':''}>Miesiąc</option>
+                        </select>
                     </div>
                 </div>
-                
-                <div style="border:1px solid rgba(217, 70, 239, 0.4); border-radius:14px; padding:20px; text-align:center; margin-bottom:15px; background:linear-gradient(180deg, rgba(217, 70, 239, 0.05) 0%, transparent 100%);">
-                    <span style="font-size:0.75rem; color:#d946ef; font-weight:bold; text-transform:uppercase;">PROPONOWANA CENA (BRUTTO)</span>
-                    <div id="dqt" style="font-size:3.5rem; font-weight:900; letter-spacing:-2px; color:#fff;">0.00 zł</div>
-                    <div style="font-size:0.75rem; color:var(--danger); margin-top:5px;">Koszt paliwa (w koszty): <span id="q-fuel-cost">0.00</span> zł</div>
-                </div>
-                
-                <div class="inp-group" style="margin-bottom:20px;">
-                    <label>KLIENT VIP (RABAT)</label>
-                    <select id="dq-c" onchange="window.updateRoutePrice()" style="background:#000;">
-                        <option value="0">-- Zwykły kurs --</option>
-                        ${cOpts}
-                    </select>
-                </div>
-                
-                <button class="btn" style="background:#d946ef; color:#fff; font-size:1.1rem; padding:15px;" onclick="window.saveQuoteToPanel()">ZAKSIĘGUJ KURS DO PANELU</button>
-            </div>
+            `}
         </div>
-        ${nav}`;
-        return;
-    }
 
-    if (t === 'garage') {
-        APP.innerHTML = `
-        ${hdr}
-        <div class="dash-hero" style="padding-bottom:10px;">
-            <p>DZIENNIK TANKOWAŃ I SERWISÓW</p>
-            <h1 style="color:var(--fuel); font-size:3.5rem; letter-spacing:-1px;">⛽ GARAŻ</h1>
+        <div class="inp-row" style="margin-top:15px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.1);">
+            <div class="inp-group"><label>Twoja stawka podatku (%)</label><input type="number" id="us-tx" value="${tax}" step="0.1" style="background:rgba(0,0,0,0.5);"></div>
+            <div class="inp-group"><label>Prowizja terminala (%)</label><input type="number" id="us-cf" value="${cardF}" step="0.1" style="background:rgba(0,0,0,0.5);"></div>
         </div>
-        ${window.hRenderGarage(d)}
-        ${nav}`;
+        
+        <div class="inp-group" style="margin-top:10px;"><label>Prowizja Voucherów (%) (Opcjonalnie)</label><input type="number" id="us-vf" value="${vouchF}" placeholder="0" step="0.1" style="background:rgba(0,0,0,0.5);"></div>
+    </div>
+
+    <div style="padding:0 12px; margin-bottom:20px;">
+        <button class="btn btn-info" style="padding:15px; font-size:1.1rem; box-shadow:0 8px 25px rgba(14,165,233,0.3);" onclick="window.dSaveUS()">ZAPISZ WSZYSTKIE OPCJE</button>
+    </div>
+    
+    <div style="text-align:center; padding: 20px 0;">
+        <img src="icon-512.png" style="width:70px;height:70px; opacity:0.1; mix-blend-mode:luminosity;" class="float-icon">
+        <p style="color:var(--muted); font-size:0.6rem; margin-top:10px;">StyreOS Pro Core v1.01 Alpha<br>Powered by technic1251 Solutions</p>
+    </div>
+    
+    <input type="file" id="h-import-file" style="display:none;" onchange="window.dImport(event)">
+    <input type="file" id="d-import-file" style="display:none;" onchange="window.dImport(event)">
+
+    ${nav}`;
+};
+
+// --- FUNKCJA POKAZUJĄCA DYNAMICZNE RYCZAŁTY ---
+window.toggleManualFuelBoxes = function() {
+    let src = document.getElementById('us-fuel-src').value;
+    let wrap = document.getElementById('manual-fuel-wrapper');
+    if(wrap) wrap.style.display = (src === 'manual') ? 'block' : 'none';
+
+    ['pb', 'on', 'lpg', 'ev'].forEach(t => {
+        let cb = document.getElementById('cb-ftype-' + t);
+        let box = document.getElementById('mf-box-' + t);
+        if(cb && box) box.style.display = cb.checked ? 'block' : 'none';
+    });
+};
+
+// Funkcje pomocnicze dla UI Opcji
+window.dCheckEPct = function() {
+    let t = document.getElementById('us-etype').value;
+    let b = document.getElementById('us-ep-box');
+    if(t === 'pct') {
+        b.innerHTML = `<div class="inp-group"><label>Prowizja partnera (%)</label><input type="number" id="us-epct" placeholder="np. 50" style="background:rgba(0,0,0,0.5);"></div>`;
+    } else {
+        b.innerHTML = `
+            <div class="inp-row">
+                <div class="inp-group"><label>Kwota stała (ZUS/Umowa) (zł)</label><input type="number" id="us-ec" placeholder="np. 50" style="background:rgba(0,0,0,0.5);"></div>
+                <div class="inp-group"><label>Okres</label><select id="us-e-period" style="background:#000;"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div>
+            </div>`;
     }
 };
 
-// --- RENDER GARAŻU (Z DYNAMICZNYM WYBOREM PALIW) ---
-window.hRenderGarage = function(d) {
-    let mode = window.dGarMode || 'f';
-    let sourceAlert = '';
-    
-    if (d.cfg && d.cfg.fuelSource === 'manual') {
-        sourceAlert = `<div style="background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.3); color:var(--danger); padding:10px; border-radius:12px; font-size:0.75rem; text-align:center; margin-bottom:15px; font-weight:bold;">⚠️ Masz włączony tryb Ręcznego Wpisywania Spalania w Opcjach. Apka zignoruje statystyki z Garażu do wyliczeń Wyceny.</div>`;
-    }
-
-    let stats = window.calcFuelioStats();
-    let statsCards = '';
-
-    if (stats.list.length > 0) {
-        stats.list.forEach(x => {
-            let u100 = x.unit === 'kWh' ? 'kWh/100' : 'L/100';
-            statsCards += `
-            <div class="box" style="border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.05); text-align:center; padding:15px 5px;">
-                <span style="font-size:0.6rem; color:var(--muted); font-weight:800; text-transform:uppercase;">${x.name} <span style="opacity:0.5;">(${x.dist.toFixed(0)} KM)</span></span><br>
-                <strong style="color:var(--fuel); font-size:1.3rem;">${x.l100.toFixed(2)} <span style="font-size:0.6rem;">${u100}</span></strong><br>
-                <strong style="color:var(--danger); font-size:0.8rem;">${x.ck.toFixed(2)} zł/km</strong>
-            </div>`;
-        });
+window.dCrmChange = function() {
+    let bl = document.getElementById('dc-bl').checked;
+    let b = document.getElementById('dc-btn');
+    if(bl) {
+        b.innerHTML = "DODAJ DO CZARNEJ LISTY 🚫";
+        b.className = "btn btn-danger";
     } else {
-        statsCards = `<div class="box" style="grid-column: span 2; text-align:center; padding:20px; color:var(--muted); font-size:0.8rem; border-color:rgba(255,255,255,0.05);">Brak pełnych cykli tankowań do obliczeń. Zatankuj do pełna 2 razy.</div>`;
+        b.innerHTML = "DODAJ DO CRM VIP ★";
+        b.className = "btn btn-driver";
     }
-
-    // Dynamiczne opcje paliw na podstawie tego, co zaznaczono w Opcjach
-    let fTypes = (d.cfg && d.cfg.fTypes && d.cfg.fTypes.length > 0) ? d.cfg.fTypes : ['pb'];
-    let fuelOptionsHtml = '';
-    if (fTypes.includes('pb')) fuelOptionsHtml += `<option value="pb">⛽ Benzyna (PB)</option>`;
-    if (fTypes.includes('on')) fuelOptionsHtml += `<option value="on">⛽ Diesel (ON)</option>`;
-    if (fTypes.includes('lpg')) fuelOptionsHtml += `<option value="lpg">⛽ Gaz (LPG)</option>`;
-    if (fTypes.includes('ev')) fuelOptionsHtml += `<option value="ev">⚡ Prąd (EV)</option>`;
-
-    let html = `
-    <div style="padding:0 12px;">
-        ${sourceAlert}
-        <div class="grid-2" style="margin-bottom:10px;">
-            ${statsCards}
-        </div>
-        
-        <div style="text-align:center; margin-bottom:20px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); padding:12px; border-radius:12px;">
-            <span style="font-size:0.65rem; color:var(--danger); font-weight:bold; text-transform:uppercase;">ZBIORCZY KOSZT PALIW (MIX) NA 1 KM</span><br>
-            <strong style="color:var(--danger); font-size:1.5rem;">${stats.ck.toFixed(2)} zł</strong>
-            <div style="font-size:0.65rem; color:var(--muted); margin-top:4px;">Dystans Mix: ${stats.td.toFixed(0)} KM | Wydano: ${stats.totalCost.toFixed(2)} zł</div>
-        </div>
-
-        <div class="mode-switch" style="border-color:rgba(255,255,255,0.1); margin-bottom:15px;">
-            <div class="m-btn ${mode==='f'?'active':''}" onclick="window.dGarMode='f';window.render()" style="${mode==='f'?'background:var(--fuel);color:#000;box-shadow:0 4px 15px rgba(245,158,11,0.3);':''}">⛽ TANKOWANIA</div>
-            <div class="m-btn ${mode==='e'?'active':''}" onclick="window.dGarMode='e';window.render()" style="${mode==='e'?'background:var(--info);color:#fff;':''}">🔧 SERWIS / MYJNIA</div>
-        </div>
-    </div>`;
-
-    if(mode === 'f') {
-        html += `
-        <div class="panel" style="border-color:var(--fuel); background:linear-gradient(145deg, #2a1600, #09090b);">
-            <div class="p-title" style="color:var(--fuel);">⛽ NOWE TANKOWANIE</div>
-            
-            <div class="inp-row">
-                <div class="inp-group"><label>STAN LICZNIKA (KM)</label><input type="number" id="df-o" value="${d.odo||0}" placeholder="np. 155000" style="background:rgba(0,0,0,0.5);"></div>
-                <div class="inp-group"><label>LITRY / kWh</label><input type="number" step="0.1" id="df-l" placeholder="0.0" style="background:rgba(0,0,0,0.5);"></div>
-            </div>
-            <div class="inp-row">
-                <div class="inp-group"><label>KWOTA (ZŁ)</label><input type="number" step="0.01" id="df-v" placeholder="0.00" style="background:rgba(0,0,0,0.5);"></div>
-                <div class="inp-group"><label>DATA</label><input type="date" id="df-date" value="${window.getLocalYMD()}" style="background:rgba(0,0,0,0.5);"></div>
-            </div>
-            
-            <div class="inp-row" style="margin-bottom:15px; align-items:center;">
-                <div class="inp-group" style="margin-bottom:0;">
-                    <label>RODZAJ PALIWA</label>
-                    <select id="df-type" style="background:#000; border-color:var(--fuel);">
-                        ${fuelOptionsHtml}
-                    </select>
-                </div>
-                <div class="inp-group" style="margin-bottom:0; display:flex; flex-direction:column; align-items:center; background:rgba(0,0,0,0.3); border-radius:12px; padding:10px;">
-                    <label style="color:var(--fuel); margin-bottom:5px;">DO PEŁNA?</label>
-                    <input type="checkbox" id="df-full" checked style="width:24px; height:24px; accent-color:var(--fuel); cursor:pointer;">
-                </div>
-            </div>
-
-            <button class="btn" style="background:var(--fuel); color:#000; font-weight:900; padding:15px;" onclick="window.dAF()">DODAJ TANKOWANIE</button>
-        </div>`;
-    } else {
-        html += `
-        <div class="panel" style="border-color:var(--info); background:linear-gradient(145deg, #0f172a, #09090b);">
-            <div class="p-title" style="color:var(--info);">🔧 NOWY WYDATEK SERWISOWY</div>
-            <div class="inp-group" style="margin-bottom:12px;"><label>KWOTA Z PARAGONU (ZŁ)</label><input type="number" step="0.01" id="de-v" class="big-inp" placeholder="0.00" style="background:rgba(0,0,0,0.5); border-color:var(--info);"></div>
-            <div class="inp-row">
-                <div class="inp-group"><label>KATEGORIA</label><select id="de-c" style="background:#000;"><option>💦 Myjnia</option><option>🔧 Naprawa / Części</option><option>🚗 Płyn / Olej</option><option>🅿️ Parking</option><option>📋 Przegląd</option><option>Inne wydatki</option></select></div>
-                <div class="inp-group"><label>DATA</label><input type="date" id="de-date" value="${window.getLocalYMD()}" style="background:#000;"></div>
-            </div>
-            <button class="btn btn-info" style="margin-top:15px; padding:15px;" onclick="window.dAE()">DODAJ WYDATEK</button>
-        </div>`;
-    }
-
-    html += `<div class="section-lbl">HISTORIA WYDATKÓW</div><div style="padding: 0 12px;">`;
-    
-    let expl = d.exp || [];
-    let fList = mode === 'f' ? expl.filter(x => x.ty === 'f') : expl.filter(x => x.ty === 'e');
-    
-    if(fList.length === 0) {
-        html += `<div style="text-align:center; padding:30px; color:var(--muted); font-size:0.8rem; background:rgba(255,255,255,0.02); border-radius:14px; border:1px dashed rgba(255,255,255,0.05);">Brak wpisów w tej kategorii.</div>`;
-    }
-    
-    fList.forEach(e => {
-        let isFull = (e.isF === 'lpg_full' || e.isF === 'pb_full' || e.isF === 'on_full' || e.isF === 'ev_full' || e.isF === 1 || e.isF === "1");
-        
-        let fLabel = 'Dolewka';
-        if (e.isF === 'lpg_full') fLabel = 'LPG (Do pełna)';
-        if (e.isF === 'pb_full') fLabel = 'PB (Do pełna)';
-        if (e.isF === 'on_full') fLabel = 'ON (Do pełna)';
-        if (e.isF === 'ev_full') fLabel = 'EV (Do pełna)';
-        if (e.isF === 'lpg_part') fLabel = 'LPG (Dolewka)';
-        if (e.isF === 'pb_part') fLabel = 'PB (Dolewka)';
-        if (e.isF === 'on_part') fLabel = 'ON (Dolewka)';
-        if (e.isF === 'ev_part') fLabel = 'EV (Dolewka)';
-        if (e.isF === 1 || e.isF === "1") fLabel = 'PB (Do pełna)';
-        
-        let uStr = (e.isF && e.isF.includes('ev')) ? 'kWh' : 'Litrów';
-
-        html += `
-        <div class="log-item" style="border-left-color:${e.ty==='f' ? 'var(--fuel)' : 'var(--info)'};">
-            <div style="flex:1;" onclick="window.dEditExp(${e.id})">
-                <strong style="display:block; font-size:0.95rem;">${e.d}</strong>
-                <span style="font-size:0.7rem; color:var(--muted);">${e.dt} ${e.ty==='f' ? `| ODO: ${e.odo}` : ''}</span>
-                ${e.ty==='f' ? `<div style="font-size:0.65rem; color:${isFull ? 'var(--success)' : 'var(--warning)'}; font-weight:bold; margin-top:4px;">${fLabel} | ${Number(e.l||0).toFixed(1)} ${uStr}</div>` : ''}
-            </div>
-            <div style="text-align:right;">
-                <div style="color:${e.ty==='f' ? 'var(--fuel)' : 'var(--info)'}; font-weight:900; font-size:1.1rem; margin-bottom:5px;">-${Number(e.v||0).toFixed(2)} zł</div>
-                <button class="btn btn-danger" style="padding:6px 12px; font-size:0.6rem; width:auto; margin:0;" onclick="window.dDelExp(${e.id})">KOSZ</button>
-            </div>
-        </div>`;
-    });
-    
-    html += `</div><div style="height:40px;"></div>`;
-    return html;
 };
