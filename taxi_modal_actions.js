@@ -43,12 +43,16 @@ window.dAF = function() {
     let o = window.safeVal('df-o');
     let l = window.safeVal('df-l');
     let v = window.safeVal('df-v');
-    let fEl = document.getElementById('df-f');
-    let f = fEl ? fEl.value : 'part';
     
-    // Konwersja dla kompatybilności wstecznej (jeśli ktoś używał starych wartości)
-    if (f === '1') f = 'pb_full';
-    if (f === '0') f = 'part';
+    // Pobieranie typu paliwa i checkboxa "Do pełna" z nowego interfejsu
+    let fTypeEl = document.getElementById('df-type');
+    let type = fTypeEl ? fTypeEl.value : 'pb';
+    
+    let fFullEl = document.getElementById('df-full');
+    let isFullCheck = fFullEl ? fFullEl.checked : true;
+    
+    // Budowanie flagi dla algorytmu (np. 'pb_full', 'lpg_part')
+    let f = isFullCheck ? type + '_full' : type + '_part';
 
     if(!o || !l || !v) { 
         if(window.sysAlert) return window.sysAlert("Błąd", "Wypełnij dane!"); 
@@ -68,13 +72,6 @@ window.dAF = function() {
         if(dist > 0) {
             l100 = (l / dist) * 100;
             cpkm = v / dist;
-            if(f === 'lpg_full' || f === 'pb_full' || f === 'on_full') {
-                if(!window.db.drv.cfg) window.db.drv.cfg = {};
-                // Ustawiamy cenę z Garażu tylko, jeśli kierowca nie wymusił ręcznego ryczałtu w Opcjach
-                if(window.db.drv.cfg.fuelSource !== 'manual') {
-                    window.db.drv.cfg.fuelPx = cpkm;
-                }
-            }
         }
     }
     
@@ -89,6 +86,12 @@ window.dAF = function() {
         l: l, odo: o, dist: dist, l100: l100, cpkm: cpkm, isF: f
     });
     window.db.drv.exp.sort((a,b) => new Date(b.rD) - new Date(a.rD));
+    
+    // Przeliczenie i zapis kosztu na 1KM dla całej apki
+    if(window.db.drv.cfg && window.db.drv.cfg.fuelSource !== 'manual' && window.calcFuelioStats) {
+         let fs = window.calcFuelioStats();
+         if(fs.ck > 0) window.db.drv.cfg.fuelPx = fs.ck;
+    }
     
     window.save(); 
     window.render();
@@ -142,6 +145,13 @@ window.dDelExp = function(id) {
                 window.db.drv.fuel = (window.db.drv.fuel || []).filter(f => f.o !== e.odo);
             }
             window.db.drv.exp = expList.filter(x => x.id !== id);
+            
+            // Przeliczenie po usunięciu
+            if(window.db.drv.cfg && window.db.drv.cfg.fuelSource !== 'manual' && window.calcFuelioStats) {
+                let fs = window.calcFuelioStats();
+                window.db.drv.cfg.fuelPx = fs.ck > 0 ? fs.ck : 0;
+            }
+
             window.save(); 
             window.render();
         });
@@ -177,6 +187,12 @@ window.dSaveEditExp = function(id) {
                 let f = fuelList.find(x => x.o === e.odo);
                 if(f) f.v = nv;
                 if(e.dist > 0) e.cpkm = nv / e.dist;
+                
+                // Przeliczenie po edycji
+                if(window.db.drv.cfg && window.db.drv.cfg.fuelSource !== 'manual' && window.calcFuelioStats) {
+                    let fs = window.calcFuelioStats();
+                    if(fs.ck > 0) window.db.drv.cfg.fuelPx = fs.ck;
+                }
             }
             window.save(); 
             window.render();
@@ -380,7 +396,7 @@ window.dSaveUS = function() {
     window.db.userName = document.getElementById('us-name').value;
     if(!window.db.drv.cfg) window.db.drv.cfg = {};
 
-    // Zapisywanie Taryfikatora (teraz pobierane z zakładki Opcje)
+    // Zapisywanie Taryfikatora
     window.db.drv.q = {
         s: parseFloat(document.getElementById('q-cfg-s').value) || 0,
         w: parseFloat(document.getElementById('q-cfg-w').value) || 0,
@@ -393,6 +409,15 @@ window.dSaveUS = function() {
     window.db.drv.cfg.goal = window.safeVal('us-goal');
     window.db.drv.cfg.defCity = document.getElementById('us-city') ? document.getElementById('us-city').value : 'Szczecin';
     
+    // Zapisywanie wybranch rodzajów zasilania z checkboxów!
+    let fCheckboxes = document.querySelectorAll('.car-ftype');
+    let selectedF = [];
+    if(fCheckboxes && fCheckboxes.length > 0) {
+        fCheckboxes.forEach(cb => { if(cb.checked) selectedF.push(cb.value); });
+    }
+    if(selectedF.length === 0) selectedF = ['pb']; // Zabezpieczenie przed usunięciem wszystkiego
+    window.db.drv.cfg.fTypes = selectedF;
+
     // Zapisywanie Paliwa
     window.db.drv.cfg.fuelCons = window.safeVal('us-fcons');
     window.db.drv.cfg.fuelPriceL = window.safeVal('us-fprice');
@@ -409,7 +434,7 @@ window.dSaveUS = function() {
         }
     }
     
-    // Reszta ustawień (Koszty, Podatki, itp.)
+    // Reszta ustawień
     window.db.drv.cfg.cC = window.safeVal('us-cc');
     window.db.drv.cfg.cType = document.getElementById('us-ctype') ? document.getElementById('us-ctype').value : 'month';
     window.db.drv.cfg.bC = window.safeVal('us-bc');
@@ -430,5 +455,5 @@ window.dSaveUS = function() {
     
     window.save(); 
     window.render();
-    if(window.sysAlert) window.sysAlert("Zapisano!", "Opcje i Taryfy zaktualizowane.", "success");
+    if(window.sysAlert) window.sysAlert("Zapisano!", "Opcje zaktualizowane. Garaż dopasowany!", "success");
 };
