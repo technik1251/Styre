@@ -101,7 +101,7 @@ window.save = function() {
 
 window.onerror = function(msg, url, lineNo) { 
     let fn = url ? url.substring(url.lastIndexOf('/') + 1) : 'Nieznany plik'; 
-    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🐛</div><h2 style="color:var(--danger);">Błąd Kodu!</h2><div style="background:#000; padding:15px; border-radius:12px; text-align:left; font-family:monospace; font-size:0.8rem; color:#fff;">${msg}<br>Plik: ${fn}<br>Linia: ${lineNo}</div><button class="btn" style="background:rgba(255,255,255,0.1); margin-top:20px;" onclick="localStorage.clear();location.reload()">TWARDY RESET (CZYŚĆ PAMIĘĆ)</button><p style="color:var(--muted); font-size:0.7rem; margin-top:15px;">Twoje dane w chmurze Google są bezpieczne.</p></div>`; 
+    if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;" class="float-icon">🐛</div><h2 style="color:var(--danger);">Błąd Kodu!</h2><div style="background:rgba(0,0,0,0.5); padding:15px; border-radius:12px; text-align:left; font-family:monospace; font-size:0.8rem; color:#fff; border:1px solid rgba(255,255,255,0.1);">${msg}<br>Plik: ${fn}<br>Linia: ${lineNo}</div><button class="btn" style="background:rgba(255,255,255,0.1); margin-top:20px; border:1px solid rgba(255,255,255,0.2);" onclick="localStorage.clear();location.reload()">TWARDY RESET (CZYŚĆ PAMIĘĆ)</button><p style="color:var(--muted); font-size:0.7rem; margin-top:15px;">Twoje dane w chmurze Google są bezpieczne.</p></div>`; 
     return false; 
 };
 
@@ -113,7 +113,7 @@ window.switchTab = function(t) {
     if (window.db) window.db.tab = t; 
     window.save(); 
     window.render(); 
-    window.scrollTo(0,0); 
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
 };
 
 window.openSwitcher = function() {
@@ -121,15 +121,15 @@ window.openSwitcher = function() {
     let btns = document.getElementById('switcher-btns');
     if(el && btns) {
         btns.innerHTML = `
-            <button class="btn" style="background:var(--driver); color:#000; padding:15px; font-weight:900; margin-bottom:10px; font-size:1.1rem; box-shadow:0 4px 15px rgba(59,130,246,0.3);" onclick="window.db.mainProfile='driver'; window.db.role='drv'; window.db.tab='term'; window.save(); document.getElementById('m-switcher').classList.add('hidden'); window.render();">🚕 PANEL TAXI</button>
-            <button class="btn" style="background:var(--life); color:#000; padding:15px; font-weight:900; margin-bottom:15px; font-size:1.1rem; box-shadow:0 4px 15px rgba(20,184,166,0.3);" onclick="window.db.mainProfile='home'; window.db.role='home'; window.db.tab='dash'; window.save(); document.getElementById('m-switcher').classList.add('hidden'); window.render();">🏠 BUDŻET DOMOWY</button>
-            <div style="height:1px; background:rgba(255,255,255,0.1); margin: 5px 0 15px 0;"></div>
-            <p style="color:var(--muted); font-size:0.7rem; text-transform:uppercase; margin-bottom:10px; font-weight:bold;">Zarządzaj innymi profilami</p>
-            <button class="btn" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); color:var(--muted); padding:15px; margin-bottom:10px;" onclick="if(window.sysAlert) window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca z zarządzaniem rewirami i stawkami za paczkę pojawi się w kolejnych aktualizacjach!', 'info')">📦 KURIER / DOSTAWA (Wkrótce)</button>
-            <button class="btn" style="background:rgba(168, 85, 247, 0.1); border:1px dashed rgba(168, 85, 247, 0.4); color:#a855f7; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="if(window.sysAlert) window.sysAlert('Funkcja PRO', 'Pełny moduł Firma/Spedycja (z KSeF, fakturami i flotą) będzie dostępny w wersji StyreOS PRO!', 'info')">🚛 FIRMA / SPEDYCJA (PRO)</button>
-            <div style="height:1px; background:rgba(255,255,255,0.1); margin: 15px 0;"></div>
-            <button class="btn" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:12px; font-size:0.85rem; font-weight:bold;" onclick="window.logoutToLauncher()">⚙️ WRÓĆ DO EKRANU STARTOWEGO</button>
-            <button class="btn" style="background:transparent; color:var(--muted); margin-top:10px;" onclick="document.getElementById('m-switcher').classList.add('hidden')">ZAMKNIJ</button>
+            <button class="btn" style="background:linear-gradient(135deg, var(--driver), #2563eb); color:#fff; padding:18px; font-weight:900; margin-bottom:12px; font-size:1.1rem; box-shadow:0 8px 25px rgba(59,130,246,0.35);" onclick="window.db.mainProfile='driver'; window.db.role='drv'; window.db.tab='term'; window.save(); document.getElementById('m-switcher').classList.add('hidden'); window.render();"><span class="float-icon" style="display:inline-block; margin-right:8px;">🚕</span> PANEL TAXI</button>
+            <button class="btn" style="background:linear-gradient(135deg, var(--life), #0f766e); color:#fff; padding:18px; font-weight:900; margin-bottom:18px; font-size:1.1rem; box-shadow:0 8px 25px rgba(20,184,166,0.35);" onclick="window.db.mainProfile='home'; window.db.role='home'; window.db.tab='dash'; window.save(); document.getElementById('m-switcher').classList.add('hidden'); window.render();"><span class="float-icon" style="display:inline-block; margin-right:8px;">🏠</span> BUDŻET DOMOWY</button>
+            <div style="height:1px; background:rgba(255,255,255,0.08); margin: 5px 0 15px 0;"></div>
+            <p style="color:var(--muted); font-size:0.7rem; text-transform:uppercase; margin-bottom:12px; font-weight:bold; letter-spacing:0.5px;">Zarządzaj innymi profilami</p>
+            <button class="btn" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:var(--muted); padding:15px; margin-bottom:10px;" onclick="if(window.sysAlert) window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca z zarządzaniem rewirami i stawkami za paczkę pojawi się w kolejnych aktualizacjach!', 'info')">📦 KURIER / DOSTAWA (Wkrótce)</button>
+            <button class="btn" style="background:rgba(168, 85, 247, 0.05); border:1px dashed rgba(168, 85, 247, 0.3); color:#c084fc; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="if(window.sysAlert) window.sysAlert('Funkcja PRO', 'Pełny moduł Firma/Spedycja (z KSeF, fakturami i flotą) będzie dostępny w wersji StyreOS PRO!', 'info')">🚛 FIRMA / SPEDYCJA (PRO)</button>
+            <div style="height:1px; background:rgba(255,255,255,0.08); margin: 15px 0;"></div>
+            <button class="btn" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:14px; font-size:0.85rem; font-weight:bold;" onclick="window.logoutToLauncher()">⚙️ WRÓĆ DO EKRANU STARTOWEGO</button>
+            <button class="btn" style="background:transparent; color:var(--muted); margin-top:5px; box-shadow:none;" onclick="document.getElementById('m-switcher').classList.add('hidden')">ZAMKNIJ</button>
         `;
         el.classList.remove('hidden');
     }
@@ -176,7 +176,7 @@ window.render = function() {
         return window.rLauncher(); 
     } catch(err) { 
         console.error(err);
-        if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;">🚨</div><h2 style="color:var(--danger)">Krytyczny Błąd Interfejsu</h2><p style="color:var(--muted);font-size:0.85rem;">${err.message}</p><button class="btn btn-danger" style="margin-top:30px;padding:20px;" onclick="localStorage.clear();location.reload();">TWARDY RESET APLIKACJI</button></div>`; 
+        if(APP) APP.innerHTML = `<div style="padding:20px;text-align:center;margin-top:50px;"><div style="font-size:4rem;margin-bottom:10px;" class="float-icon">🚨</div><h2 style="color:var(--danger)">Krytyczny Błąd Interfejsu</h2><p style="color:var(--muted);font-size:0.85rem;">${err.message}</p><button class="btn btn-danger" style="margin-top:30px;padding:20px;" onclick="localStorage.clear();location.reload();">TWARDY RESET APLIKACJI</button></div>`; 
     } 
 }
 
@@ -186,61 +186,61 @@ window.render = function() {
 
 window.rLauncher = function() {
     let roadmapHtml = `
-    <div style="width:100%; max-width:350px; margin-top:25px; text-align:left; background:linear-gradient(145deg, #1e1b4b, #09090b); border:1px solid rgba(139, 92, 246, 0.3); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(139, 92, 246, 0.1);">
-        <h3 style="color:#c084fc; margin:0 0 15px 0; font-size:1rem; display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:1px;"><span>🚀</span> Wkrótce w StyreOS PRO</h3>
+    <div style="width:100%; max-width:350px; margin-top:25px; text-align:left; background:linear-gradient(145deg, rgba(30,27,75,0.8), rgba(9,9,11,0.9)); border:1px solid rgba(139, 92, 246, 0.2); border-radius:24px; padding:24px; box-shadow:0 15px 40px rgba(0,0,0,0.4); backdrop-filter: blur(12px);">
+        <h3 style="color:#c084fc; margin:0 0 18px 0; font-size:1.05rem; display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:1px;"><span>🚀</span> Wkrótce w StyreOS PRO</h3>
         
-        <div style="margin-bottom:15px; border-left:2px solid #8b5cf6; padding-left:10px;">
+        <div style="margin-bottom:16px; border-left:2px solid #8b5cf6; padding-left:12px;">
             <strong style="color:#fff; font-size:0.85rem;">🚕 Asystent Zleceń AI & e-Kasa API</strong>
-            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Pływająca nakładka opłacalności zlecenia oraz auto-zaciąganie kursów z kas RT3000 i centrali.</p>
+            <p style="color:var(--muted); font-size:0.75rem; margin:6px 0 0; line-height:1.4;">Pływająca nakładka opłacalności zlecenia oraz auto-zaciąganie kursów z kas RT3000 i centrali.</p>
         </div>
         
-        <div style="margin-bottom:15px; border-left:2px solid #14b8a6; padding-left:10px;">
+        <div style="margin-bottom:16px; border-left:2px solid #14b8a6; padding-left:12px;">
             <strong style="color:#fff; font-size:0.85rem;">🏦 Open Banking (Banki & Budżet)</strong>
-            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Połączenie z bankami. AI samo w locie rozpozna i skategoryzuje transakcje i przypisze je do odpowiedniego miejsca w panelu.</p>
+            <p style="color:var(--muted); font-size:0.75rem; margin:6px 0 0; line-height:1.4;">Połączenie z bankami. AI samo w locie rozpozna i skategoryzuje transakcje i przypisze je do odpowiedniego miejsca w panelu.</p>
         </div>
 
-        <div style="margin-bottom:15px; border-left:2px solid #ec4899; padding-left:10px;">
+        <div style="margin-bottom:16px; border-left:2px solid #ec4899; padding-left:12px;">
             <strong style="color:#fff; font-size:0.85rem;">📸 Inteligentny Skaner Paragonów</strong>
-            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Wystarczy zrobić zdjęcie paragonu, a AI odczyta kwotę, datę i samo wrzuci ją w koszty napraw lub tankowania.</p>
+            <p style="color:var(--muted); font-size:0.75rem; margin:6px 0 0; line-height:1.4;">Wystarczy zrobić zdjęcie paragonu, a AI odczyta kwotę, datę i samo wrzuci ją w koszty napraw lub tankowania.</p>
         </div>
         
-        <div style="border-left:2px solid #f59e0b; padding-left:10px;">
+        <div style="border-left:2px solid #f59e0b; padding-left:12px;">
             <strong style="color:#fff; font-size:0.85rem;">🚛 Moduł Flota / Spedycja</strong>
-            <p style="color:var(--muted); font-size:0.75rem; margin:4px 0 0; line-height:1.4;">Obsługa wielu aut i kierowców, fakturowanie, KSeF i pełna automatyczna księgowość firmy transportowej.</p>
+            <p style="color:var(--muted); font-size:0.75rem; margin:6px 0 0; line-height:1.4;">Obsługa wielu aut i kierowców, fakturowanie, KSeF i pełna automatyczna księgowość firmy transportowej.</p>
         </div>
     </div>
     `;
 
     APP.innerHTML = `
-    <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px 20px; text-align:center; background:var(--bg);">
+    <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; text-align:center; background:var(--bg);">
         <div style="width:90px;height:90px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
-            <img src="icon-512.png" style="width:100%;height:100%;border-radius:22px;box-shadow:0 10px 25px rgba(0,0,0,0.5);" alt="Logo" onerror="this.outerHTML='<div style=\\'font-size:3rem;\\'>🚀</div>'">
+            <img src="icon-512.png" class="float-icon" style="width:100%;height:100%;border-radius:24px;box-shadow:0 12px 30px rgba(0,0,0,0.6);" alt="Logo" onerror="this.outerHTML='<div style=\\'font-size:3.5rem;\\'>🚀</div>'">
         </div>
-        <h1 style="color:#fff; font-size:2.2rem; margin-bottom:5px;">Cześć, ${window.db.userName}! 👋</h1>
-        <p style="color:var(--muted); margin-bottom:30px; font-size:0.95rem;">Wybierz swój pulpit roboczy</p>
+        <h1 style="color:#fff; font-size:2.4rem; margin-bottom:5px; letter-spacing:-1px;">Cześć, ${window.db.userName}! 👋</h1>
+        <p style="color:var(--muted); margin-bottom:35px; font-size:1rem;">Wybierz swój pulpit roboczy</p>
 
-        <div style="width:100%; max-width:350px; display:flex; flex-direction:column; gap:15px;">
-            <button class="btn" style="background:var(--driver); color:#000; padding:20px; font-size:1.2rem; font-weight:900; box-shadow:0 8px 25px rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center; gap:12px; border-radius:16px;" onclick="window.db.role='drv'; window.db.tab='term'; window.save(); window.render();">
-                <span style="font-size:1.6rem;">🚕</span> PANEL TAXI
+        <div style="width:100%; max-width:350px; display:flex; flex-direction:column; gap:16px;">
+            <button class="btn" style="background:linear-gradient(135deg, var(--driver), #2563eb); color:#fff; padding:22px; font-size:1.2rem; font-weight:900; box-shadow:0 10px 30px rgba(59,130,246,0.4); display:flex; align-items:center; justify-content:center; gap:14px; border-radius:20px;" onclick="window.db.role='drv'; window.db.tab='term'; window.save(); window.render();">
+                <span style="font-size:1.6rem;" class="float-icon">🚕</span> PANEL TAXI
             </button>
-            <button class="btn" style="background:var(--life); color:#000; padding:20px; font-size:1.2rem; font-weight:900; box-shadow:0 8px 25px rgba(20,184,166,0.3); display:flex; align-items:center; justify-content:center; gap:12px; border-radius:16px;" onclick="window.db.role='home'; window.db.tab='dash'; window.save(); window.render();">
-                <span style="font-size:1.6rem;">🏠</span> BUDŻET DOMOWY
+            <button class="btn" style="background:linear-gradient(135deg, var(--life), #0f766e); color:#fff; padding:22px; font-size:1.2rem; font-weight:900; box-shadow:0 10px 30px rgba(20,184,166,0.4); display:flex; align-items:center; justify-content:center; gap:14px; border-radius:20px;" onclick="window.db.role='home'; window.db.tab='dash'; window.save(); window.render();">
+                <span style="font-size:1.6rem;" class="float-icon">🏠</span> BUDŻET DOMOWY
             </button>
-            <button class="btn" style="background:rgba(255,255,255,0.05); color:var(--muted); border:1px dashed rgba(255,255,255,0.2); padding:15px; font-size:1rem; font-weight:bold; border-radius:16px;" onclick="if(window.sysAlert) window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca w kolejnej aktualizacji!', 'info')">
+            <button class="btn" style="background:rgba(255,255,255,0.03); color:var(--muted); border:1px dashed rgba(255,255,255,0.15); padding:16px; font-size:1rem; font-weight:bold; border-radius:18px; box-shadow:none;" onclick="if(window.sysAlert) window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca w kolejnej aktualizacji!', 'info')">
                 📦 KURIER / DOSTAWA
             </button>
         </div>
 
         ${roadmapHtml}
 
-        <div style="margin-top:40px; display:flex; flex-direction:column; gap:15px; align-items:center;">
-            <button style="background:transparent; border:none; color:var(--danger); font-size:0.8rem; text-decoration:underline; cursor:pointer;" onclick="if(confirm('Chcesz zresetować konfigurację i zacząć od nowa?')){ localStorage.clear(); location.reload(); }">Wyczyść dane i zresetuj aplikację</button>
+        <div style="margin-top:45px; display:flex; flex-direction:column; gap:15px; align-items:center;">
+            <button style="background:transparent; border:none; color:var(--danger); font-size:0.8rem; text-decoration:underline; cursor:pointer; opacity:0.8; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8" onclick="if(confirm('Chcesz zresetować konfigurację i zacząć od nowa?')){ localStorage.clear(); location.reload(); }">Wyczyść dane i zresetuj aplikację</button>
         </div>
     </div>
     `;
 }
 
-window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e.classList.remove('active')); let t = document.getElementById(id); if(t) t.classList.add('active'); window.scrollTo(0,0); }
+window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e.classList.remove('active')); let t = document.getElementById(id); if(t) t.classList.add('active'); window.scrollTo({top:0, behavior:'smooth'}); }
 
 window.saveNameAndNext = function() {
     let nameInp = document.getElementById('w-guest-name');
@@ -309,7 +309,6 @@ window.loginWithGoogle = function() {
         return alert("Poczekaj na wczytanie bibliotek...");
     }
     
-    // Wymuszamy domyślnego providera
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
@@ -329,11 +328,11 @@ window.loginWithGoogle = function() {
                         let modalHtml = `
                         <div id="m-conflict" class="modal-overlay" style="z-index:99999;">
                             <div class="panel" style="width:100%; max-width:350px; text-align:center;">
-                                <div style="font-size:3rem; margin-bottom:10px;">☁️</div>
+                                <div style="font-size:3rem; margin-bottom:10px;" class="float-icon">☁️</div>
                                 <h3 style="color:var(--warning); margin-bottom:10px;">Konto odnalezione!</h3>
                                 <p style="font-size:0.85rem; color:var(--muted); margin-bottom:20px; line-height:1.4;">Masz już dane w chmurze, ale pracowałeś też jako Gość na tym telefonie. Co chcesz zachować?</p>
-                                <button class="btn" style="background:var(--success); color:#000; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="window.resolveConflict('cloud')">📥 POBIERZ Z CHMURY<br><small style="font-weight:normal;">(Skasuje dane Gościa)</small></button>
-                                <button class="btn" style="background:var(--info); color:#fff; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="window.resolveConflict('local')">📤 WYŚLIJ DO CHMURY<br><small style="font-weight:normal;">(Zachowa dane Gościa)</small></button>
+                                <button class="btn" style="background:linear-gradient(135deg, var(--success), #16a34a); color:#fff; padding:18px; margin-bottom:12px; font-weight:bold; box-shadow:0 8px 25px rgba(34,197,94,0.3);" onclick="window.resolveConflict('cloud')">📥 POBIERZ Z CHMURY<br><small style="font-weight:normal; opacity:0.8;">(Skasuje dane Gościa)</small></button>
+                                <button class="btn" style="background:linear-gradient(135deg, var(--info), #0284c7); color:#fff; padding:18px; margin-bottom:10px; font-weight:bold; box-shadow:0 8px 25px rgba(14,165,233,0.3);" onclick="window.resolveConflict('local')">📤 WYŚLIJ DO CHMURY<br><small style="font-weight:normal; opacity:0.8;">(Zachowa dane Gościa)</small></button>
                             </div>
                         </div>`;
                         document.body.insertAdjacentHTML('beforeend', modalHtml);
@@ -376,39 +375,42 @@ window.rWiz = function() {
 
     APP.innerHTML = `
     <div id="w-main" class="wiz-screen active" style="align-items:center; text-align:center;">
-        <div style="width:90px;height:90px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
-            <img src="icon-512.png" style="width:100%;height:100%;border-radius:22px;box-shadow:0 10px 25px rgba(0,0,0,0.5);" alt="Logo" onerror="this.outerHTML='<div style=\\'font-size:3rem;\\'>🚀</div>'">
+        <div style="width:100px;height:100px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
+            <img src="icon-512.png" class="float-icon" style="width:100%;height:100%;border-radius:26px;box-shadow:0 15px 35px rgba(0,0,0,0.5);" alt="Logo" onerror="this.outerHTML='<div style=\\'font-size:3.5rem;\\'>🚀</div>'">
         </div>
-        <h1 style="color:#fff; font-size:3.5rem; margin:0; font-weight:900; letter-spacing:-2.5px;">STYRE OS</h1>
-        <p style="color:var(--muted); font-size:1.1rem; font-weight:600; margin-top:5px; margin-bottom:40px;">Twój Asystent Finansowy</p>
+        <h1 style="color:#fff; font-size:3.8rem; margin:0; font-weight:900; letter-spacing:-2.5px;">STYRE OS</h1>
+        <p style="color:var(--muted); font-size:1.15rem; font-weight:600; margin-top:5px; margin-bottom:45px; letter-spacing:1px;">Twój Asystent Finansowy</p>
         <div style="width:100%; max-width:350px;">
-            <button class="btn" style="background:#fff; color:#000; box-shadow: 0 4px 15px rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; gap:10px; font-weight:800; padding:15px;" onclick="window.loginWithGoogle()"><span style="font-size:1.3rem;">G</span> Zaloguj przez Google</button>
-            <p style="font-size:0.7rem; color:var(--success); margin-top:10px; margin-bottom:25px;">Zalecane: bezpieczna kopia w chmurze</p>
-            <div style="display:flex; align-items:center; margin: 20px 0; color:var(--muted); font-size:0.7rem; text-transform:uppercase; font-weight:bold;"><div style="flex:1; height:1px; background:rgba(255,255,255,0.1);"></div><span style="padding:0 10px;">LUB</span><div style="flex:1; height:1px; background:rgba(255,255,255,0.1);"></div></div>
-            <button class="btn" style="background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.2); padding:15px;" onclick="window.wS('w-name')">Rozpocznij (Konto Offline)</button>
+            <button class="btn" style="background:#fff; color:#000; box-shadow: 0 8px 25px rgba(255,255,255,0.25); display:flex; align-items:center; justify-content:center; gap:12px; font-weight:900; padding:18px; font-size:1.1rem;" onclick="window.loginWithGoogle()">
+                <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                Zaloguj przez Google
+            </button>
+            <p style="font-size:0.75rem; color:var(--success); margin-top:12px; margin-bottom:30px; font-weight:600;">Zalecane: bezpieczna kopia w chmurze</p>
+            <div style="display:flex; align-items:center; margin: 25px 0; color:var(--muted); font-size:0.75rem; text-transform:uppercase; font-weight:bold;"><div style="flex:1; height:1px; background:rgba(255,255,255,0.08);"></div><span style="padding:0 12px;">LUB</span><div style="flex:1; height:1px; background:rgba(255,255,255,0.08);"></div></div>
+            <button class="btn" style="background:rgba(255,255,255,0.03); color:var(--muted); border:1px solid rgba(255,255,255,0.15); padding:16px; font-size:0.95rem; box-shadow:none;" onclick="window.wS('w-name')">Rozpocznij (Konto Offline)</button>
         </div>
     </div>
     <div id="w-name" class="wiz-screen" style="align-items:center; text-align:center;">
         <div style="width:100%; max-width:350px; margin-top:50px;">
-            <h2 style="color:#fff; margin-bottom:5px;">Jak masz na imię?</h2>
-            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:30px;">Abyśmy wiedzieli, jak się do Ciebie zwracać.</p>
-            <input type="text" id="w-guest-name" class="premium-input" placeholder="Wpisz imię..." value="${uName}" style="text-align:center; font-size:1.2rem; padding:15px; margin-bottom:30px;">
-            <button class="btn btn-info" style="padding:15px;" onclick="window.saveNameAndNext()">DALEJ ➔</button>
-            <button class="btn" style="background:transparent; color:var(--muted); margin-top:10px;" onclick="window.wS('w-main')">Wróć</button>
+            <h2 style="color:#fff; margin-bottom:5px; font-size:2.2rem;">Jak masz na imię?</h2>
+            <p style="color:var(--muted); font-size:0.95rem; margin-bottom:35px;">Abyśmy wiedzieli, jak się do Ciebie zwracać.</p>
+            <input type="text" id="w-guest-name" class="premium-input" placeholder="Wpisz imię..." value="${uName}" style="text-align:center; font-size:1.4rem; padding:18px; margin-bottom:35px;">
+            <button class="btn btn-home" style="padding:18px; font-size:1.1rem;" onclick="window.saveNameAndNext()">DALEJ ➔</button>
+            <button class="btn" style="background:transparent; color:var(--muted); margin-top:12px; box-shadow:none;" onclick="window.wS('w-main')">Wróć</button>
         </div>
     </div>
     <div id="w-modules" class="wiz-screen" style="align-items:center; text-align:center;">
         <div style="width:100%; max-width:380px; margin-top:30px;">
-            <h2 style="color:#fff; margin-bottom:5px;">Konfiguracja Konta</h2>
-            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:30px;">Z czego będziesz korzystać w StyreOS?</p>
-            <div class="opt-card" style="border-color:rgba(59,130,246,0.5); background:rgba(59,130,246,0.05); text-align:left;" onclick="window.wSetupChoice('taxi')"><div class="opt-icon">🚕</div><div class="opt-text"><h3 style="color:var(--driver)">Jestem Kierowcą Taxi</h3><p style="font-size:0.75rem;">Skonfiguruj auto, prowizje i korporację</p></div></div>
-            <div class="opt-card" style="border-color:rgba(20,184,166,0.5); background:rgba(20,184,166,0.05); text-align:left;" onclick="window.wSetupChoice('home')"><div class="opt-icon">🏠</div><div class="opt-text"><h3 style="color:var(--life)">Tylko Budżet Domowy</h3><p style="font-size:0.75rem;">Zarządzaj domem, pomiń ustawienia Taxi</p></div></div>
-            <button class="btn" style="background:transparent; color:var(--muted); margin-top:20px;" onclick="window.wS('w-name')">Wróć</button>
+            <h2 style="color:#fff; margin-bottom:5px; font-size:2.2rem;">Konfiguracja Konta</h2>
+            <p style="color:var(--muted); font-size:0.95rem; margin-bottom:35px;">Z czego będziesz korzystać w StyreOS?</p>
+            <div class="opt-card" style="border-color:rgba(59,130,246,0.4); background:rgba(59,130,246,0.05);" onclick="window.wSetupChoice('taxi')"><div class="opt-icon float-icon">🚕</div><div class="opt-text"><h3 style="color:var(--driver)">Jestem Kierowcą Taxi</h3><p>Skonfiguruj auto, prowizje i korporację</p></div></div>
+            <div class="opt-card" style="border-color:rgba(20,184,166,0.4); background:rgba(20,184,166,0.05);" onclick="window.wSetupChoice('home')"><div class="opt-icon float-icon">🏠</div><div class="opt-text"><h3 style="color:var(--life)">Tylko Budżet Domowy</h3><p>Zarządzaj domem, pomiń ustawienia Taxi</p></div></div>
+            <button class="btn" style="background:transparent; color:var(--muted); margin-top:25px; box-shadow:none;" onclick="window.wS('w-name')">Wróć</button>
         </div>
     </div>
-    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-modules')">Wróć</button></div>
-    <div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:20px;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d1')">Wróć</button></div>
-    <div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:10px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:30px; padding:15px;" onclick="window.finishSetup(true)">ZAKOŃCZ I WEJDŹ</button><button class="btn" style="background:transparent; color:var(--muted);" onclick="window.wS('w-d2')">Wróć</button></div>
+    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:25px; padding:18px; font-size:1.1rem;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted); box-shadow:none;" onclick="window.wS('w-modules')">Wróć</button></div>
+    <div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:25px; padding:18px; font-size:1.1rem;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted); box-shadow:none;" onclick="window.wS('w-d1')">Wróć</button></div>
+    <div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:12px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:35px; padding:18px; font-size:1.1rem;" onclick="window.finishSetup(true)">ZAKOŃCZ I WEJDŹ</button><button class="btn" style="background:transparent; color:var(--muted); box-shadow:none;" onclick="window.wS('w-d2')">Wróć</button></div>
     `;
 }
 
