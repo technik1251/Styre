@@ -93,6 +93,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
                     <input type="checkbox" id="cb-ftype-ev" value="ev" ${fTypes.includes('ev')?'checked':''} onchange="window.toggleManualFuelBoxes()" style="accent-color:var(--info); width:18px; height:18px;"> Prąd (EV)
                 </label>
             </div>
+            <div style="font-size:0.65rem; color:var(--muted); margin-top:8px;">Zaznacz zasilanie auta. Garaż i Ryczałt pokażą tylko wybrane opcje.</div>
         </div>
 
         <div class="inp-group" style="margin-bottom:5px;">
@@ -106,40 +107,40 @@ window.rDrvSet = function(d, t, nav, hdr) {
         <div id="manual-fuel-wrapper" style="display:${fuelSource==='manual'?'block':'none'}; margin-top:15px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">
             <p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-bottom:15px;">Podaj parametry dla zaznaczonych paliw. Aplikacja automatycznie je zsumuje i wyliczy średni łączny koszt na 1 KM.</p>
             
-            <div class="grid-2" style="margin-bottom:5px;">
-                <div style="font-size:0.65rem; color:var(--muted); text-align:center;">ŚREDNIE SPALANIE</div>
-                <div style="font-size:0.65rem; color:var(--muted); text-align:center;">CENA (ZŁ/L lub kWh)</div>
+            <div class="grid-2" style="margin-bottom:5px; padding:0 5px;">
+                <div style="font-size:0.6rem; color:var(--muted); text-align:center; font-weight:bold;">ŚREDNIE SPALANIE</div>
+                <div style="font-size:0.6rem; color:var(--muted); text-align:center; font-weight:bold;">CENA (ZŁ/L lub kWh)</div>
             </div>
 
             <div id="mf-box-pb" style="display:${fTypes.includes('pb')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
                 <div style="color:var(--fuel); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⛽ Benzyna</div>
                 <div class="inp-row" style="margin:0;">
-                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-pb" value="${mF.pb.c}" placeholder="L/100km" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
-                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-pb" value="${mF.pb.p}" placeholder="zł/L" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-pb" value="${mF.pb.c}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-pb" value="${mF.pb.p}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
                 </div>
             </div>
 
             <div id="mf-box-on" style="display:${fTypes.includes('on')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
                 <div style="color:var(--fuel); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⛽ Diesel</div>
                 <div class="inp-row" style="margin:0;">
-                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-on" value="${mF.on.c}" placeholder="L/100km" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
-                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-on" value="${mF.on.p}" placeholder="zł/L" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-on" value="${mF.on.c}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-on" value="${mF.on.p}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
                 </div>
             </div>
 
             <div id="mf-box-lpg" style="display:${fTypes.includes('lpg')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
                 <div style="color:var(--fuel); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⛽ Gaz (LPG)</div>
                 <div class="inp-row" style="margin:0;">
-                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-lpg" value="${mF.lpg.c}" placeholder="L/100km" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
-                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-lpg" value="${mF.lpg.p}" placeholder="zł/L" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-lpg" value="${mF.lpg.c}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-lpg" value="${mF.lpg.p}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
                 </div>
             </div>
 
             <div id="mf-box-ev" style="display:${fTypes.includes('ev')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
                 <div style="color:var(--info); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⚡ Prąd (EV)</div>
                 <div class="inp-row" style="margin:0;">
-                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-ev" value="${mF.ev.c}" placeholder="kWh/100km" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
-                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-ev" value="${mF.ev.p}" placeholder="zł/kWh" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-ev" value="${mF.ev.c}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-ev" value="${mF.ev.p}" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
                 </div>
             </div>
         </div>
@@ -246,9 +247,9 @@ window.rDrvSet = function(d, t, nav, hdr) {
         <button class="btn btn-info" style="padding:15px; font-size:1.1rem; box-shadow:0 8px 25px rgba(14,165,233,0.3);" onclick="window.dSaveUS()">ZAPISZ WSZYSTKIE OPCJE</button>
     </div>
     
-    <div style="text-align:center; padding: 20px 0;">
+    <div style="text-align:center; padding: 20px 0; padding-bottom: 40px;">
         <img src="icon-512.png" style="width:70px;height:70px; opacity:0.1; mix-blend-mode:luminosity;" class="float-icon">
-        <p style="color:var(--muted); font-size:0.6rem; margin-top:10px;">StyreOS Pro Core v1.01 Alpha<br>Powered by technic1251 Solutions</p>
+        <p style="color:var(--muted); font-size:0.65rem; margin-top:10px; text-transform:uppercase; letter-spacing:1px; line-height:1.4;">StyreOS PWA 1.0 Beta<br><span style="opacity:0.6;">Powered by GnomekOK</span></p>
     </div>
     
     <input type="file" id="h-import-file" style="display:none;" onchange="window.dImport(event)">
