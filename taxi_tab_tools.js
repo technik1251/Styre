@@ -2,7 +2,7 @@
 // PLIK: taxi_tab_tools.js - Narzędzia (Wycena, Garaż, Fuelio Algorytm)
 // ==========================================
 
-// --- ZAAWANSOWANY ALGORYTM FUELIO (ROZDZIELONE PALIWA + PRĄD) ---
+// --- NOWY ALGORYTM FUELIO (Z PODZIAŁEM NA PALIWA) ---
 window.calcFuelioStats = function() {
     let fList = (window.db.drv.fuel || []).slice().sort((a, b) => a.o - b.o);
 
@@ -23,7 +23,7 @@ window.calcFuelioStats = function() {
         let type = 'pb'; // Domyślnie benzyna dla starych wpisów
         
         if (f.isF === 1 || f.isF === '1' || f.isF === 'part') {
-            type = 'pb'; // Stare wpisy
+            type = 'pb'; 
         } else if (typeof f.isF === 'string') {
             if (f.isF.startsWith('lpg')) type = 'lpg';
             else if (f.isF.startsWith('pb')) type = 'pb';
@@ -33,12 +33,10 @@ window.calcFuelioStats = function() {
 
         let isFull = (f.isF === 1 || f.isF === '1' || (typeof f.isF === 'string' && f.isF.includes('full')));
 
-        // Zbiorcze statystyki
         if (minOdo === null || f.o < minOdo) minOdo = f.o;
         if (maxOdo === null || f.o > maxOdo) maxOdo = f.o;
         totalCostAll += (parseFloat(f.v) || 0);
 
-        // Przypisywanie do odpowiedniego koszyka
         let b = s[type];
         if (b.last === null) {
             if (isFull) b.last = f.o; 
@@ -62,7 +60,6 @@ window.calcFuelioStats = function() {
     let totalDistAll = (maxOdo !== null && minOdo !== null) ? (maxOdo - minOdo) : 0;
     let globalCk = totalDistAll > 0 ? (totalCostAll / totalDistAll) : 0;
 
-    // Formatowanie wyników koszyków
     let results = [];
     for (let k in s) {
         if (s[k].d > 0) {
@@ -76,7 +73,6 @@ window.calcFuelioStats = function() {
         }
     }
 
-    // Zwraca .ck jako globalny koszt mix (aby logika zapisywania zadziałała poprawnie)
     return { list: results, ck: globalCk, td: totalDistAll, totalCost: totalCostAll };
 };
 
@@ -158,7 +154,7 @@ window.rDrvTools = function(d, t, nav, hdr) {
     }
 };
 
-// --- RENDER GARAŻU Z ROZDZIELONYMI PALIWAMI ---
+// --- RENDER GARAŻU (Z DYNAMICZNYM WYBOREM PALIW) ---
 window.hRenderGarage = function(d) {
     let mode = window.dGarMode || 'f';
     let sourceAlert = '';
@@ -183,6 +179,14 @@ window.hRenderGarage = function(d) {
     } else {
         statsCards = `<div class="box" style="grid-column: span 2; text-align:center; padding:20px; color:var(--muted); font-size:0.8rem; border-color:rgba(255,255,255,0.05);">Brak pełnych cykli tankowań do obliczeń. Zatankuj do pełna 2 razy.</div>`;
     }
+
+    // Dynamiczne opcje paliw na podstawie tego, co zaznaczono w Opcjach
+    let fTypes = (d.cfg && d.cfg.fTypes && d.cfg.fTypes.length > 0) ? d.cfg.fTypes : ['pb'];
+    let fuelOptionsHtml = '';
+    if (fTypes.includes('pb')) fuelOptionsHtml += `<option value="pb">⛽ Benzyna (PB)</option>`;
+    if (fTypes.includes('on')) fuelOptionsHtml += `<option value="on">⛽ Diesel (ON)</option>`;
+    if (fTypes.includes('lpg')) fuelOptionsHtml += `<option value="lpg">⛽ Gaz (LPG)</option>`;
+    if (fTypes.includes('ev')) fuelOptionsHtml += `<option value="ev">⚡ Prąd (EV)</option>`;
 
     let html = `
     <div style="padding:0 12px;">
@@ -216,23 +220,20 @@ window.hRenderGarage = function(d) {
                 <div class="inp-group"><label>KWOTA (ZŁ)</label><input type="number" step="0.01" id="df-v" placeholder="0.00" style="background:rgba(0,0,0,0.5);"></div>
                 <div class="inp-group"><label>DATA</label><input type="date" id="df-date" value="${window.getLocalYMD()}" style="background:rgba(0,0,0,0.5);"></div>
             </div>
-            <div class="inp-group" style="margin-bottom:15px;">
-                <label>RODZAJ PALIWA</label>
-                <select id="df-f" style="background:#000; border-color:var(--fuel);">
-                    <optgroup label="Do pełna (Oblicza spalanie)">
-                        <option value="lpg_full">⛽ LPG (Do pełna)</option>
-                        <option value="pb_full">⛽ Benzyna (Do pełna)</option>
-                        <option value="on_full">⛽ Diesel (Do pełna)</option>
-                        <option value="ev_full">⚡ Prąd (Pełne ład.)</option>
-                    </optgroup>
-                    <optgroup label="Dolewka (Tylko koszty mix)">
-                        <option value="lpg_part">💧 LPG (Dolewka)</option>
-                        <option value="pb_part">💧 Benzyna (Dolewka)</option>
-                        <option value="on_part">💧 Diesel (Dolewka)</option>
-                        <option value="ev_part">⚡ Prąd (Doładowanie)</option>
-                    </optgroup>
-                </select>
+            
+            <div class="inp-row" style="margin-bottom:15px; align-items:center;">
+                <div class="inp-group" style="margin-bottom:0;">
+                    <label>RODZAJ PALIWA</label>
+                    <select id="df-type" style="background:#000; border-color:var(--fuel);">
+                        ${fuelOptionsHtml}
+                    </select>
+                </div>
+                <div class="inp-group" style="margin-bottom:0; display:flex; flex-direction:column; align-items:center; background:rgba(0,0,0,0.3); border-radius:12px; padding:10px;">
+                    <label style="color:var(--fuel); margin-bottom:5px;">DO PEŁNA?</label>
+                    <input type="checkbox" id="df-full" checked style="width:24px; height:24px; accent-color:var(--fuel); cursor:pointer;">
+                </div>
             </div>
+
             <button class="btn" style="background:var(--fuel); color:#000; font-weight:900; padding:15px;" onclick="window.dAF()">DODAJ TANKOWANIE</button>
         </div>`;
     } else {
