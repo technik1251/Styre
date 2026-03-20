@@ -44,8 +44,12 @@ window.dAF = function() {
     let l = window.safeVal('df-l');
     let v = window.safeVal('df-v');
     let fEl = document.getElementById('df-f');
-    let f = fEl ? parseInt(fEl.value) : 1;
+    let f = fEl ? fEl.value : 'part';
     
+    // Konwersja dla kompatybilności wstecznej (jeśli ktoś używał starych wartości)
+    if (f === '1') f = 'pb_full';
+    if (f === '0') f = 'part';
+
     if(!o || !l || !v) { 
         if(window.sysAlert) return window.sysAlert("Błąd", "Wypełnij dane!"); 
         return; 
@@ -64,7 +68,7 @@ window.dAF = function() {
         if(dist > 0) {
             l100 = (l / dist) * 100;
             cpkm = v / dist;
-            if(f === 1) {
+            if(f === 'lpg_full' || f === 'pb_full' || f === 'on_full') {
                 if(!window.db.drv.cfg) window.db.drv.cfg = {};
                 // Ustawiamy cenę z Garażu tylko, jeśli kierowca nie wymusił ręcznego ryczałtu w Opcjach
                 if(window.db.drv.cfg.fuelSource !== 'manual') {
@@ -380,7 +384,7 @@ window.dSaveUS = function() {
     window.db.drv.cfg.goal = window.safeVal('us-goal');
     window.db.drv.cfg.defCity = document.getElementById('us-city') ? document.getElementById('us-city').value : 'Szczecin';
     
-    // Zapisywanie Paliwa - Nowy Moduł
+    // Zapisywanie Paliwa
     window.db.drv.cfg.fuelCons = window.safeVal('us-fcons');
     window.db.drv.cfg.fuelPriceL = window.safeVal('us-fprice');
     
