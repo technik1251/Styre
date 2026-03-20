@@ -66,7 +66,10 @@ window.dAF = function() {
             cpkm = v / dist;
             if(f === 1) {
                 if(!window.db.drv.cfg) window.db.drv.cfg = {};
-                window.db.drv.cfg.fuelPx = cpkm;
+                // Ustawiamy cenę z Garażu tylko, jeśli kierowca nie wymusił ręcznego ryczałtu w Opcjach
+                if(window.db.drv.cfg.fuelSource !== 'manual') {
+                    window.db.drv.cfg.fuelPx = cpkm;
+                }
             }
         }
     }
@@ -368,30 +371,46 @@ window.dCrmDel = function(id) {
     }
 };
 
-// --- USTAWIENIA TAXI (ZAPIS DANYCH) ---
+// --- USTAWIENIA TAXI (ZAPIS DANYCH I PALIWA) ---
 window.dSaveUS = function() {
     window.db.userName = document.getElementById('us-name').value;
     
     if(!window.db.drv.cfg) window.db.drv.cfg = {};
     
     window.db.drv.cfg.goal = window.safeVal('us-goal');
-    window.db.drv.cfg.defCity = document.getElementById('us-city').value;
+    window.db.drv.cfg.defCity = document.getElementById('us-city') ? document.getElementById('us-city').value : 'Szczecin';
+    
+    // Zapisywanie Paliwa - Nowy Moduł
     window.db.drv.cfg.fuelCons = window.safeVal('us-fcons');
     window.db.drv.cfg.fuelPriceL = window.safeVal('us-fprice');
-    window.db.drv.cfg.fuelPx = (window.db.drv.cfg.fuelCons * window.db.drv.cfg.fuelPriceL) / 100;
     
+    let fSrcEl = document.getElementById('us-fuel-src');
+    window.db.drv.cfg.fuelSource = fSrcEl ? fSrcEl.value : 'garage';
+
+    // Jeśli wybrano ręczne wpisywanie, aplikacja przelicza cenę za 1KM matematycznie z okienek
+    if(window.db.drv.cfg.fuelSource === 'manual') {
+        window.db.drv.cfg.fuelPx = (window.db.drv.cfg.fuelCons * window.db.drv.cfg.fuelPriceL) / 100;
+    } else {
+        // Jeśli wybrano 'garage', staramy się pobrać najświeższe dane z faktycznych paragonów
+        if(window.calcFuelioStats) {
+            let fs = window.calcFuelioStats();
+            if(fs.ck > 0) window.db.drv.cfg.fuelPx = fs.ck;
+        }
+    }
+    
+    // Reszta ustawień (Koszty, Podatki, itp.)
     window.db.drv.cfg.cC = window.safeVal('us-cc');
-    window.db.drv.cfg.cType = document.getElementById('us-ctype').value;
+    window.db.drv.cfg.cType = document.getElementById('us-ctype') ? document.getElementById('us-ctype').value : 'month';
     window.db.drv.cfg.bC = window.safeVal('us-bc');
-    window.db.drv.cfg.bPeriod = document.getElementById('us-b-period').value;
+    window.db.drv.cfg.bPeriod = document.getElementById('us-b-period') ? document.getElementById('us-b-period').value : 'month';
     window.db.drv.cfg.iC = window.safeVal('us-ic');
-    window.db.drv.cfg.iPeriod = document.getElementById('us-i-period').value;
+    window.db.drv.cfg.iPeriod = document.getElementById('us-i-period') ? document.getElementById('us-i-period').value : 'month';
     window.db.drv.cfg.uC = window.safeVal('us-uc');
-    window.db.drv.cfg.uType = document.getElementById('us-utype').value;
+    window.db.drv.cfg.uType = document.getElementById('us-utype') ? document.getElementById('us-utype').value : 'corp';
     
-    window.db.drv.cfg.eType = document.getElementById('us-etype').value;
+    window.db.drv.cfg.eType = document.getElementById('us-etype') ? document.getElementById('us-etype').value : 'flat';
     window.db.drv.cfg.eC = window.safeVal('us-ec');
-    window.db.drv.cfg.ePeriod = document.getElementById('us-e-period').value;
+    window.db.drv.cfg.ePeriod = document.getElementById('us-e-period') ? document.getElementById('us-e-period').value : 'month';
     window.db.drv.cfg.ePct = window.safeVal('us-epct') / 100;
     
     window.db.drv.cfg.tax = window.safeVal('us-tx') / 100;
@@ -400,5 +419,5 @@ window.dSaveUS = function() {
     
     window.save(); 
     window.render();
-    if(window.sysAlert) window.sysAlert("Sukces", "Opcje zaktualizowane!", "success");
+    if(window.sysAlert) window.sysAlert("Sukces", "Ustawienia zaktualizowane!", "success");
 };
