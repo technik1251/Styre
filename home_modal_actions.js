@@ -1,4 +1,3 @@
-
 // ==========================================
 // PLIK: home_modal_actions.js - Akcje, Konta, Skarbonki, Transakcje
 // ==========================================
@@ -7,8 +6,9 @@ window.hExportData = function() {
     let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.db)); 
     let dlAnchorElem = document.createElement('a'); 
     dlAnchorElem.setAttribute("href", dataStr); 
-    dlAnchorElem.setAttribute("download", "styreos_kopia_" + window.getLocalYMD() + ".json"); 
+    dlAnchorElem.setAttribute("download", "styreos_home_backup_" + window.getLocalYMD() + ".json"); 
     dlAnchorElem.click(); 
+    if(window.sysAlert) window.sysAlert("Pobrano!", "Plik kopii zapasowej został pobrany na urządzenie.", "success"); 
 };
 
 window.hImportTrigger = function() { document.getElementById('h-import-file').click(); };
@@ -21,11 +21,20 @@ window.hImportData = function(event) {
         try { 
             let importedDb = JSON.parse(e.target.result); 
             if(importedDb && importedDb.home) { 
-                window.db = importedDb; window.save(); 
-                if(window.sysAlert) window.sysAlert('Sukces', 'Kopia przywrócona!', 'success'); 
-                setTimeout(() => location.reload(), 1500); 
-            } else { if(window.sysAlert) window.sysAlert('Błąd', 'Błędny plik.', 'error'); } 
-        } catch(err) { if(window.sysAlert) window.sysAlert('Błąd', 'Błąd odczytu.', 'error'); } 
+                if(window.sysConfirm) { 
+                    window.sysConfirm("Uwaga", "To nadpisze obecne dane z tego telefonu. Kontynuować?", () => { 
+                        localStorage.setItem('styre_v101_db', JSON.stringify(importedDb)); 
+                        window.sysAlert("Sukces!", "Dane przywrócone. Trwa restart...", "success"); 
+                        setTimeout(() => location.reload(), 1500); 
+                    }); 
+                } else { 
+                    localStorage.setItem('styre_v101_db', JSON.stringify(importedDb)); 
+                    location.reload(); 
+                } 
+            } else throw new Error("Błędny plik"); 
+        } catch(err) { 
+            if(window.sysAlert) window.sysAlert("Błąd", "Nieprawidłowy plik kopii zapasowej."); 
+        } 
     }; 
     reader.readAsText(file); 
 };
