@@ -197,12 +197,6 @@ window.hRenderGarage = function(d) {
             <div style="font-size:0.65rem; color:var(--muted); margin-top:4px;">Dystans Mix: ${stats.td.toFixed(0)} KM | Wydano: ${stats.totalCost.toFixed(2)} zł</div>
         </div>
 
-        <div class="p-title" style="color:var(--info);">⚡ SZYBKIE WYDATKI (PODCZAS ZMIANY)</div>
-        <div class="grid-2" style="margin-bottom:20px;">
-            <button class="btn" style="background:#18181b; color:#fff; border:1px solid rgba(255,255,255,0.1); font-size:0.8rem; padding:12px;" onclick="window.dQuickExp('☕ Kawa', 15)">☕ Kawa (15 zł)</button>
-            <button class="btn" style="background:#18181b; color:#fff; border:1px solid rgba(255,255,255,0.1); font-size:0.8rem; padding:12px;" onclick="window.dQuickExp('🍔 Jedzenie', 35)">🍔 Jedzenie (35 zł)</button>
-        </div>
-
         <div class="mode-switch" style="border-color:rgba(255,255,255,0.1); margin-bottom:15px;">
             <div class="m-btn ${mode==='f'?'active':''}" onclick="window.dGarMode='f';window.render()" style="${mode==='f'?'background:var(--fuel);color:#000;box-shadow:0 4px 15px rgba(245,158,11,0.3);':''}">⛽ TANKOWANIA</div>
             <div class="m-btn ${mode==='e'?'active':''}" onclick="window.dGarMode='e';window.render()" style="${mode==='e'?'background:var(--info);color:#fff;':''}">🔧 SERWIS / MYJNIA</div>
