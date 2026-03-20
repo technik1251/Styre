@@ -104,7 +104,7 @@ window.calculateRouteAuto = async function() {
     let end = document.getElementById('dq-end') ? document.getElementById('dq-end').value : '';
     
     if (!start || !end) { 
-        if (window.sysAlert) return window.sysAlert("Błąd", "Podaj adres startowy i docelowy!"); 
+        if (window.sysAlert) return window.sysAlert("Brak Danych", "Podaj adres startowy i docelowy!", "error"); 
         return; 
     }
     
@@ -118,6 +118,7 @@ window.calculateRouteAuto = async function() {
     if (btn) { 
         btn.innerText = "⏳ OBLICZANIE..."; 
         btn.style.opacity = 0.7; 
+        btn.disabled = true;
     }
     
     try {
@@ -128,8 +129,8 @@ window.calculateRouteAuto = async function() {
         let dataE = await resE.json();
         
         if (!dataS.length || !dataE.length) {
-            if (btn) { btn.innerText = origBtnText; btn.style.opacity = 1; }
-            if (window.sysAlert) return window.sysAlert("Błąd Mapy", "Nie odnaleziono adresu."); 
+            if (btn) { btn.innerText = origBtnText; btn.style.opacity = 1; btn.disabled = false; }
+            if (window.sysAlert) return window.sysAlert("Błąd Mapy", "Nie odnaleziono adresu. Sprawdź pisownię.", "error"); 
             return;
         }
         
@@ -182,10 +183,10 @@ window.calculateRouteAuto = async function() {
         }
         
     } catch(e) {
-        if (window.sysAlert) window.sysAlert("Błąd Serwera", "Błąd połączenia z mapami.");
+        if (window.sysAlert) window.sysAlert("Błąd Serwera", "Problem z wyznaczeniem trasy na mapach OSRM.", "error");
         console.error(e);
     } finally {
-        if (btn) { btn.innerText = origBtnText; btn.style.opacity = 1; }
+        if (btn) { btn.innerText = origBtnText; btn.style.opacity = 1; btn.disabled = false; }
     }
 };
 
@@ -217,18 +218,31 @@ window.updateRoutePrice = function(inDist = null, outDist = null) {
     let discSel = document.getElementById('dq-c');
     let disc = (discSel && discSel.selectedIndex > 0) ? parseFloat(discSel.options[discSel.selectedIndex].getAttribute('data-d') || 0) : 0;
     
+    // Zabezpieczenie przed brakiem taryf w bazie (gdy kierowca nic nie wpisał w Opcjach)
+    let s = parseFloat(q.s) || 0;
+    let t1 = parseFloat(q.t1) || 0; let t2 = parseFloat(q.t2) || 0;
+    let t3 = parseFloat(q.t3) || 0; let t4 = parseFloat(q.t4) || 0;
+    let w = parseFloat(q.w) || 0;
+
     let expectedTime = ((window.dQK || 0) / 20) * 60;
     let trafficTime = Math.max(0, (window.dQM_T || 0) - expectedTime);
     
-    let base = (parseFloat(q.s) || 0) + 
-               (inDist * (window.dQN ? (parseFloat(q.t2) || 0) : (parseFloat(q.t1) || 0))) + 
-               (outDist * (window.dQN ? (parseFloat(q.t4) || 0) : (parseFloat(q.t3) || 0))) + 
-               (trafficTime * ((parseFloat(q.w) || 0) / 60));
+    let base = s + 
+               (inDist * (window.dQN ? t2 : t1)) + 
+               (outDist * (window.dQN ? t4 : t3)) + 
+               (trafficTime * (w / 60));
                
     window.dQV = base - (base * (disc / 100));
     
     let dqt = document.getElementById('dqt');
-    if (dqt) dqt.innerText = Number(window.dQV || 0).toFixed(2) + " zł";
+    if (dqt) {
+        if(s === 0 && t1 === 0 && t2 === 0) {
+            dqt.innerHTML = `<span style="font-size:1.5rem; color:var(--danger)">Ustaw taryfy w zakładce Opcje!</span>`;
+            window.dQV = 0;
+        } else {
+            dqt.innerText = Number(window.dQV || 0).toFixed(2) + " zł";
+        }
+    }
 };
 
 window.calcFuelioStats = function() {
@@ -252,6 +266,7 @@ window.calcFuelioStats = function() {
                     s.c1 = (tC / d) * 100; 
                     s.ck = tC / d;
                     
+                    // Automatyczna aktualizacja ceny kilometra w głównych ustawieniach kierowcy!
                     if (window.db && window.db.drv && window.db.drv.cfg) {
                         window.db.drv.cfg.fuelPx = s.ck; 
                         window.save();
