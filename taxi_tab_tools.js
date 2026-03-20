@@ -10,7 +10,6 @@ window.calcFuelioStats = function() {
 
     for(let i=0; i<fList.length; i++) {
         let f = fList[i];
-        // Sprawdzamy, czy to tankowanie "Do Pełna" (LPG, PB lub ON) czy tylko "Dolewka" (part / 0)
         let isFull = (f.isF === 'lpg_full' || f.isF === 'pb_full' || f.isF === 'on_full' || f.isF === 1);
 
         if (lastFullOdo === null) {
@@ -35,6 +34,7 @@ window.rDrvTools = function(d, t, nav, hdr) {
     if (t === 'quote') {
         let q = d.q || {s:9, w:39, t1:3.2, t2:4, t3:6.4, t4:8};
         let cKm = (d.cfg && d.cfg.fuelPx) ? d.cfg.fuelPx : 0;
+        let cOpts = (d.clients||[]).map(c => `<option value="${c.d}">${c.n} (-${c.d}%)</option>`).join('');
         
         APP.innerHTML = `
         ${hdr}
@@ -44,7 +44,6 @@ window.rDrvTools = function(d, t, nav, hdr) {
         </div>
         
         <div class="panel" style="border-color:rgba(217, 70, 239, 0.3); background:linear-gradient(145deg, #1e0a2d, #09090b);">
-            <div class="p-title" style="color:var(--quote);">INTELIGENTNA WYCENA (MAPY)</div>
             <div class="inp-group" style="margin-bottom:10px;">
                 <label style="color:var(--success);">🟢 ADRES POCZĄTKOWY</label>
                 <input type="text" id="q-start" placeholder="np. Dworzec Główny" style="border-color:var(--success);">
@@ -53,29 +52,41 @@ window.rDrvTools = function(d, t, nav, hdr) {
                 <label style="color:var(--danger);">🔴 ADRES DOCELOWY</label>
                 <input type="text" id="q-end" placeholder="np. Powstańców Warszawy 1" style="border-color:var(--danger);">
             </div>
-            <button class="btn btn-quote" onclick="if(window.sysAlert) window.sysAlert('Wkrótce', 'Integracja z Google Maps w wersji PRO!', 'info')">🔍 WYZNACZ TRASĘ I CENĘ</button>
-        </div>
-
-        <div class="panel" style="border-color:rgba(217, 70, 239, 0.3); background:linear-gradient(145deg, #1e0a2d, #09090b);">
-            <div class="inp-row">
-                <div class="inp-group"><label style="color:var(--quote);">KM Z KLIENTEM</label><input type="number" id="q-km" class="big-inp" style="color:var(--quote); border-color:var(--quote); background:#000;" oninput="window.calcQuote()"></div>
-                <div class="inp-group"><label style="color:var(--quote);">CZAS (MINUTY)</label><input type="number" id="q-min" class="big-inp" style="color:var(--quote); border-color:var(--quote); background:#000;" oninput="window.calcQuote()"></div>
-            </div>
-            <div class="inp-group" style="margin-top:10px;"><label>TARYFA</label>
-                <select id="q-tar" onchange="window.calcQuote()" style="background:#000;">
-                    <option value="1">Taryfa 1 (Dzień) - ${q.t1} zł/km</option>
-                    <option value="2">Taryfa 2 (Noc) - ${q.t2} zł/km</option>
-                    <option value="3">Taryfa 3 (Za miasto) - ${q.t3} zł/km</option>
-                    <option value="4">Taryfa 4 (Święto/Poza) - ${q.t4} zł/km</option>
-                </select>
-            </div>
-            <div style="background:#000; padding:20px; border-radius:14px; margin-top:15px; text-align:center; border:1px solid rgba(255,255,255,0.05);">
-                <p style="margin:0 0 5px 0; color:var(--muted); font-size:0.75rem; text-transform:uppercase; font-weight:bold;">SUGEROWANA KWOTA NA TAKSOMETRZE</p>
-                <div id="q-res" style="font-size:3.5rem; font-weight:900; color:var(--quote); letter-spacing:-2px; text-shadow:0 0 20px rgba(217, 70, 239, 0.4);">0.00 <span style="font-size:1.5rem;">zł</span></div>
-                <div style="display:flex; justify-content:space-between; margin-top:15px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
-                    <span style="font-size:0.75rem; color:var(--muted);">Start: ${q.s} zł | Czas: ${(q.w/60).toFixed(2)} zł/min</span>
-                    <span id="q-cost" style="font-size:0.75rem; color:var(--danger); font-weight:bold;">Koszt paliwa: 0.00 zł</span>
+            <button class="btn" style="background:#d946ef; color:#fff;" onclick="window.dRoute()">🔍 WYZNACZ TRASĘ I CENĘ</button>
+            
+            <div id="q-map-box" style="display:none; margin-top:20px;">
+                <div id="q-map" style="height:250px; border-radius:14px; margin-bottom:15px;"></div>
+                <div class="grid-2">
+                    <div style="text-align:center;"><span style="font-size:0.65rem; color:var(--muted);">DYSTANS</span><br><strong style="font-size:1.3rem;" id="q-map-km">0.0 km</strong></div>
+                    <div style="text-align:center;"><span style="font-size:0.65rem; color:var(--muted);">CZAS JAZDY</span><br><strong style="font-size:1.3rem;" id="q-map-min">0 min</strong></div>
                 </div>
+                <div class="mode-switch" style="margin:15px 0;">
+                    <div class="m-btn active" id="btn-t1" onclick="window.qSetTar(1)" style="border:1px solid var(--quote);">Dzień (T1/T3)</div>
+                    <div class="m-btn" id="btn-t2" onclick="window.qSetTar(2)">Noc/Święto (T2/T4)</div>
+                </div>
+                <div style="margin-bottom:15px; padding:10px; background:rgba(0,0,0,0.5); border-radius:12px;">
+                    <label style="font-size:0.7rem; color:var(--info); display:block; text-align:center; margin-bottom:10px; font-weight:bold;">PRZESUŃ DO GRANICY MIASTA</label>
+                    <input type="range" id="q-slider" min="0" max="100" value="100" style="width:100%; accent-color:var(--info);" oninput="window.qRecalc()">
+                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-top:5px;">
+                        <span style="color:var(--info);">Miasto: <span id="q-lbl-in">0.0</span> km</span>
+                        <span style="color:var(--warning);">Poza miastem: <span id="q-lbl-out">0.0</span> km</span>
+                    </div>
+                </div>
+                <div style="background:#000; border:1px solid rgba(217, 70, 239, 0.4); border-radius:14px; padding:20px; text-align:center;">
+                    <span style="font-size:0.75rem; color:var(--quote); font-weight:bold;">PROPONOWANA CENA (BRUTTO)</span>
+                    <div id="q-final-price" style="font-size:3rem; font-weight:900; letter-spacing:-1.5px;">0.00 zł</div>
+                    <div style="font-size:0.7rem; color:var(--danger); margin-top:5px;">Paliwo wyniesie ok. <span id="q-final-fuel">0.00</span> zł</div>
+                </div>
+                
+                <div class="inp-group" style="margin-top:15px;">
+                    <label>KLIENT VIP (RABAT)</label>
+                    <select id="q-vip" onchange="window.qRecalc()">
+                        <option value="0">-- Zwykły kurs --</option>
+                        ${cOpts}
+                    </select>
+                </div>
+                
+                <button class="btn" style="background:#d946ef; color:#fff; margin-top:15px;" onclick="window.dSaveRouteToPanel()">ZAKSIĘGUJ KURS DO PANELU</button>
             </div>
         </div>
 
@@ -107,37 +118,6 @@ window.rDrvTools = function(d, t, nav, hdr) {
         ${window.hRenderGarage(d)}
         ${nav}`;
     }
-};
-
-// --- LOGIKA WYCENY ---
-window.calcQuote = function() {
-    let km = parseFloat(document.getElementById('q-km').value) || 0;
-    let min = parseFloat(document.getElementById('q-min').value) || 0;
-    let tarIdx = document.getElementById('q-tar').value;
-    
-    let q = window.db.drv.q || {s:9, w:39, t1:3.2, t2:4, t3:6.4, t4:8};
-    let cKm = (window.db.drv.cfg && window.db.drv.cfg.fuelPx) ? window.db.drv.cfg.fuelPx : 0;
-    
-    let tVal = q['t'+tarIdx] || 0;
-    let total = q.s + (km * tVal) + (min * (q.w / 60));
-    
-    document.getElementById('q-res').innerHTML = `${total.toFixed(2)} <span style="font-size:1.5rem;">zł</span>`;
-    let costEl = document.getElementById('q-cost');
-    if(costEl) costEl.innerHTML = `Spali: ~${(km * cKm).toFixed(2)} zł`;
-};
-
-window.saveQuoteCfg = function() {
-    window.db.drv.q = {
-        s: parseFloat(document.getElementById('q-cfg-s').value) || 0,
-        w: parseFloat(document.getElementById('q-cfg-w').value) || 0,
-        t1: parseFloat(document.getElementById('q-cfg-t1').value) || 0,
-        t2: parseFloat(document.getElementById('q-cfg-t2').value) || 0,
-        t3: parseFloat(document.getElementById('q-cfg-t3').value) || 0,
-        t4: parseFloat(document.getElementById('q-cfg-t4').value) || 0
-    };
-    window.save(); 
-    window.render();
-    if(window.sysAlert) window.sysAlert("Sukces", "Cennik zapisany!", "success");
 };
 
 // --- RENDER GARAŻU Z PALIWEM ---
@@ -245,4 +225,18 @@ window.hRenderGarage = function(d) {
     
     html += `</div><div style="height:40px;"></div>`;
     return html;
+};
+
+window.saveQuoteCfg = function() {
+    window.db.drv.q = {
+        s: parseFloat(document.getElementById('q-cfg-s').value) || 0,
+        w: parseFloat(document.getElementById('q-cfg-w').value) || 0,
+        t1: parseFloat(document.getElementById('q-cfg-t1').value) || 0,
+        t2: parseFloat(document.getElementById('q-cfg-t2').value) || 0,
+        t3: parseFloat(document.getElementById('q-cfg-t3').value) || 0,
+        t4: parseFloat(document.getElementById('q-cfg-t4').value) || 0
+    };
+    window.save(); 
+    window.render();
+    if(window.sysAlert) window.sysAlert("Sukces", "Cennik zapisany!", "success");
 };
