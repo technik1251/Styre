@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_modal_actions.js - Garaż, Historia, Klienci, Backup
+// PLIK: taxi_modal_actions.js - Garaż, Historia, Klienci, Backup, Opcje
 // ==========================================
 
 // --- BACKUP DANYCH ---
@@ -375,12 +375,21 @@ window.dCrmDel = function(id) {
     }
 };
 
-// --- USTAWIENIA TAXI (ZAPIS DANYCH I PALIWA) ---
+// --- USTAWIENIA TAXI (ZAPIS DANYCH, PALIWA I TARYF) ---
 window.dSaveUS = function() {
     window.db.userName = document.getElementById('us-name').value;
-    
     if(!window.db.drv.cfg) window.db.drv.cfg = {};
-    
+
+    // Zapisywanie Taryfikatora (teraz pobierane z zakładki Opcje)
+    window.db.drv.q = {
+        s: parseFloat(document.getElementById('q-cfg-s').value) || 0,
+        w: parseFloat(document.getElementById('q-cfg-w').value) || 0,
+        t1: parseFloat(document.getElementById('q-cfg-t1').value) || 0,
+        t2: parseFloat(document.getElementById('q-cfg-t2').value) || 0,
+        t3: parseFloat(document.getElementById('q-cfg-t3').value) || 0,
+        t4: parseFloat(document.getElementById('q-cfg-t4').value) || 0
+    };
+
     window.db.drv.cfg.goal = window.safeVal('us-goal');
     window.db.drv.cfg.defCity = document.getElementById('us-city') ? document.getElementById('us-city').value : 'Szczecin';
     
@@ -391,11 +400,9 @@ window.dSaveUS = function() {
     let fSrcEl = document.getElementById('us-fuel-src');
     window.db.drv.cfg.fuelSource = fSrcEl ? fSrcEl.value : 'garage';
 
-    // Jeśli wybrano ręczne wpisywanie, aplikacja przelicza cenę za 1KM matematycznie z okienek
     if(window.db.drv.cfg.fuelSource === 'manual') {
         window.db.drv.cfg.fuelPx = (window.db.drv.cfg.fuelCons * window.db.drv.cfg.fuelPriceL) / 100;
     } else {
-        // Jeśli wybrano 'garage', staramy się pobrać najświeższe dane z faktycznych paragonów
         if(window.calcFuelioStats) {
             let fs = window.calcFuelioStats();
             if(fs.ck > 0) window.db.drv.cfg.fuelPx = fs.ck;
@@ -410,7 +417,7 @@ window.dSaveUS = function() {
     window.db.drv.cfg.iC = window.safeVal('us-ic');
     window.db.drv.cfg.iPeriod = document.getElementById('us-i-period') ? document.getElementById('us-i-period').value : 'month';
     window.db.drv.cfg.uC = window.safeVal('us-uc');
-    window.db.drv.cfg.uType = document.getElementById('us-utype') ? document.getElementById('us-utype').value : 'corp';
+    window.db.drv.cfg.uType = document.getElementById('us-utype') ? document.getElementById('us-utype').value : 'week';
     
     window.db.drv.cfg.eType = document.getElementById('us-etype') ? document.getElementById('us-etype').value : 'flat';
     window.db.drv.cfg.eC = window.safeVal('us-ec');
@@ -423,5 +430,5 @@ window.dSaveUS = function() {
     
     window.save(); 
     window.render();
-    if(window.sysAlert) window.sysAlert("Sukces", "Ustawienia zaktualizowane!", "success");
+    if(window.sysAlert) window.sysAlert("Zapisano!", "Opcje i Taryfy zaktualizowane.", "success");
 };
