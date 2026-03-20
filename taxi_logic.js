@@ -1,16 +1,16 @@
 // ==========================================
-// PLIK: taxi_logic.js - "Mózg" Panelu Kierowcy
+// PLIK: taxi_logic.js - "Mózg" Panelu Kierowcy (z obsługą mapy)
 // ==========================================
 
 window.dShowOff = window.dShowOff || false;
 
-// 🔥 Zabezpieczenie przed amnezją zmiany po odświeżeniu (F5)
+// --- INICJALIZACJA SESJI TAXI ---
 window.dSessionInit = function() {
     if (!window.db || !window.db.drv) return;
-    if (window.db.drv.sh && window.db.drv.sh.on && window.db.role === 'drv' && window.db.tab === 'term') {
+    if (window.db.drv.sh && window.db.drv.sh.active && window.db.role === 'drv' && window.db.tab === 'term') {
         if (!window.clockInt) {
             window.clockInt = setInterval(() => { 
-                if(window.db && window.db.role === 'drv' && window.db.tab === 'term' && window.db.drv.sh && window.db.drv.sh.on) {
+                if(window.db && window.db.role === 'drv' && window.db.tab === 'term' && window.db.drv.sh && window.db.drv.sh.active) {
                     window.render(); 
                 }
             }, 60000);
@@ -28,77 +28,87 @@ window.dTC = function(t, v) {
     window.render(); 
 };
 
-window.toggleShiftPause = function() { 
-    if (!window.db || !window.db.drv || !window.db.drv.sh) return;
-    if (!window.db.drv.sh.sPS) { 
-        window.db.drv.sh.sPS = Date.now(); 
-    } else { 
-        window.db.drv.sh.sPT = (window.db.drv.sh.sPT || 0) + (Date.now() - window.db.drv.sh.sPS); 
-        window.db.drv.sh.sPS = null; 
-    } 
-    window.save(); 
-    window.render(); 
-};
-
-window.toggleRideWait = function() { 
-    if (!window.db || !window.db.drv || !window.db.drv.sh) return;
-    if (!window.db.drv.sh.rWS) { 
-        window.db.drv.sh.rWS = Date.now(); 
-    } else { 
-        window.db.drv.sh.rWT = (window.db.drv.sh.rWT || 0) + (Date.now() - window.db.drv.sh.rWS); 
-        window.db.drv.sh.rWS = null; 
-    } 
-    window.save(); 
-    window.render(); 
-};
-
-window.startLiveRide = function() { 
-    if (!window.db || !window.db.drv) return;
-    window.db.drv.liveRideStart = Date.now(); 
-    window.save(); 
-    window.render(); 
-};
-
-window.stopLiveRide = function() {
-    if (!window.db || !window.db.drv || !window.db.drv.sh) return;
+// --- LOGIKA ROZPOCZYNANIA I KOŃCZENIA ZMIANY W PANELU ---
+window.dToggleShift = function() {
+    if(!window.db.drv.sh) window.db.drv.sh = { active: false, tr: [] };
     
-    let t = Date.now() - (window.db.drv.liveRideStart || Date.now());
+    if(window.db.drv.sh.active) {
+        // Zakończenie Zmiany
+        window.db.drv.sh.active = false;
+        window.db.drv.sh.end = new Date().toISOString();
+        
+        let dObj = new Date(window.db.drv.sh.start);
+        let g = window.db.drv.sh.tr.reduce((sum, t) => sum + (parseFloat(t.v)||0), 0);
+        let k = window.db.drv.sh.tr.reduce((sum, t) => sum + (parseFloat(t.km)||0), 0);
+        
+        if(g > 0 || window.db.drv.sh.tr.length > 0) {
+            if(!window.db.drv.h) window.db.drv.h = [];
+            window.db.drv.h.unshift({
+                id: Date.now(),
+                dt: dObj.toLocaleDateString('pl-PL'),
+                start: window.db.drv.sh.start,
+                end: window.db.drv.sh.end,
+                g: g,
+                k: k,
+                tr: window.db.drv.sh.tr
+            });
+        }
+        window.db.drv.sh.tr = [];
+    } else {
+        // Rozpoczęcie Zmiany
+        window.db.drv.sh.active = true;
+        window.db.drv.sh.start = new Date().toISOString();
+        window.db.drv.sh.tr = [];
+    }
+    window.save();
+    window.render();
+};
+
+window.dAddTr = function() {
+    let v = parseFloat(document.getElementById('dt-v').value);
+    let p = document.getElementById('dt-p').value;
+    let plat = document.getElementById('dt-plat').value;
     
-    if (window.db.drv.sh.rWS) { 
-        window.db.drv.sh.rWT = (window.db.drv.sh.rWT || 0) + (Date.now() - window.db.drv.sh.rWS); 
-        window.db.drv.sh.rWS = null; 
+    if(!v) {
+        if(window.sysAlert) return window.sysAlert("Błąd", "Wpisz kwotę kursu!");
+        return;
     }
     
-    let m = Math.max(1, Math.round(t / 60000));
-    let wM = (window.db.drv.sh.rWT || 0) / 60000;
-    
-    // Bezpieczne pobranie stawki za postój (w)
-    let qWait = window.db.drv.q && window.db.drv.q.w ? window.db.drv.q.w : 0;
-    let wC = (wM / 60) * qWait;
-    
-    window.db.drv.liveRideStart = null; 
-    window.db.drv.sh.rWT = 0;
-    window.save(); 
+    if(!window.db.drv.sh.tr) window.db.drv.sh.tr = [];
+    let dObj = new Date();
+    window.db.drv.sh.tr.unshift({
+        id: Date.now(),
+        t: dObj.toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'}),
+        v: v,
+        p: p,
+        plat: plat,
+        km: 0
+    });
+    window.save();
     window.render();
-    
-    setTimeout(() => {
-        let iM = document.getElementById('dt-m');
-        let iV = document.getElementById('dt-v');
-        if (iM) { 
-            iM.value = m; 
-            iM.classList.add('highlight-input'); 
-            setTimeout(() => iM.classList.remove('highlight-input'), 1500); 
-        }
-        if (iV && wC > 0) { 
-            let cV = parseFloat(iV.value) || 0; 
-            iV.value = Number(cV + wC).toFixed(2); 
-            iV.classList.add('highlight-input'); 
-            setTimeout(() => iV.classList.remove('highlight-input'), 1500); 
-        }
-        if (iV) iV.focus(); 
-    }, 50);
 };
 
+window.dDelTr = function(id) {
+    if(window.sysConfirm) {
+        window.sysConfirm("Usuwanie", "Usunąć ten wpis ze zmiany?", () => {
+            window.db.drv.sh.tr = window.db.drv.sh.tr.filter(x => x.id !== id);
+            window.save(); 
+            window.render();
+        });
+    }
+};
+
+window.dEditGlobalOdo = function() {
+    let cOdo = window.db.drv.odo || 0;
+    let n = prompt("Aktualny przebieg auta (KM):", cOdo);
+    if(n !== null && !isNaN(parseInt(n))) {
+        window.db.drv.odo = parseInt(n);
+        window.save();
+        window.render();
+    }
+};
+
+// --- LOGIKA WYCENY (MAPY LEAFLET I API) ---
 window.calculateRouteAuto = async function() {
     let start = document.getElementById('dq-start') ? document.getElementById('dq-start').value : '';
     let end = document.getElementById('dq-end') ? document.getElementById('dq-end').value : '';
@@ -112,7 +122,7 @@ window.calculateRouteAuto = async function() {
     let sQ = start.toLowerCase().includes(defCity.toLowerCase()) ? start : start + ', ' + defCity;
     let eQ = end.toLowerCase().includes(defCity.toLowerCase()) ? end : end + ', ' + defCity;
     
-    let btn = document.querySelector('button[onclick="window.calculateRouteAuto()"]');
+    let btn = document.getElementById('btn-route-calc');
     let origBtnText = btn ? btn.innerText : '';
     
     if (btn) { 
@@ -146,14 +156,16 @@ window.calculateRouteAuto = async function() {
         if (mapContainer) mapContainer.style.display = 'block';
         
         if (!window.lmap) {
-            window.lmap = L.map('map').setView([dataS[0].lat, dataS[0].lon], 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(window.lmap);
+            window.lmap = L.map('map', {zoomControl: false}).setView([dataS[0].lat, dataS[0].lon], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OSM'
+            }).addTo(window.lmap);
         }
-        window.lmap.invalidateSize();
+        setTimeout(() => { window.lmap.invalidateSize(); }, 200);
         
         if (window.routeLayer) window.lmap.removeLayer(window.routeLayer);
         
-        window.routeLayer = L.geoJSON(routeData.routes[0].geometry, {style: {color:'#d946ef', weight:6}}).addTo(window.lmap);
+        window.routeLayer = L.geoJSON(routeData.routes[0].geometry, {style: {color:'#d946ef', weight:6, opacity: 0.9}}).addTo(window.lmap);
         window.lmap.fitBounds(window.routeLayer.getBounds(), {padding:[20,20]});
         
         window.dQK = distKm; 
@@ -172,12 +184,8 @@ window.calculateRouteAuto = async function() {
             slider.max = Number(distKm).toFixed(1);
             if (isOut) { 
                 slider.value = Math.min(10, distKm); 
-                let zs = document.getElementById('zone-split');
-                if(zs) zs.style.display = 'block'; 
             } else { 
                 slider.value = Number(distKm).toFixed(1); 
-                let zs = document.getElementById('zone-split');
-                if(zs) zs.style.display = 'none'; 
             }
             window.updateZoneSplit();
         }
@@ -216,9 +224,8 @@ window.updateRoutePrice = function(inDist = null, outDist = null) {
     
     let q = (window.db && window.db.drv && window.db.drv.q) ? window.db.drv.q : {s:0, w:0, t1:0, t2:0, t3:0, t4:0};
     let discSel = document.getElementById('dq-c');
-    let disc = (discSel && discSel.selectedIndex > 0) ? parseFloat(discSel.options[discSel.selectedIndex].getAttribute('data-d') || 0) : 0;
+    let disc = (discSel && discSel.selectedIndex > 0) ? parseFloat(discSel.options[discSel.selectedIndex].value || 0) : 0;
     
-    // Zabezpieczenie przed brakiem taryf w bazie (gdy kierowca nic nie wpisał w Opcjach)
     let s = parseFloat(q.s) || 0;
     let t1 = parseFloat(q.t1) || 0; let t2 = parseFloat(q.t2) || 0;
     let t3 = parseFloat(q.t3) || 0; let t4 = parseFloat(q.t4) || 0;
@@ -234,46 +241,67 @@ window.updateRoutePrice = function(inDist = null, outDist = null) {
                
     window.dQV = base - (base * (disc / 100));
     
+    // Obliczanie szacowanego kosztu paliwa (Dystans całkowity * koszt 1km)
+    let cKm = (window.db && window.db.drv && window.db.drv.cfg && window.db.drv.cfg.fuelPx) ? window.db.drv.cfg.fuelPx : 0;
+    let fuelCost = (window.dQK || 0) * cKm;
+    
     let dqt = document.getElementById('dqt');
     if (dqt) {
         if(s === 0 && t1 === 0 && t2 === 0) {
-            dqt.innerHTML = `<span style="font-size:1.5rem; color:var(--danger)">Ustaw taryfy w zakładce Opcje!</span>`;
+            dqt.innerHTML = `<span style="font-size:1.5rem; color:var(--danger)">Ustaw taryfy poniżej!</span>`;
             window.dQV = 0;
         } else {
             dqt.innerText = Number(window.dQV || 0).toFixed(2) + " zł";
         }
     }
+    
+    let fuelEl = document.getElementById('q-fuel-cost');
+    if (fuelEl) fuelEl.innerText = Number(fuelCost).toFixed(2);
 };
 
-window.calcFuelioStats = function() {
-    let l = (window.db && window.db.drv && window.db.drv.fuel) ? window.db.drv.fuel : [];
-    let px = (window.db && window.db.drv && window.db.drv.cfg && window.db.drv.cfg.fuelPx) ? window.db.drv.cfg.fuelPx : 0;
-    let s = {l1: 0, c1: 0, ck: px};
-    
-    if (l.length >= 2) {
-        let lF = l.findIndex(x => x.isF === 1);
-        if (lF !== -1) {
-            let pF = l.findIndex((x,i) => i > lF && x.isF === 1);
-            if (pF !== -1) {
-                let d = (l[lF].o || 0) - (l[pF].o || 0);
-                if (d > 0) {
-                    let tL = 0, tC = 0;
-                    for (let i = lF; i < pF; i++) { 
-                        tL += (l[i].l || 0); 
-                        tC += (l[i].v || 0); 
-                    }
-                    s.l1 = (tL / d) * 100; 
-                    s.c1 = (tC / d) * 100; 
-                    s.ck = tC / d;
-                    
-                    // Automatyczna aktualizacja ceny kilometra w głównych ustawieniach kierowcy!
-                    if (window.db && window.db.drv && window.db.drv.cfg) {
-                        window.db.drv.cfg.fuelPx = s.ck; 
-                        window.save();
-                    }
-                }
-            }
-        }
+window.saveQuoteToPanel = function() {
+    if (!window.dQV || window.dQV <= 0) return;
+
+    let start = document.getElementById('dq-start').value;
+    let end = document.getElementById('dq-end').value;
+    let activeShift = (window.db.drv.sh && window.db.drv.sh.active) ? window.db.drv.sh : null;
+
+    if (!activeShift) {
+        if(window.sysAlert) window.sysAlert("Brak aktywnej zmiany", "Przejdź do zakładki Panel i rozpocznij zmianę, by zaksięgować ten kurs!", "warning");
+        return;
     }
-    return s;
+
+    let dObj = new Date();
+    if(!activeShift.tr) activeShift.tr = [];
+    
+    let isVip = false;
+    let vipName = '';
+    let discSel = document.getElementById('dq-c');
+    if (discSel && discSel.selectedIndex > 0) {
+        isVip = true;
+        vipName = discSel.options[discSel.selectedIndex].getAttribute('data-n') || 'VIP';
+    }
+    
+    let sourceDesc = `Trasa: ${start} ➔ ${end}`;
+    if (isVip) sourceDesc = `Trasa VIP (${vipName}): ${start} ➔ ${end}`;
+    
+    activeShift.tr.unshift({
+        id: Date.now(),
+        t: dObj.toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'}),
+        v: parseFloat(window.dQV.toFixed(2)),
+        p: 'Gotówka',
+        plat: 'Wycena (Mapy)',
+        src: sourceDesc,
+        km: parseFloat((window.dQK || 0).toFixed(1))
+    });
+    
+    window.save();
+    
+    if(window.sysAlert) {
+        window.sysAlert("Zaksięgowano!", "Kurs wylądował na Twojej aktywnej zmianie. Zostaniesz przeniesiony.", "success");
+        setTimeout(() => { window.switchTab('term'); }, 1500);
+    } else {
+        alert("Zaksięgowano kurs!");
+        window.switchTab('term');
+    }
 };
