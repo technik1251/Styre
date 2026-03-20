@@ -8,6 +8,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
     let fuelCons = (d.cfg && d.cfg.fuelCons) ? d.cfg.fuelCons : 7;
     let fuelPx = (d.cfg && d.cfg.fuelPriceL) ? d.cfg.fuelPriceL : 6.50;
     let fuelSource = (d.cfg && d.cfg.fuelSource) ? d.cfg.fuelSource : 'garage';
+    let fTypes = (d.cfg && d.cfg.fTypes) ? d.cfg.fTypes : ['pb']; // Pobiera zaznaczone paliwa (domyślnie benzyna)
     
     let plat = d.plat || 'apps';
     let corpBaseC = (d.cfg && d.cfg.bC) ? d.cfg.bC : 0;
@@ -32,7 +33,6 @@ window.rDrvSet = function(d, t, nav, hdr) {
     let cardF = (d.cfg && d.cfg.cardF) ? d.cfg.cardF * 100 : 1.5;
     let vouchF = (d.cfg && d.cfg.voucherF) ? d.cfg.voucherF * 100 : 0;
 
-    // Pobranie ustawień Taryfikatora
     let q = d.q || {s:9, w:39, t1:3.2, t2:4, t3:6.4, t4:8};
 
     APP.innerHTML = `
@@ -71,6 +71,25 @@ window.rDrvSet = function(d, t, nav, hdr) {
     <div class="panel" style="border-color:rgba(245,158,11,0.2); background:linear-gradient(145deg, #2a1600, #09090b);">
         <div class="p-title" style="color:var(--fuel);">⛽ KOSZTY PALIWA NA KM</div>
         
+        <div class="inp-group" style="margin-bottom:15px; border-bottom:1px dashed rgba(255,255,255,0.1); padding-bottom:15px;">
+            <label style="color:var(--fuel);">JAKIMI PALIWAMI ZASILANE JEST AUTO?</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
+                    <input type="checkbox" class="car-ftype" value="pb" ${fTypes.includes('pb')?'checked':''} style="accent-color:var(--fuel); width:18px; height:18px;"> Benzyna
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
+                    <input type="checkbox" class="car-ftype" value="on" ${fTypes.includes('on')?'checked':''} style="accent-color:var(--fuel); width:18px; height:18px;"> Diesel
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
+                    <input type="checkbox" class="car-ftype" value="lpg" ${fTypes.includes('lpg')?'checked':''} style="accent-color:var(--fuel); width:18px; height:18px;"> Gaz (LPG)
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
+                    <input type="checkbox" class="car-ftype" value="ev" ${fTypes.includes('ev')?'checked':''} style="accent-color:var(--info); width:18px; height:18px;"> Prąd (EV)
+                </label>
+            </div>
+            <div style="font-size:0.65rem; color:var(--muted); margin-top:8px;">Zaznacz zasilanie auta (np. tylko Diesel, albo Benzyna + LPG). Garaż pokaże tylko wybrane.</div>
+        </div>
+
         <div class="inp-group" style="margin-bottom:15px;">
             <label style="color:var(--fuel);">SKĄD BRAĆ DANE O SPALANIU?</label>
             <select id="us-fuel-src" style="background:#000; border-color:rgba(245,158,11,0.3);">
