@@ -2,37 +2,87 @@
 // PLIK: taxi_tab_tools.js - Narzędzia (Wycena, Garaż, Fuelio Algorytm)
 // ==========================================
 
-// --- NOWY ALGORYTM FUELIO (Z PODZIAŁEM NA PALIWA) ---
+// --- ZAAWANSOWANY ALGORYTM FUELIO (ROZDZIELONE PALIWA + PRĄD) ---
 window.calcFuelioStats = function() {
     let fList = (window.db.drv.fuel || []).slice().sort((a, b) => a.o - b.o);
-    let totalDist = 0, totalLit = 0, totalCost = 0;
-    let lastFullOdo = null, tempLiters = 0, tempCost = 0;
+
+    // Koszyki dla różnych rodzajów zasilania
+    let s = {
+        lpg: { name: 'LPG', d: 0, l: 0, c: 0, last: null, tL: 0, tC: 0, u: 'L' },
+        pb:  { name: 'Benzyna', d: 0, l: 0, c: 0, last: null, tL: 0, tC: 0, u: 'L' },
+        on:  { name: 'Diesel', d: 0, l: 0, c: 0, last: null, tL: 0, tC: 0, u: 'L' },
+        ev:  { name: 'Prąd', d: 0, l: 0, c: 0, last: null, tL: 0, tC: 0, u: 'kWh' }
+    };
+
+    let minOdo = null;
+    let maxOdo = null;
+    let totalCostAll = 0;
 
     for(let i=0; i<fList.length; i++) {
         let f = fList[i];
-        let isFull = (f.isF === 'lpg_full' || f.isF === 'pb_full' || f.isF === 'on_full' || f.isF === 1 || f.isF === "1");
+        let type = 'pb'; // Domyślnie benzyna dla starych wpisów
+        
+        if (f.isF === 1 || f.isF === '1' || f.isF === 'part') {
+            type = 'pb'; // Stare wpisy
+        } else if (typeof f.isF === 'string') {
+            if (f.isF.startsWith('lpg')) type = 'lpg';
+            else if (f.isF.startsWith('pb')) type = 'pb';
+            else if (f.isF.startsWith('on')) type = 'on';
+            else if (f.isF.startsWith('ev')) type = 'ev';
+        }
 
-        if (lastFullOdo === null) {
-            if (isFull) lastFullOdo = f.o; 
+        let isFull = (f.isF === 1 || f.isF === '1' || (typeof f.isF === 'string' && f.isF.includes('full')));
+
+        // Zbiorcze statystyki
+        if (minOdo === null || f.o < minOdo) minOdo = f.o;
+        if (maxOdo === null || f.o > maxOdo) maxOdo = f.o;
+        totalCostAll += (parseFloat(f.v) || 0);
+
+        // Przypisywanie do odpowiedniego koszyka
+        let b = s[type];
+        if (b.last === null) {
+            if (isFull) b.last = f.o; 
         } else {
-            tempLiters += (parseFloat(f.l) || 0);
-            tempCost += (parseFloat(f.v) || 0);
+            b.tL += (parseFloat(f.l) || 0);
+            b.tC += (parseFloat(f.v) || 0);
             if (isFull) {
-                let dist = f.o - lastFullOdo;
-                if (dist > 0) { totalDist += dist; totalLit += tempLiters; totalCost += tempCost; }
-                lastFullOdo = f.o; tempLiters = 0; tempCost = 0;
+                let dist = f.o - b.last;
+                if (dist > 0) {
+                    b.d += dist;
+                    b.l += b.tL;
+                    b.c += b.tC;
+                }
+                b.last = f.o; 
+                b.tL = 0; 
+                b.tC = 0;
             }
         }
     }
-    let avgL100 = totalDist > 0 ? (totalLit / totalDist) * 100 : 0;
-    let avgCostKm = totalDist > 0 ? (totalCost / totalDist) : 0;
-    return { l100: avgL100, ck: avgCostKm, td: totalDist };
+
+    let totalDistAll = (maxOdo !== null && minOdo !== null) ? (maxOdo - minOdo) : 0;
+    let globalCk = totalDistAll > 0 ? (totalCostAll / totalDistAll) : 0;
+
+    // Formatowanie wyników koszyków
+    let results = [];
+    for (let k in s) {
+        if (s[k].d > 0) {
+            results.push({
+                name: s[k].name,
+                unit: s[k].u,
+                l100: (s[k].l / s[k].d) * 100,
+                ck: (s[k].c / s[k].d),
+                dist: s[k].d
+            });
+        }
+    }
+
+    // Zwraca .ck jako globalny koszt mix (aby logika zapisywania zadziałała poprawnie)
+    return { list: results, ck: globalCk, td: totalDistAll, totalCost: totalCostAll };
 };
 
 // --- RENDER ZAKŁADEK NARZĘDZIOWYCH ---
 window.rDrvTools = function(d, t, nav, hdr) {
     if (t === 'quote') {
-        let q = d.q || {s:9, w:39, t1:3.2, t2:4, t3:6.4, t4:8};
         let cOpts = (d.clients||[]).map(c => `<option value="${c.d}" data-n="${c.n}">${c.n} (-${c.d}%)</option>`).join('');
         
         APP.innerHTML = `
@@ -108,46 +158,43 @@ window.rDrvTools = function(d, t, nav, hdr) {
     }
 };
 
-window.saveQuoteCfg = function() {
-    window.db.drv.q = {
-        s: parseFloat(document.getElementById('q-cfg-s').value) || 0,
-        w: parseFloat(document.getElementById('q-cfg-w').value) || 0,
-        t1: parseFloat(document.getElementById('q-cfg-t1').value) || 0,
-        t2: parseFloat(document.getElementById('q-cfg-t2').value) || 0,
-        t3: parseFloat(document.getElementById('q-cfg-t3').value) || 0,
-        t4: parseFloat(document.getElementById('q-cfg-t4').value) || 0
-    };
-    window.save(); 
-    window.render();
-};
-
-// --- RENDER GARAŻU Z PALIWEM ---
+// --- RENDER GARAŻU Z ROZDZIELONYMI PALIWAMI ---
 window.hRenderGarage = function(d) {
     let mode = window.dGarMode || 'f';
     let sourceAlert = '';
     
-    // Ostrzeżenie jeśli kierowca włączył ryczałt w Opcjach
     if (d.cfg && d.cfg.fuelSource === 'manual') {
-        sourceAlert = `<div style="background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.3); color:var(--danger); padding:10px; border-radius:12px; font-size:0.75rem; text-align:center; margin-bottom:15px; font-weight:bold;">⚠️ Masz włączony tryb Ręcznego Wpisywania Spalania w Opcjach. Apka zignoruje statystyki z Garażu do wyliczeń.</div>`;
+        sourceAlert = `<div style="background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.3); color:var(--danger); padding:10px; border-radius:12px; font-size:0.75rem; text-align:center; margin-bottom:15px; font-weight:bold;">⚠️ Masz włączony tryb Ręcznego Wpisywania Spalania w Opcjach. Apka zignoruje statystyki z Garażu do wyliczeń Wyceny.</div>`;
     }
 
     let stats = window.calcFuelioStats();
-    
+    let statsCards = '';
+
+    if (stats.list.length > 0) {
+        stats.list.forEach(x => {
+            let u100 = x.unit === 'kWh' ? 'kWh/100' : 'L/100';
+            statsCards += `
+            <div class="box" style="border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.05); text-align:center; padding:15px 5px;">
+                <span style="font-size:0.6rem; color:var(--muted); font-weight:800; text-transform:uppercase;">${x.name} <span style="opacity:0.5;">(${x.dist.toFixed(0)} KM)</span></span><br>
+                <strong style="color:var(--fuel); font-size:1.3rem;">${x.l100.toFixed(2)} <span style="font-size:0.6rem;">${u100}</span></strong><br>
+                <strong style="color:var(--danger); font-size:0.8rem;">${x.ck.toFixed(2)} zł/km</strong>
+            </div>`;
+        });
+    } else {
+        statsCards = `<div class="box" style="grid-column: span 2; text-align:center; padding:20px; color:var(--muted); font-size:0.8rem; border-color:rgba(255,255,255,0.05);">Brak pełnych cykli tankowań do obliczeń. Zatankuj do pełna 2 razy.</div>`;
+    }
+
     let html = `
     <div style="padding:0 12px;">
         ${sourceAlert}
-        <div class="grid-2">
-            <div class="box" style="border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.05); text-align:center; padding:20px 10px;">
-                <span style="font-size:0.6rem; color:var(--muted); font-weight:800; text-transform:uppercase;">ŚREDNIE SPALANIE (Z PARAGONÓW)</span>
-                <strong style="color:var(--fuel); font-size:1.6rem; margin-top:5px;">${stats.l100.toFixed(2)} <span style="font-size:0.8rem;">L/100</span></strong>
-            </div>
-            <div class="box" style="border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.05); text-align:center; padding:20px 10px;">
-                <span style="font-size:0.6rem; color:var(--muted); font-weight:800; text-transform:uppercase;">KOSZT 1 KM</span>
-                <strong style="color:var(--danger); font-size:1.6rem; margin-top:5px;">${stats.ck.toFixed(2)} <span style="font-size:0.8rem;">zł</span></strong>
-            </div>
+        <div class="grid-2" style="margin-bottom:10px;">
+            ${statsCards}
         </div>
-        <div style="text-align:center; margin-bottom:20px;">
-            <span style="font-size:0.75rem; color:var(--muted);">Obliczenia na poświadczonym dystansie: ${stats.td.toFixed(0)} KM</span>
+        
+        <div style="text-align:center; margin-bottom:20px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); padding:12px; border-radius:12px;">
+            <span style="font-size:0.65rem; color:var(--danger); font-weight:bold; text-transform:uppercase;">ZBIORCZY KOSZT PALIW (MIX) NA 1 KM</span><br>
+            <strong style="color:var(--danger); font-size:1.5rem;">${stats.ck.toFixed(2)} zł</strong>
+            <div style="font-size:0.65rem; color:var(--muted); margin-top:4px;">Dystans Mix: ${stats.td.toFixed(0)} KM | Wydano: ${stats.totalCost.toFixed(2)} zł</div>
         </div>
 
         <div class="p-title" style="color:var(--info);">⚡ SZYBKIE WYDATKI (PODCZAS ZMIANY)</div>
@@ -169,19 +216,27 @@ window.hRenderGarage = function(d) {
             
             <div class="inp-row">
                 <div class="inp-group"><label>STAN LICZNIKA (KM)</label><input type="number" id="df-o" value="${d.odo||0}" placeholder="np. 155000" style="background:rgba(0,0,0,0.5);"></div>
-                <div class="inp-group"><label>ZATANKOWANO (LITRY)</label><input type="number" step="0.1" id="df-l" placeholder="0.0" style="background:rgba(0,0,0,0.5);"></div>
+                <div class="inp-group"><label>LITRY / kWh</label><input type="number" step="0.1" id="df-l" placeholder="0.0" style="background:rgba(0,0,0,0.5);"></div>
             </div>
             <div class="inp-row">
-                <div class="inp-group"><label>KWOTA Z PARAGONU (ZŁ)</label><input type="number" step="0.01" id="df-v" placeholder="0.00" style="background:rgba(0,0,0,0.5);"></div>
+                <div class="inp-group"><label>KWOTA (ZŁ)</label><input type="number" step="0.01" id="df-v" placeholder="0.00" style="background:rgba(0,0,0,0.5);"></div>
                 <div class="inp-group"><label>DATA</label><input type="date" id="df-date" value="${window.getLocalYMD()}" style="background:rgba(0,0,0,0.5);"></div>
             </div>
             <div class="inp-group" style="margin-bottom:15px;">
-                <label>RODZAJ PALIWA (DO OBLICZEŃ FUELIO)</label>
+                <label>RODZAJ PALIWA</label>
                 <select id="df-f" style="background:#000; border-color:var(--fuel);">
-                    <option value="lpg_full">⛽ LPG (Zalane do pełna)</option>
-                    <option value="pb_full">⛽ Benzyna (Zalane do pełna)</option>
-                    <option value="on_full">⛽ Diesel (Zalane do pełna)</option>
-                    <option value="part">💧 Dolewka (Tylko koszt - Nie liczy spalania)</option>
+                    <optgroup label="Do pełna (Oblicza spalanie)">
+                        <option value="lpg_full">⛽ LPG (Do pełna)</option>
+                        <option value="pb_full">⛽ Benzyna (Do pełna)</option>
+                        <option value="on_full">⛽ Diesel (Do pełna)</option>
+                        <option value="ev_full">⚡ Prąd (Pełne ład.)</option>
+                    </optgroup>
+                    <optgroup label="Dolewka (Tylko koszty mix)">
+                        <option value="lpg_part">💧 LPG (Dolewka)</option>
+                        <option value="pb_part">💧 Benzyna (Dolewka)</option>
+                        <option value="on_part">💧 Diesel (Dolewka)</option>
+                        <option value="ev_part">⚡ Prąd (Doładowanie)</option>
+                    </optgroup>
                 </select>
             </div>
             <button class="btn" style="background:var(--fuel); color:#000; font-weight:900; padding:15px;" onclick="window.dAF()">DODAJ TANKOWANIE</button>
@@ -209,19 +264,27 @@ window.hRenderGarage = function(d) {
     }
     
     fList.forEach(e => {
-        let isFull = (e.isF === 'lpg_full' || e.isF === 'pb_full' || e.isF === 'on_full' || e.isF === 1 || e.isF === "1");
+        let isFull = (e.isF === 'lpg_full' || e.isF === 'pb_full' || e.isF === 'on_full' || e.isF === 'ev_full' || e.isF === 1 || e.isF === "1");
+        
         let fLabel = 'Dolewka';
-        if (e.isF === 'lpg_full') fLabel = 'LPG Pełny';
-        if (e.isF === 'pb_full') fLabel = 'Benzyna Pełny';
-        if (e.isF === 'on_full') fLabel = 'Diesel Pełny';
-        if (e.isF === 1 || e.isF === "1") fLabel = 'Do pełna';
+        if (e.isF === 'lpg_full') fLabel = 'LPG (Do pełna)';
+        if (e.isF === 'pb_full') fLabel = 'PB (Do pełna)';
+        if (e.isF === 'on_full') fLabel = 'ON (Do pełna)';
+        if (e.isF === 'ev_full') fLabel = 'EV (Do pełna)';
+        if (e.isF === 'lpg_part') fLabel = 'LPG (Dolewka)';
+        if (e.isF === 'pb_part') fLabel = 'PB (Dolewka)';
+        if (e.isF === 'on_part') fLabel = 'ON (Dolewka)';
+        if (e.isF === 'ev_part') fLabel = 'EV (Dolewka)';
+        if (e.isF === 1 || e.isF === "1") fLabel = 'PB (Do pełna)';
+        
+        let uStr = (e.isF && e.isF.includes('ev')) ? 'kWh' : 'Litrów';
 
         html += `
         <div class="log-item" style="border-left-color:${e.ty==='f' ? 'var(--fuel)' : 'var(--info)'};">
             <div style="flex:1;" onclick="window.dEditExp(${e.id})">
                 <strong style="display:block; font-size:0.95rem;">${e.d}</strong>
                 <span style="font-size:0.7rem; color:var(--muted);">${e.dt} ${e.ty==='f' ? `| ODO: ${e.odo}` : ''}</span>
-                ${e.ty==='f' ? `<div style="font-size:0.65rem; color:${isFull ? 'var(--success)' : 'var(--warning)'}; font-weight:bold; margin-top:4px;">${fLabel} | ${Number(e.l||0).toFixed(1)} Litrów</div>` : ''}
+                ${e.ty==='f' ? `<div style="font-size:0.65rem; color:${isFull ? 'var(--success)' : 'var(--warning)'}; font-weight:bold; margin-top:4px;">${fLabel} | ${Number(e.l||0).toFixed(1)} ${uStr}</div>` : ''}
             </div>
             <div style="text-align:right;">
                 <div style="color:${e.ty==='f' ? 'var(--fuel)' : 'var(--info)'}; font-weight:900; font-size:1.1rem; margin-bottom:5px;">-${Number(e.v||0).toFixed(2)} zł</div>
