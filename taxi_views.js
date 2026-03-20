@@ -525,7 +525,6 @@ window.rDrv = function() {
     // ZAKŁADKA: WYCENA (QUOTE)
     // ==========================================
     if(t === 'quote') {
-        let q = d.q || {s:0, w:0, t1:0, t2:0, t3:0, t4:0};
         let clientOpts = (d.clients || []).map(c => `<option value="${c.id}" data-d="${c.d||0}">${c.n} (Rabat: ${c.d||0}%)</option>`).join('');
         
         APP.innerHTML = hdr + `
@@ -561,20 +560,6 @@ window.rDrv = function() {
                 <div class="inp-group" style="margin-top:15px;"><label>Klient VIP (Rabat)</label><select id="dq-c" onchange="window.updateRoutePrice()"><option value="">-- Zwykły kurs --</option>${clientOpts}</select></div>
                 <button class="btn btn-quote" style="margin-top:15px;" onclick="window.dQB()">ZAKSIĘGUJ KURS DO PANELU</button>
             </div>
-        </div>
-        <div class="section-lbl" style="color:var(--quote); border-color:var(--quote);">Ustawienia Taryfikatora</div>
-        <div class="panel">
-            <div class="grid-2">
-                <div class="inp-group"><label>Start</label><input type="number" id="dcs" value="${q.s || 0}"></div>
-                <div class="inp-group"><label>1h Postoju</label><input type="number" id="dcw" value="${q.w || 0}"></div>
-            </div>
-            <div class="grid-4" style="grid-template-columns:1fr 1fr 1fr 1fr; gap:8px;">
-                <div class="inp-group"><label>T1</label><input type="number" id="dct1" value="${q.t1 || 0}"></div>
-                <div class="inp-group"><label>T2</label><input type="number" id="dct2" value="${q.t2 || 0}"></div>
-                <div class="inp-group"><label>T3</label><input type="number" id="dct3" value="${q.t3 || 0}"></div>
-                <div class="inp-group"><label>T4</label><input type="number" id="dct4" value="${q.t4 || 0}"></div>
-            </div>
-            <button class="btn" style="background:#222; color:#fff;" onclick="window.dSaveQC()">ZAPISZ TARYFY</button>
         </div>` + nav;
     }
 
@@ -608,31 +593,38 @@ window.rDrv = function() {
             </div>
         </div>
         ${quickExpHtml}
-        <div class="panel" style="border-color:var(--fuel); background: linear-gradient(180deg, #18181b 0%, #09090b 100%);">
-            <div class="p-title" style="color:var(--fuel)">⛽ Dziennik Tankowań</div>
-            <div class="inp-row">
-                <div class="inp-group"><label>Licznik (KM)</label><input type="number" id="df-o" placeholder="np. 155000"></div>
-                <div class="inp-group"><label>Litry</label><input type="number" id="df-l" step="0.1" placeholder="0.0"></div>
+        
+        <div class="panel" style="border-color:var(--fuel); background: linear-gradient(145deg, #18181b 0%, #09090b 100%);">
+            <div class="p-title" style="color:var(--fuel); display:flex; align-items:center; gap:10px;"><span style="font-size:1.5rem;">⛽</span> Nowe Tankowanie</div>
+            <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:15px;">
+                <div class="inp-row">
+                    <div class="inp-group"><label>Stan Licznika (KM)</label><input type="number" id="df-o" placeholder="np. 155000" style="background:#000;"></div>
+                    <div class="inp-group"><label>Zatankowano (Litry)</label><input type="number" id="df-l" step="0.1" placeholder="0.0" style="background:#000;"></div>
+                </div>
+                <div class="inp-row">
+                    <div class="inp-group"><label>Kwota z paragonu (zł)</label><input type="number" id="df-v" placeholder="0.00" style="background:#000; color:var(--fuel); font-weight:bold;"></div>
+                    <div class="inp-group"><label>Data</label><input type="date" id="df-date" value="${todayStr}" style="background:#000;"></div>
+                </div>
+                <div class="inp-group" style="margin-bottom:0;">
+                    <label>Czy zatankowano do pełna?</label>
+                    <select id="df-f" style="background:#000;"><option value="1">Tak (Wymagane do obliczenia spalania)</option><option value="0">Tylko częściowo</option></select>
+                </div>
             </div>
-            <div class="inp-row">
-                <div class="inp-group"><label>Rachunek (zł)</label><input type="number" id="df-v" placeholder="0.00"></div>
-                <div class="inp-group"><label>Data</label><input type="date" id="df-date" value="${todayStr}"></div>
-            </div>
-            <div class="inp-group" style="margin-bottom:15px;">
-                <label>Pod korek?</label>
-                <select id="df-f"><option value="1">Tak (Oblicz spalanie)</option><option value="0">Nie</option></select>
-            </div>
-            <button class="btn" style="background:var(--fuel); color:#000;" onclick="window.dAF()">ZAPISZ PARAGON</button>
+            <button class="btn" style="background:var(--fuel); color:#000; font-weight:bold; font-size:1.1rem; padding:15px; box-shadow:0 5px 15px rgba(245,158,11,0.2);" onclick="window.dAF()">ZAPISZ PARAGON TANKOWANIA</button>
         </div>
-        <div class="panel" style="border-color:rgba(239,68,68,0.4)">
-            <div class="p-title" style="color:var(--danger)">🔧 Inne Wydatki</div>
-            <div class="inp-row">
-                <div class="inp-group" style="flex:2"><label>Kategoria</label><select id="de-c"><option value="✨ Myjnia">✨ Myjnia</option><option value="🛠 Serwis">🛠 Serwis</option><option value="💧 Płyny">💧 Płyny</option><option value="🅿 Parking">🅿 Parking</option><option value="🎫 Mandat">🎫 Mandat</option><option value="☕ Kawa/Jedzenie">☕ Kawa/Jedzenie</option><option value="🛒 Inne">🛒 Inne</option></select></div>
-                <div class="inp-group"><label>Kwota (zł)</label><input type="number" id="de-v" placeholder="0.00"></div>
+
+        <div class="panel" style="border-color:rgba(239,68,68,0.4); background: linear-gradient(145deg, #18181b 0%, #09090b 100%);">
+            <div class="p-title" style="color:var(--danger); display:flex; align-items:center; gap:10px;"><span style="font-size:1.5rem;">🔧</span> Dodaj Wydatek (Eksploatacja)</div>
+            <div style="background:rgba(239,68,68,0.05); padding:15px; border-radius:12px; border:1px solid rgba(239,68,68,0.2); margin-bottom:15px;">
+                <div class="inp-row">
+                    <div class="inp-group" style="flex:2"><label>Kategoria Wydatku</label><select id="de-c" style="background:#000;"><option value="✨ Myjnia">✨ Myjnia</option><option value="🛠 Serwis">🛠 Serwis</option><option value="💧 Płyny">💧 Płyny</option><option value="🅿 Parking">🅿 Parking</option><option value="🎫 Mandat">🎫 Mandat</option><option value="☕ Kawa/Jedzenie">☕ Kawa/Jedzenie</option><option value="🛒 Inne">🛒 Inne</option></select></div>
+                    <div class="inp-group"><label>Kwota (zł)</label><input type="number" id="de-v" placeholder="0.00" style="background:#000; color:var(--danger); font-weight:bold;"></div>
+                </div>
+                <div class="inp-group" style="margin-bottom:0;"><label>Data Wydatku</label><input type="date" id="de-date" value="${todayStr}" style="background:#000;"></div>
             </div>
-            <div class="inp-group" style="margin-bottom:15px;"><label>Data</label><input type="date" id="de-date" value="${todayStr}"></div>
-            <button class="btn btn-danger" style="background:var(--danger); color:#fff;" onclick="window.dAE()">ZAPISZ WYDATEK</button>
+            <button class="btn btn-danger" style="background:var(--danger); color:#fff; font-weight:bold; font-size:1.1rem; padding:15px; box-shadow:0 5px 15px rgba(239,68,68,0.2);" onclick="window.dAE()">ZAPISZ WYDATEK</button>
         </div>
+
         <div class="section-lbl" style="color:#fff; border-color:rgba(255,255,255,0.1);">Historia Garażu</div>
         <div style="padding: 0 15px; margin-bottom: 20px;">${window.renderGarageHistory()}</div>` + nav;
     }
@@ -641,9 +633,16 @@ window.rDrv = function() {
     // ZAKŁADKA: USTAWIENIA (SET)
     // ==========================================
     if(t === 'set') {
-        let cloudStatusHtml = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) ? 
+        let isCloud = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser);
+        let cloudStatusHtml = isCloud ? 
             `<div style="background:rgba(34,197,94,0.1); border:1px solid var(--success); padding:15px; border-radius:12px; margin-bottom:20px; text-align:center;"><strong style="color:var(--success); font-size:1.1rem;">☁️ Połączono z chmurą Google</strong><br><span style="font-size:0.8rem; color:var(--success); opacity:0.8;">Zalogowano jako: ${firebase.auth().currentUser.displayName || window.db.userName}</span></div>` : 
-            `<div style="background:rgba(239,68,68,0.1); border:1px solid var(--danger); padding:15px; border-radius:12px; margin-bottom:20px; text-align:center;"><strong style="color:var(--danger); font-size:1.1rem;">🚫 Tryb Offline</strong><br><span style="font-size:0.8rem; color:var(--muted);">Dane zapisywane tylko na telefonie</span></div>`;
+            `<div style="background:rgba(239,68,68,0.1); border:1px solid var(--danger); padding:15px; border-radius:12px; margin-bottom:20px; text-align:center;">
+                <strong style="color:var(--danger); font-size:1.1rem;">🚫 Tryb Offline (Gość)</strong><br>
+                <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:10px;">Twoje dane są tylko na tym urządzeniu. Zabezpiecz je!</span>
+                <button class="btn" style="background:#fff; color:#000; border:none; padding:12px; font-weight:900; box-shadow:0 4px 15px rgba(255,255,255,0.2);" onclick="window.loginWithGoogle()">G ZALOGUJ PRZEZ GOOGLE</button>
+            </div>`;
+
+        let q = d.q || {s:0, w:0, t1:0, t2:0, t3:0, t4:0};
 
         APP.innerHTML = hdr + `
         <div class="dash-hero" style="padding-bottom:0; padding-top:10px;"><p>KONTROLA TWOJEJ FIRMY</p></div>
@@ -652,6 +651,21 @@ window.rDrv = function() {
         <div style="padding: 0 15px;">
             ${cloudStatusHtml}
             <button class="btn" style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:15px; width:100%; margin-bottom:20px; font-weight:bold;" onclick="window.logoutToLauncher()">⚙️ WRÓĆ DO EKRANU STARTOWEGO</button>
+        </div>
+
+        <div class="section-lbl" style="color:var(--quote); border-color:var(--quote);">🧮 Ustawienia Taryfikatora (Wycena)</div>
+        <div class="panel">
+            <div class="grid-2">
+                <div class="inp-group"><label>Opłata początkowa</label><input type="number" id="dcs" value="${q.s || 0}"></div>
+                <div class="inp-group"><label>1h Postoju</label><input type="number" id="dcw" value="${q.w || 0}"></div>
+            </div>
+            <div class="grid-4" style="grid-template-columns:1fr 1fr 1fr 1fr; gap:8px;">
+                <div class="inp-group"><label>T1</label><input type="number" id="dct1" value="${q.t1 || 0}"></div>
+                <div class="inp-group"><label>T2</label><input type="number" id="dct2" value="${q.t2 || 0}"></div>
+                <div class="inp-group"><label>T3</label><input type="number" id="dct3" value="${q.t3 || 0}"></div>
+                <div class="inp-group"><label>T4</label><input type="number" id="dct4" value="${q.t4 || 0}"></div>
+            </div>
+            <button class="btn" style="background:var(--quote); color:#fff; margin-top:10px;" onclick="window.dSaveQC()">ZAPISZ TARYFY</button>
         </div>
 
         <div class="section-lbl" style="color:var(--success); border-color:var(--success);">👤 Personalizacja i Miasto</div>
@@ -756,11 +770,6 @@ window.rDrv = function() {
             <a href="https://buycoffee.to/styreos" target="_blank" style="background:#ffdd00; color:#000; font-weight:900; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:10px; padding:15px; border-radius:12px; box-shadow: 0 4px 15px rgba(255, 221, 0, 0.2);">
                 <span style="font-size:1.5rem;">☕</span> POSTAW MI KAWĘ
             </a>
-        </div>
-
-        <div class="section-lbl" style="color:var(--danger); border-color:var(--danger);">⚠️ Strefa Niebezpieczna</div>
-        <div class="panel" style="border-color:rgba(239,68,68,0.4)">
-            <button class="btn btn-danger" style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; box-shadow:none;" onclick="window.hardReset()">TWARDY RESET APLIKACJI</button>
         </div>` + nav;
     }
 };
