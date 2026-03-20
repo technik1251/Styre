@@ -92,21 +92,6 @@ window.rDrvTools = function(d, t, nav, hdr) {
                 <button class="btn" style="background:#d946ef; color:#fff; font-size:1.1rem; padding:15px;" onclick="window.saveQuoteToPanel()">ZAKSIĘGUJ KURS DO PANELU</button>
             </div>
         </div>
-
-        <div class="panel" style="border-color:rgba(255,255,255,0.05);">
-            <div class="p-title" style="color:var(--info);">USTAWIENIA TARYFIKATORA (WYCENY) ⚙️</div>
-            <div class="inp-row">
-                <div class="inp-group"><label>OPŁATA POCZĄTKOWA</label><input type="number" id="q-cfg-s" value="${q.s}" style="background:rgba(0,0,0,0.5);"></div>
-                <div class="inp-group"><label>1H POSTOJU</label><input type="number" id="q-cfg-w" value="${q.w}" style="background:rgba(0,0,0,0.5);"></div>
-            </div>
-            <div class="grid-4" style="padding:0; margin-top:10px;">
-                <div class="inp-group"><label>T1</label><input type="number" step="0.1" id="q-cfg-t1" value="${q.t1}" style="background:rgba(0,0,0,0.5);"></div>
-                <div class="inp-group"><label>T2</label><input type="number" step="0.1" id="q-cfg-t2" value="${q.t2}" style="background:rgba(0,0,0,0.5);"></div>
-                <div class="inp-group"><label>T3</label><input type="number" step="0.1" id="q-cfg-t3" value="${q.t3}" style="background:rgba(0,0,0,0.5);"></div>
-                <div class="inp-group"><label>T4</label><input type="number" step="0.1" id="q-cfg-t4" value="${q.t4}" style="background:rgba(0,0,0,0.5);"></div>
-            </div>
-            <button class="btn" style="background:#d946ef; color:#fff; margin-top:15px; padding:15px;" onclick="window.saveQuoteCfg()">ZAPISZ TARYFY</button>
-        </div>
         ${nav}`;
         return;
     }
@@ -134,7 +119,6 @@ window.saveQuoteCfg = function() {
     };
     window.save(); 
     window.render();
-    if(window.sysAlert) window.sysAlert("Sukces", "Cennik zapisany!", "success");
 };
 
 // --- RENDER GARAŻU Z PALIWEM ---
