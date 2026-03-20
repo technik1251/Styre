@@ -5,10 +5,16 @@
 window.rDrvSet = function(d, t, nav, hdr) {
     let goal = (d.cfg && d.cfg.goal) ? d.cfg.goal : 350;
     let city = (d.cfg && d.cfg.defCity) ? d.cfg.defCity : 'Szczecin';
-    let fuelCons = (d.cfg && d.cfg.fuelCons) ? d.cfg.fuelCons : 7;
-    let fuelPx = (d.cfg && d.cfg.fuelPriceL) ? d.cfg.fuelPriceL : 6.50;
     let fuelSource = (d.cfg && d.cfg.fuelSource) ? d.cfg.fuelSource : 'garage';
-    let fTypes = (d.cfg && d.cfg.fTypes) ? d.cfg.fTypes : ['pb']; // Pobiera zaznaczone paliwa (domyślnie benzyna)
+    let fTypes = (d.cfg && d.cfg.fTypes) ? d.cfg.fTypes : ['pb']; 
+    
+    // Pobranie ręcznych ryczałtów (lub domyślnych, jeśli puste)
+    let mF = (d.cfg && d.cfg.mFuel) ? d.cfg.mFuel : {
+        pb: {c: 7.0, p: 6.50},
+        on: {c: 6.0, p: 6.00},
+        lpg: {c: 10.0, p: 3.00},
+        ev: {c: 15.0, p: 1.00}
+    };
     
     let plat = d.plat || 'apps';
     let corpBaseC = (d.cfg && d.cfg.bC) ? d.cfg.bC : 0;
@@ -75,40 +81,68 @@ window.rDrvSet = function(d, t, nav, hdr) {
             <label style="color:var(--fuel);">JAKIMI PALIWAMI ZASILANE JEST AUTO?</label>
             <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
                 <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
-                    <input type="checkbox" class="car-ftype" value="pb" ${fTypes.includes('pb')?'checked':''} style="accent-color:var(--fuel); width:18px; height:18px;"> Benzyna
+                    <input type="checkbox" id="cb-ftype-pb" value="pb" ${fTypes.includes('pb')?'checked':''} onchange="window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:18px; height:18px;"> Benzyna
                 </label>
                 <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
-                    <input type="checkbox" class="car-ftype" value="on" ${fTypes.includes('on')?'checked':''} style="accent-color:var(--fuel); width:18px; height:18px;"> Diesel
+                    <input type="checkbox" id="cb-ftype-on" value="on" ${fTypes.includes('on')?'checked':''} onchange="window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:18px; height:18px;"> Diesel
                 </label>
                 <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
-                    <input type="checkbox" class="car-ftype" value="lpg" ${fTypes.includes('lpg')?'checked':''} style="accent-color:var(--fuel); width:18px; height:18px;"> Gaz (LPG)
+                    <input type="checkbox" id="cb-ftype-lpg" value="lpg" ${fTypes.includes('lpg')?'checked':''} onchange="window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:18px; height:18px;"> Gaz (LPG)
                 </label>
                 <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:45%;">
-                    <input type="checkbox" class="car-ftype" value="ev" ${fTypes.includes('ev')?'checked':''} style="accent-color:var(--info); width:18px; height:18px;"> Prąd (EV)
+                    <input type="checkbox" id="cb-ftype-ev" value="ev" ${fTypes.includes('ev')?'checked':''} onchange="window.toggleManualFuelBoxes()" style="accent-color:var(--info); width:18px; height:18px;"> Prąd (EV)
                 </label>
             </div>
-            <div style="font-size:0.65rem; color:var(--muted); margin-top:8px;">Zaznacz zasilanie auta (np. tylko Diesel, albo Benzyna + LPG). Garaż pokaże tylko wybrane.</div>
         </div>
 
-        <div class="inp-group" style="margin-bottom:15px;">
-            <label style="color:var(--fuel);">SKĄD BRAĆ DANE O SPALANIU?</label>
-            <select id="us-fuel-src" style="background:#000; border-color:rgba(245,158,11,0.3);">
+        <div class="inp-group" style="margin-bottom:5px;">
+            <label style="color:var(--fuel);">SKĄD BRAĆ DANE O KOSZTACH?</label>
+            <select id="us-fuel-src" onchange="window.toggleManualFuelBoxes()" style="background:#000; border-color:rgba(245,158,11,0.3);">
                 <option value="garage" ${fuelSource==='garage'?'selected':''}>Dziennik Garażu (Zalecane / Dokładne)</option>
                 <option value="manual" ${fuelSource==='manual'?'selected':''}>Z ryczałtu wpisanego poniżej</option>
             </select>
         </div>
-        
-        <div class="inp-row" style="margin-bottom:5px;">
-            <div class="inp-group" style="background:rgba(0,0,0,0.3); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.03);">
-                <label style="color:var(--muted); font-size:0.6rem;">ŚREDNIE SPALANIE (L/100KM)</label>
-                <input type="number" step="0.1" id="us-fcons" value="${Number(fuelCons).toFixed(1)}" style="background:transparent; border:none; box-shadow:none; text-align:center; font-size:1.4rem; padding:0; height:30px;">
+
+        <div id="manual-fuel-wrapper" style="display:${fuelSource==='manual'?'block':'none'}; margin-top:15px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">
+            <p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-bottom:15px;">Podaj parametry dla zaznaczonych paliw. Aplikacja automatycznie je zsumuje i wyliczy średni łączny koszt na 1 KM.</p>
+            
+            <div class="grid-2" style="margin-bottom:5px;">
+                <div style="font-size:0.65rem; color:var(--muted); text-align:center;">ŚREDNIE SPALANIE</div>
+                <div style="font-size:0.65rem; color:var(--muted); text-align:center;">CENA (ZŁ/L lub kWh)</div>
             </div>
-            <div class="inp-group" style="background:rgba(0,0,0,0.3); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.03);">
-                <label style="color:var(--muted); font-size:0.6rem;">CENA PALIWA (ZŁ/L)</label>
-                <input type="number" step="0.01" id="us-fprice" value="${Number(fuelPx).toFixed(2)}" style="background:transparent; border:none; box-shadow:none; text-align:center; font-size:1.4rem; padding:0; height:30px;">
+
+            <div id="mf-box-pb" style="display:${fTypes.includes('pb')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="color:var(--fuel); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⛽ Benzyna</div>
+                <div class="inp-row" style="margin:0;">
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-pb" value="${mF.pb.c}" placeholder="L/100km" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-pb" value="${mF.pb.p}" placeholder="zł/L" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                </div>
+            </div>
+
+            <div id="mf-box-on" style="display:${fTypes.includes('on')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="color:var(--fuel); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⛽ Diesel</div>
+                <div class="inp-row" style="margin:0;">
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-on" value="${mF.on.c}" placeholder="L/100km" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-on" value="${mF.on.p}" placeholder="zł/L" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                </div>
+            </div>
+
+            <div id="mf-box-lpg" style="display:${fTypes.includes('lpg')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="color:var(--fuel); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⛽ Gaz (LPG)</div>
+                <div class="inp-row" style="margin:0;">
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-lpg" value="${mF.lpg.c}" placeholder="L/100km" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-lpg" value="${mF.lpg.p}" placeholder="zł/L" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                </div>
+            </div>
+
+            <div id="mf-box-ev" style="display:${fTypes.includes('ev')?'block':'none'}; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="color:var(--info); font-size:0.7rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">⚡ Prąd (EV)</div>
+                <div class="inp-row" style="margin:0;">
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="mf-c-ev" value="${mF.ev.c}" placeholder="kWh/100km" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                    <div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="mf-p-ev" value="${mF.ev.p}" placeholder="zł/kWh" style="background:rgba(0,0,0,0.5); text-align:center;"></div>
+                </div>
             </div>
         </div>
-        <p style="font-size:0.75rem; color:var(--muted); margin:0; text-align:center; line-height:1.4; opacity:0.8;">Wypełnij ręcznie, jeśli nie chcesz prowadzić dokładnego dziennika tankowań (zakładka Garaż). Aplikacja wyliczy ryczałt na bazie tych liczb.</p>
     </div>
     
     <div class="panel" style="border-color:rgba(255,255,255,0.05); background:linear-gradient(145deg, #1e1b4b, #09090b);">
@@ -221,6 +255,19 @@ window.rDrvSet = function(d, t, nav, hdr) {
     <input type="file" id="d-import-file" style="display:none;" onchange="window.dImport(event)">
 
     ${nav}`;
+};
+
+// --- FUNKCJA POKAZUJĄCA DYNAMICZNE RYCZAŁTY ---
+window.toggleManualFuelBoxes = function() {
+    let src = document.getElementById('us-fuel-src').value;
+    let wrap = document.getElementById('manual-fuel-wrapper');
+    if(wrap) wrap.style.display = (src === 'manual') ? 'block' : 'none';
+
+    ['pb', 'on', 'lpg', 'ev'].forEach(t => {
+        let cb = document.getElementById('cb-ftype-' + t);
+        let box = document.getElementById('mf-box-' + t);
+        if(cb && box) box.style.display = cb.checked ? 'block' : 'none';
+    });
 };
 
 // Funkcje pomocnicze dla UI Opcji
