@@ -1,181 +1,219 @@
-
 // ==========================================
-// PLIK: taxi_tab_tools.js - Zakładki Wycena (Quote) i Garaż (Garage)
+// PLIK: taxi_tab_tools.js - Narzędzia (Wycena, Garaż, Fuelio Algorytm)
 // ==========================================
 
-window.hRenderGarage = function() {
-    let expList = (window.db && window.db.drv && window.db.drv.exp) ? window.db.drv.exp : [];
-    
-    return expList.map(x => {
-        if(x.ty === 'f') {
-            let dist = x.dist || 0;
-            let l100 = x.l100 || 0;
-            let cpkm = x.cpkm || 0;
-            let l = x.l || 0;
-            let odo = x.odo || 0;
-            let full = x.isF === 1 ? 'Pod korek' : 'Częściowo';
-            let statsHtml = '';
-            
-            if (x.isF === 1 && dist > 0) {
-                statsHtml = `
-                <div style="display:flex; justify-content:space-between; width:100%; margin-top:12px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.1); font-size:0.8rem;">
-                    <div style="text-align:center;"><span style="color:var(--muted); font-size:0.65rem; text-transform:uppercase;">Dystans</span><br><strong style="color:#fff;">${Number(dist||0).toFixed(1)} km</strong></div>
-                    <div style="text-align:center;"><span style="color:var(--muted); font-size:0.65rem; text-transform:uppercase;">Spalanie</span><br><strong style="color:var(--info);">${Number(l100||0).toFixed(1)} L</strong></div>
-                    <div style="text-align:center;"><span style="color:var(--muted); font-size:0.65rem; text-transform:uppercase;">Koszt/KM</span><br><strong style="color:var(--danger);">${Number(cpkm||0).toFixed(2)} zł</strong></div>
-                </div>`;
-            } else if (x.isF === 0) {
-                statsHtml = `<div style="margin-top:10px; font-size:0.75rem; color:var(--warning); text-align:center; width:100%; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">Częściowe tankowanie. Brak pomiaru spalania.</div>`;
-            } else {
-                statsHtml = `<div style="margin-top:10px; font-size:0.75rem; color:var(--muted); text-align:center; width:100%; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">Zatankuj ponownie, aby obliczyć spalanie.</div>`;
-            }
-            
-            return `
-            <div class="log-item" style="border-left-color:var(--fuel); flex-direction:column; align-items:flex-start;">
-                <div style="display:flex; justify-content:space-between; width:100%; align-items:flex-start;">
-                    <div><strong style="color:#fff; font-size:1.1rem;">${x.d} <span style="color:var(--fuel)">${Number(l||0).toFixed(1)}L</span></strong><br><small style="color:var(--muted)">${x.dt} • ODO: <span style="color:#fff">${odo}</span> (${full})</small></div>
-                    <div style="text-align:right;">
-                        <strong style="color:var(--fuel); font-size:1.2rem;">-${Number(x.v || 0).toFixed(2)} zł</strong>
-                        <div style="display:flex; gap:5px; margin-top:5px; justify-content:flex-end;">
-                            <button style="background:rgba(255,255,255,0.1); color:#fff; border:none; border-radius:6px; padding:4px 8px; cursor:pointer;" onclick="window.dEditExp(${x.id})">✏️</button>
-                            <button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; border-radius:6px; padding:4px 8px; cursor:pointer;" onclick="window.dDelExp(${x.id})">🗑️</button>
-                        </div>
-                    </div>
-                </div>
-                ${statsHtml}
-            </div>`;
+// --- PRAWDZIWY ALGORYTM FUELIO (FULL-TO-FULL) ---
+window.calcFuelioStats = function() {
+    let fList = (window.db.drv.fuel || []).slice().sort((a, b) => a.o - b.o);
+    let totalDist = 0;
+    let totalLit = 0;
+    let totalCost = 0;
+
+    let lastFullOdo = null;
+    let tempLiters = 0;
+    let tempCost = 0;
+
+    for(let i=0; i<fList.length; i++) {
+        let f = fList[i];
+        if (lastFullOdo === null) {
+            // Szukamy pierwszego tankowania do pełna, by zacząć pomiar
+            if (f.isF === 1) lastFullOdo = f.o; 
         } else {
-            let col = x.ty === 'amort' ? 'var(--info)' : 'var(--danger)';
-            let pref = x.ty === 'amort' ? '' : '-';
-            return `
-            <div class="log-item" style="border-left-color:${col}; flex-direction:column; align-items:flex-start;">
-                <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                    <div><strong style="color:#fff; font-size:1.05rem;">${x.d}</strong><br><small style="color:var(--muted)">${x.dt}</small></div>
-                    <div style="text-align:right;">
-                        <strong style="color:${col}">${pref}${Number(x.v || 0).toFixed(2)} zł</strong>
-                        <div style="display:flex; gap:5px; margin-top:5px; justify-content:flex-end;">
-                            <button style="background:rgba(255,255,255,0.1); color:#fff; border:none; border-radius:6px; padding:4px 8px; cursor:pointer;" onclick="window.dEditExp(${x.id})">✏️</button>
-                            <button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; border-radius:6px; padding:4px 8px; cursor:pointer;" onclick="window.dDelExp(${x.id})">🗑️</button>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
+            // Dodajemy litry i koszty z kolejnych tankowań (nawet częściowych)
+            tempLiters += (parseFloat(f.l) || 0);
+            tempCost += (parseFloat(f.v) || 0);
+            
+            // Jeśli to tankowanie do pełna, zamykamy "cykl" i sumujemy do ogólnych statystyk
+            if (f.isF === 1) {
+                let dist = f.o - lastFullOdo;
+                if (dist > 0) {
+                    totalDist += dist;
+                    totalLit += tempLiters;
+                    totalCost += tempCost;
+                }
+                lastFullOdo = f.o; // Zaczynamy nowy cykl
+                tempLiters = 0;
+                tempCost = 0;
+            }
         }
-    }).join('') || '<div style="text-align:center;color:var(--muted);padding:10px;">Brak wpisów.</div>';
+    }
+
+    let avgL100 = totalDist > 0 ? (totalLit / totalDist) * 100 : 0;
+    let avgCostKm = totalDist > 0 ? (totalCost / totalDist) : 0;
+
+    return { l100: avgL100, ck: avgCostKm, td: totalDist };
 };
 
+// --- RENDER ZAKŁADEK NARZĘDZIOWYCH ---
 window.rDrvTools = function(d, t, nav, hdr) {
-
-    // ==========================================
-    // ZAKŁADKA: WYCENA (QUOTE)
-    // ==========================================
-    if(t === 'quote') {
-        let clientOpts = (d.clients || []).map(c => `<option value="${c.id}" data-d="${c.d||0}">${c.n} (Rabat: ${c.d||0}%)</option>`).join('');
+    if (t === 'quote') {
+        let q = d.q || {s:8, w:60, t1:3.5, t2:4.5, t3:6, t4:8};
+        let cKm = (d.cfg && d.cfg.fuelPx) ? d.cfg.fuelPx : 0;
         
-        let appContainer = document.getElementById('app');
-        if(appContainer) {
-            appContainer.innerHTML = hdr + `
-            <div class="dash-hero" style="padding-bottom:5px;"><p>INTELIGENTNA WYCENA (MAPY)</p></div>
-            <div class="panel" style="border-color:rgba(217, 70, 239, 0.4)">
-                <div class="form-section" style="padding:15px;">
-                    <div class="inp-group" style="margin-bottom:10px;"><label style="color:var(--success)">🟢 Adres początkowy</label><input type="text" id="dq-start" placeholder="np. Dworzec Główny" style="border-color:var(--success);"></div>
-                    <div class="inp-group"><label style="color:var(--danger)">🔴 Adres docelowy</label><input type="text" id="dq-end" placeholder="np. Powstańców Warszawy 1" style="border-color:var(--danger);"></div>
-                    <button class="btn btn-quote" style="margin-top:15px; padding:15px;" onclick="window.calculateRouteAuto()">🔍 WYZNACZ TRASĘ I CENĘ</button>
+        APP.innerHTML = `
+        ${hdr}
+        <div class="dash-hero" style="padding-bottom:10px;">
+            <p>Kalkulator</p>
+            <h1 style="color:var(--quote); font-size:2.8rem; letter-spacing:-1px;">🧮 WYCENA</h1>
+        </div>
+        <div class="panel" style="border-color:rgba(217, 70, 239, 0.3); background:rgba(217, 70, 239, 0.05);">
+            <div class="inp-row">
+                <div class="inp-group"><label style="color:var(--quote);">KM z klientem</label><input type="number" id="q-km" class="big-inp" style="color:var(--quote); border-color:var(--quote); background:#000;" oninput="window.calcQuote()"></div>
+                <div class="inp-group"><label style="color:var(--quote);">Czas (Minuty)</label><input type="number" id="q-min" class="big-inp" style="color:var(--quote); border-color:var(--quote); background:#000;" oninput="window.calcQuote()"></div>
+            </div>
+            <div class="inp-group" style="margin-top:10px;"><label>Taryfa</label><select id="q-tar" onchange="window.calcQuote()" style="background:#000;"><option value="1">Taryfa 1 (Dzień) - ${q.t1} zł/km</option><option value="2">Taryfa 2 (Noc) - ${q.t2} zł/km</option><option value="3">Taryfa 3 (Za miasto) - ${q.t3} zł/km</option><option value="4">Taryfa 4 (Święto/Poza) - ${q.t4} zł/km</option></select></div>
+            <div style="background:#000; padding:20px; border-radius:14px; margin-top:15px; text-align:center; border:1px solid rgba(255,255,255,0.05);">
+                <p style="margin:0 0 5px 0; color:var(--muted); font-size:0.7rem; text-transform:uppercase; font-weight:bold;">Sugerowana kwota na taksometrze</p>
+                <div id="q-res" style="font-size:3.5rem; font-weight:900; color:var(--quote); letter-spacing:-2px; text-shadow:0 0 20px rgba(217, 70, 239, 0.4);">0.00 <span style="font-size:1.5rem;">zł</span></div>
+                <div style="display:flex; justify-content:space-between; margin-top:15px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
+                    <span style="font-size:0.75rem; color:var(--muted);">Start: ${q.s} zł | Czas: ${(q.w/60).toFixed(2)} zł/min</span>
+                    <span id="q-cost" style="font-size:0.75rem; color:var(--danger); font-weight:bold;">Koszt paliwa: 0.00 zł</span>
                 </div>
-                <div id="map-container" style="display:none; margin-top:20px;">
-                    <div id="map" style="height: 250px; border-radius: 16px; border: 1px solid var(--border);"></div>
-                    <div style="display:flex; justify-content:space-between; margin-top:10px; padding:10px; background:rgba(255,255,255,0.02); border-radius:12px;">
-                        <div style="text-align:center; flex:1;"><span style="font-size:0.7rem; color:var(--muted); text-transform:uppercase;">Dystans</span><br><strong id="res-km" style="color:#fff; font-size:1.2rem;">0 km</strong></div>
-                        <div style="text-align:center; flex:1;"><span style="font-size:0.7rem; color:var(--muted); text-transform:uppercase;">Czas jazdy</span><br><strong id="res-min" style="color:#fff; font-size:1.2rem;">0 min</strong></div>
-                    </div>
-                    <div class="chip-box" style="margin-top:15px;">
-                        <div class="chip ${!window.dQN?'active':''}" style="background:${!window.dQN?'rgba(217,70,239,0.1)':'var(--bg)'};color:${!window.dQN?'var(--quote)':'var(--muted)'}; border-color:${!window.dQN?'var(--quote)':'transparent'}" onclick="window.dQN=false; window.updateRoutePrice();">Dzień (T1/T3)</div>
-                        <div class="chip ${window.dQN?'active':''}" style="background:${window.dQN?'rgba(217,70,239,0.1)':'var(--bg)'};color:${window.dQN?'var(--quote)':'var(--muted)'}; border-color:${window.dQN?'var(--quote)':'transparent'}" onclick="window.dQN=true; window.updateRoutePrice();">Noc/Święto (T2/T4)</div>
-                    </div>
-                    <div id="zone-split" style="display:none; margin-top:15px; background:#000; padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);">
-                        <label style="color:var(--info); font-size:0.75rem; text-transform:uppercase; font-weight:bold; display:block; text-align:center;">Przesuń do granicy miasta</label>
-                        <input type="range" id="zone-slider" min="0" max="100" value="100" step="0.1" style="width:100%; margin:15px 0;" oninput="window.updateZoneSplit()">
-                        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-                            <span style="color:var(--driver)">Miasto: <strong id="val-in">0.0</strong> km</span>
-                            <span style="color:var(--warning)">Poza miastem: <strong id="val-out">0.0</strong> km</span>
-                        </div>
-                    </div>
-                    <div style="background:#000; border-radius:16px; padding:20px; margin-top:20px; text-align:center; border:1px solid var(--quote); box-shadow:inset 0 5px 10px rgba(0,0,0,0.5);">
-                        <p style="margin:0 0 5px 0; color:var(--quote); font-size:0.75rem; font-weight:800;">PROPONOWANA CENA (BRUTTO)</p>
-                        <h1 id="dqt" style="margin:0; font-size:3.5rem; letter-spacing:-2px;">0.00 zł</h1>
-                    </div>
-                    <div class="inp-group" style="margin-top:15px;"><label>Klient VIP (Rabat)</label><select id="dq-c" onchange="window.updateRoutePrice()"><option value="">-- Zwykły kurs --</option>${clientOpts}</select></div>
-                    <button class="btn btn-quote" style="margin-top:15px;" onclick="window.dQB()">ZAKSIĘGUJ KURS DO PANELU</button>
-                </div>
-            </div>` + nav;
-        }
+            </div>
+        </div>
+        <div class="panel" style="border-color:rgba(255,255,255,0.05);">
+            <div class="p-title">Ustawienia Taksometru ⚙️</div>
+            <div class="inp-row">
+                <div class="inp-group"><label>Opłata początkowa (zł)</label><input type="number" id="q-cfg-s" value="${q.s}"></div>
+                <div class="inp-group"><label>Postojowe (zł/h)</label><input type="number" id="q-cfg-w" value="${q.w}"></div>
+            </div>
+            <div class="grid-2" style="padding:0; margin-top:10px;">
+                <div class="inp-group"><label>Taryfa 1 (zł)</label><input type="number" step="0.1" id="q-cfg-t1" value="${q.t1}"></div>
+                <div class="inp-group"><label>Taryfa 2 (zł)</label><input type="number" step="0.1" id="q-cfg-t2" value="${q.t2}"></div>
+                <div class="inp-group"><label>Taryfa 3 (zł)</label><input type="number" step="0.1" id="q-cfg-t3" value="${q.t3}"></div>
+                <div class="inp-group"><label>Taryfa 4 (zł)</label><input type="number" step="0.1" id="q-cfg-t4" value="${q.t4}"></div>
+            </div>
+            <button class="btn" style="background:rgba(255,255,255,0.05); color:#fff; margin-top:15px;" onclick="window.saveQuoteCfg()">ZAPISZ TARYFY</button>
+        </div>
+        ${nav}`;
+        return;
     }
 
-    // ==========================================
-    // ZAKŁADKA: GARAŻ (GARAGE)
-    // ==========================================
-    if(t === 'garage') {
-        let fS = window.calcFuelioStats(); 
-        let todayStr = window.getLocalYMD();
-        
-        let quickExpHtml = `
-        <div class="section-lbl" style="color:var(--info); border-color:var(--info); margin-top:20px;">⚡ Szybkie wydatki (podczas zmiany)</div>
-        <div style="display:flex; gap:10px; overflow-x:auto; padding: 0 15px 15px;">
-            <div onclick="window.dQuickExp('☕ Kawa', 15)" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 15px; display:flex; align-items:center; gap:8px; flex-shrink:0; cursor:pointer;"><span style="font-size:1.5rem;">☕</span><strong style="color:#fff; font-size:0.85rem;">Kawa (15 zł)</strong></div>
-            <div onclick="window.dQuickExp('🍔 Jedzenie', 35)" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 15px; display:flex; align-items:center; gap:8px; flex-shrink:0; cursor:pointer;"><span style="font-size:1.5rem;">🍔</span><strong style="color:#fff; font-size:0.85rem;">Jedzenie (35 zł)</strong></div>
-            <div onclick="window.dQuickExp('✨ Myjnia', 20)" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 15px; display:flex; align-items:center; gap:8px; flex-shrink:0; cursor:pointer;"><span style="font-size:1.5rem;">✨</span><strong style="color:#fff; font-size:0.85rem;">Myjnia (20 zł)</strong></div>
-            <div onclick="window.dQuickExp('🅿 Parking', 10)" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 15px; display:flex; align-items:center; gap:8px; flex-shrink:0; cursor:pointer;"><span style="font-size:1.5rem;">🅿</span><strong style="color:#fff; font-size:0.85rem;">Parking (10 zł)</strong></div>
+    if (t === 'garage') {
+        APP.innerHTML = `
+        ${hdr}
+        <div class="dash-hero" style="padding-bottom:10px;">
+            <p>Dziennik Tankowań i Serwisów</p>
+            <h1 style="color:var(--fuel); font-size:2.8rem; letter-spacing:-1px;">⛽ GARAŻ</h1>
+        </div>
+        ${window.hRenderGarage(d)}
+        ${nav}`;
+    }
+};
+
+// --- LOGIKA WYCENY ---
+window.calcQuote = function() {
+    let km = parseFloat(document.getElementById('q-km').value) || 0;
+    let min = parseFloat(document.getElementById('q-min').value) || 0;
+    let tarIdx = document.getElementById('q-tar').value;
+    
+    let q = window.db.drv.q || {s:8, w:60, t1:3.5, t2:4.5, t3:6, t4:8};
+    let cKm = (window.db.drv.cfg && window.db.drv.cfg.fuelPx) ? window.db.drv.cfg.fuelPx : 0;
+    
+    let tVal = q['t'+tarIdx] || 0;
+    let total = q.s + (km * tVal) + (min * (q.w / 60));
+    
+    document.getElementById('q-res').innerHTML = `${total.toFixed(2)} <span style="font-size:1.5rem;">zł</span>`;
+    let costEl = document.getElementById('q-cost');
+    if(costEl) costEl.innerHTML = `Spali: ~${(km * cKm).toFixed(2)} zł`;
+};
+
+window.saveQuoteCfg = function() {
+    window.db.drv.q = {
+        s: parseFloat(document.getElementById('q-cfg-s').value) || 0,
+        w: parseFloat(document.getElementById('q-cfg-w').value) || 0,
+        t1: parseFloat(document.getElementById('q-cfg-t1').value) || 0,
+        t2: parseFloat(document.getElementById('q-cfg-t2').value) || 0,
+        t3: parseFloat(document.getElementById('q-cfg-t3').value) || 0,
+        t4: parseFloat(document.getElementById('q-cfg-t4').value) || 0
+    };
+    window.save(); 
+    window.render();
+    if(window.sysAlert) window.sysAlert("Sukces", "Cennik zapisany!", "success");
+};
+
+// --- RENDER GARAŻU Z PALIWEM ---
+window.hRenderGarage = function(d) {
+    let mode = window.dGarMode || 'f';
+    let sourceAlert = '';
+    
+    if (d.cfg && d.cfg.fuelSource === 'manual') {
+        sourceAlert = `<div style="background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.3); color:var(--danger); padding:10px; border-radius:12px; font-size:0.75rem; text-align:center; margin-bottom:15px; font-weight:bold;">⚠️ UWAGA: Masz włączony tryb Ręcznego Wpisywania Spalania w Opcjach. Tankowania dodane tutaj zapiszą się w historii, ale NIE zaktualizują Twojego kosztu na kilometr.</div>`;
+    }
+
+    let stats = window.calcFuelioStats();
+    let statsHtml = '';
+    
+    if(mode === 'f') {
+        statsHtml = `
+        <div class="grid-2">
+            <div class="box" style="border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.05);"><span>Rzeczywiste Spalanie</span><strong style="color:var(--fuel);">${stats.l100.toFixed(2)} L/100</strong></div>
+            <div class="box" style="border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.05);"><span>Paliwo na 1 KM</span><strong style="color:var(--danger);">${stats.ck.toFixed(2)} zł</strong></div>
+        </div>
+        <div style="text-align:center; margin-bottom:15px;"><span style="font-size:0.7rem; color:var(--muted);">Obliczenia na dystansie: ${stats.td.toFixed(0)} KM</span></div>`;
+    }
+
+    let html = `
+    <div style="padding:0 12px;">
+        ${sourceAlert}
+        ${statsHtml}
+        <div class="mode-switch" style="border-color:rgba(255,255,255,0.1);">
+            <div class="m-btn ${mode==='f'?'active':''}" onclick="window.dGarMode='f';window.render()" style="${mode==='f'?'background:var(--fuel);color:#000;box-shadow:0 4px 15px rgba(245,158,11,0.3);':''}">⛽ Tankowania</div>
+            <div class="m-btn ${mode==='e'?'active':''}" onclick="window.dGarMode='e';window.render()" style="${mode==='e'?'background:var(--danger);color:#fff;box-shadow:0 4px 15px rgba(239,68,68,0.3);':''}">🔧 Serwis / Myjnia</div>
+        </div>
+    </div>`;
+
+    if(mode === 'f') {
+        html += `
+        <div class="panel" style="border-color:rgba(245,158,11,0.2);">
+            <div class="inp-group" style="margin-bottom:12px;"><label>Przebieg ODO (km)</label><input type="number" id="df-o" class="big-inp" value="${d.odo||0}"></div>
+            <div class="inp-row">
+                <div class="inp-group"><label>Zatankowano (L)</label><input type="number" step="0.1" id="df-l"></div>
+                <div class="inp-group"><label>Kwota (zł)</label><input type="number" step="0.01" id="df-v"></div>
+            </div>
+            <div class="inp-row">
+                <div class="inp-group"><label>Rodzaj</label><select id="df-f"><option value="1">⛽ Do pełna (Liczy spalanie)</option><option value="0">💧 Dolewka (Tylko koszt)</option></select></div>
+                <div class="inp-group"><label>Data</label><input type="date" id="df-date" value="${window.getLocalYMD()}"></div>
+            </div>
+            <button class="btn" style="background:linear-gradient(135deg, var(--fuel), #d97706); color:#000; margin-top:10px;" onclick="window.dAF()">ZAPISZ PARAGON</button>
         </div>`;
-        
-        let appContainer = document.getElementById('app');
-        if(appContainer) {
-            appContainer.innerHTML = hdr + `
-            <div class="dash-hero" style="padding-bottom:5px;">
-                <p>ŚREDNIE SPALANIE (Z paragonów)</p>
-                <h1 style="color:var(--fuel); font-size:4rem;">${Number(fS.l1||0).toFixed(1)} <span style="font-size:1.5rem; color:var(--muted)">L/100</span></h1>
+    } else {
+        html += `
+        <div class="panel" style="border-color:rgba(239,68,68,0.2);">
+            <div class="inp-group" style="margin-bottom:12px;"><label>Kwota z paragonu (zł)</label><input type="number" step="0.01" id="de-v" class="big-inp"></div>
+            <div class="inp-row">
+                <div class="inp-group"><label>Kategoria</label><select id="de-c"><option>💦 Myjnia</option><option>🔧 Naprawa / Części</option><option>🚗 Płyn / Olej</option><option>🅿️ Parking</option><option>📋 Przegląd</option><option>Inne wydatki</option></select></div>
+                <div class="inp-group"><label>Data</label><input type="date" id="de-date" value="${window.getLocalYMD()}"></div>
             </div>
-            <div class="grid-2" style="padding:0 15px; margin-bottom:20px;">
-                <div class="box" style="border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.05); align-items:center;">
-                    <span style="color:var(--fuel)">Koszt 100 KM</span><strong style="color:#fff">${Number(fS.c1||0).toFixed(2)} zł</strong>
-                </div>
-                <div class="box" style="border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.05); align-items:center;">
-                    <span style="color:var(--fuel)">Koszt 1 KM</span><strong style="color:#fff">${Number((d.cfg||{}).fuelPx||0).toFixed(2)} zł</strong>
-                </div>
-            </div>
-            ${quickExpHtml}
-            
-            <div class="panel" style="border-color:var(--fuel); background: linear-gradient(145deg, #18181b 0%, #09090b 100%);">
-                <div class="p-title" style="color:var(--fuel); display:flex; align-items:center; gap:10px;"><span style="font-size:1.5rem;">⛽</span> Nowe Tankowanie</div>
-                <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:15px;">
-                    <div class="inp-row">
-                        <div class="inp-group"><label>Stan Licznika (KM)</label><input type="number" id="df-o" placeholder="np. 155000" style="background:#000;"></div>
-                        <div class="inp-group"><label>Zatankowano (Litry)</label><input type="number" id="df-l" step="0.1" placeholder="0.0" style="background:#000;"></div>
-                    </div>
-                    <div class="inp-row">
-                        <div class="inp-group"><label>Kwota z paragonu (zł)</label><input type="number" id="df-v" placeholder="0.00" style="background:#000; color:var(--fuel); font-weight:bold;"></div>
-                        <div class="inp-group"><label>Data</label><input type="date" id="df-date" value="${todayStr}" style="background:#000;"></div>
-                    </div>
-                    <div class="inp-group" style="margin-bottom:0;">
-                        <label>Czy zatankowano do pełna?</label>
-                        <select id="df-f" style="background:#000;"><option value="1">Tak (Wymagane do obliczenia spalania)</option><option value="0">Tylko częściowo</option></select>
-                    </div>
-                </div>
-                <button class="btn" style="background:var(--fuel); color:#000; font-weight:bold; font-size:1.1rem; padding:15px; box-shadow:0 5px 15px rgba(245,158,11,0.2);" onclick="window.dAF()">ZAPISZ PARAGON TANKOWANIA</button>
-            </div>
-
-            <div class="panel" style="border-color:rgba(239,68,68,0.4); background: linear-gradient(145deg, #18181b 0%, #09090b 100%);">
-                <div class="p-title" style="color:var(--danger); display:flex; align-items:center; gap:10px;"><span style="font-size:1.5rem;">🔧</span> Dodaj Wydatek (Eksploatacja)</div>
-                <div style="background:rgba(239,68,68,0.05); padding:15px; border-radius:12px; border:1px solid rgba(239,68,68,0.2); margin-bottom:15px;">
-                    <div class="inp-row">
-                        <div class="inp-group" style="flex:2"><label>Kategoria Wydatku</label><select id="de-c" style="background:#000;"><option value="✨ Myjnia">✨ Myjnia</option><option value="🛠 Serwis">🛠 Serwis</option><option value="💧 Płyny">💧 Płyny</option><option value="🅿 Parking">🅿 Parking</option><option value="🎫 Mandat">🎫 Mandat</option><option value="☕ Kawa/Jedzenie">☕ Kawa/Jedzenie</option><option value="🛒 Inne">🛒 Inne</option></select></div>
-                        <div class="inp-group"><label>Kwota (zł)</label><input type="number" id="de-v" placeholder="0.00" style="background:#000; color:var(--danger); font-weight:bold;"></div>
-                    </div>
-                    <div class="inp-group" style="margin-bottom:0;"><label>Data Wydatku</label><input type="date" id="de-date" value="${todayStr}" style="background:#000;"></div>
-                </div>
-                <button class="btn btn-danger" style="background:var(--danger); color:#fff; font-weight:bold; font-size:1.1rem; padding:15px; box-shadow:0 5px 15px rgba(239,68,68,0.2);" onclick="window.dAE()">ZAPISZ WYDATEK</button>
-            </div>
-
-            <div class="section-lbl" style="color:#fff; border-color:rgba(255,255,255,0.1);">Historia Garażu</div>
-            <div style="padding: 0 15px; margin-bottom: 20px;">${window.hRenderGarage()}</div>` + nav;
-        }
+            <button class="btn btn-danger" style="margin-top:10px;" onclick="window.dAE()">DODAJ WYDATEK</button>
+        </div>`;
     }
+
+    html += `<div class="section-lbl">Historia Wydatków</div><div style="padding: 0 12px;">`;
+    
+    let expl = d.exp || [];
+    let fList = mode === 'f' ? expl.filter(x => x.ty === 'f') : expl.filter(x => x.ty === 'e');
+    
+    if(fList.length === 0) {
+        html += `<div style="text-align:center; padding:30px; color:var(--muted); font-size:0.8rem; background:rgba(255,255,255,0.02); border-radius:14px; border:1px dashed rgba(255,255,255,0.05);">Brak wpisów w tej kategorii.</div>`;
+    }
+    
+    fList.forEach(e => {
+        let isFull = e.isF === 1;
+        html += `
+        <div class="log-item" style="border-left-color:${e.ty==='f' ? 'var(--fuel)' : 'var(--danger)'};">
+            <div style="flex:1;" onclick="window.dEditExp(${e.id})">
+                <strong style="display:block; font-size:0.95rem;">${e.d}</strong>
+                <span style="font-size:0.7rem; color:var(--muted);">${e.dt} ${e.ty==='f' ? `| ODO: ${e.odo}` : ''}</span>
+                ${e.ty==='f' ? `<div style="font-size:0.65rem; color:${isFull ? 'var(--success)' : 'var(--warning)'}; font-weight:bold; margin-top:4px;">${isFull ? 'Do pełna' : 'Dolewka'} | ${Number(e.l||0).toFixed(1)} Litrów</div>` : ''}
+            </div>
+            <div style="text-align:right;">
+                <div style="color:var(--danger); font-weight:900; font-size:1.1rem; margin-bottom:5px;">-${Number(e.v||0).toFixed(2)} zł</div>
+                <button class="btn btn-danger" style="padding:6px 12px; font-size:0.6rem; width:auto; margin:0;" onclick="window.dDelExp(${e.id})">KOSZ</button>
+            </div>
+        </div>`;
+    });
+    
+    html += `</div><div style="height:40px;"></div>`;
+    return html;
 };
