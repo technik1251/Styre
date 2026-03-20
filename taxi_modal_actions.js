@@ -44,7 +44,7 @@ window.dAF = function() {
     let l = window.safeVal('df-l');
     let v = window.safeVal('df-v');
     
-    // Pobieranie typu paliwa i checkboxa "Do pełna" z nowego interfejsu
+    // Pobieranie typu paliwa i checkboxa "Do pełna" z nowego interfejsu Fuelio
     let fTypeEl = document.getElementById('df-type');
     let type = fTypeEl ? fTypeEl.value : 'pb';
     
@@ -146,7 +146,6 @@ window.dDelExp = function(id) {
             }
             window.db.drv.exp = expList.filter(x => x.id !== id);
             
-            // Przeliczenie po usunięciu
             if(window.db.drv.cfg && window.db.drv.cfg.fuelSource !== 'manual' && window.calcFuelioStats) {
                 let fs = window.calcFuelioStats();
                 window.db.drv.cfg.fuelPx = fs.ck > 0 ? fs.ck : 0;
@@ -188,7 +187,6 @@ window.dSaveEditExp = function(id) {
                 if(f) f.v = nv;
                 if(e.dist > 0) e.cpkm = nv / e.dist;
                 
-                // Przeliczenie po edycji
                 if(window.db.drv.cfg && window.db.drv.cfg.fuelSource !== 'manual' && window.calcFuelioStats) {
                     let fs = window.calcFuelioStats();
                     if(fs.ck > 0) window.db.drv.cfg.fuelPx = fs.ck;
@@ -391,12 +389,11 @@ window.dCrmDel = function(id) {
     }
 };
 
-// --- USTAWIENIA TAXI (ZAPIS DANYCH, PALIWA I TARYF) ---
+// --- ZAPIS USTAWIEŃ (TARYFY I ZAAWANSOWANE PALIWO) ---
 window.dSaveUS = function() {
     window.db.userName = document.getElementById('us-name').value;
     if(!window.db.drv.cfg) window.db.drv.cfg = {};
 
-    // Zapisywanie Taryfikatora
     window.db.drv.q = {
         s: parseFloat(document.getElementById('q-cfg-s').value) || 0,
         w: parseFloat(document.getElementById('q-cfg-w').value) || 0,
@@ -410,31 +407,43 @@ window.dSaveUS = function() {
     window.db.drv.cfg.defCity = document.getElementById('us-city') ? document.getElementById('us-city').value : 'Szczecin';
     
     // Zapisywanie wybranch rodzajów zasilania z checkboxów!
-    let fCheckboxes = document.querySelectorAll('.car-ftype');
     let selectedF = [];
-    if(fCheckboxes && fCheckboxes.length > 0) {
-        fCheckboxes.forEach(cb => { if(cb.checked) selectedF.push(cb.value); });
-    }
+    ['pb', 'on', 'lpg', 'ev'].forEach(t => {
+        let cb = document.getElementById('cb-ftype-' + t);
+        if(cb && cb.checked) selectedF.push(t);
+    });
     if(selectedF.length === 0) selectedF = ['pb']; // Zabezpieczenie przed usunięciem wszystkiego
     window.db.drv.cfg.fTypes = selectedF;
 
-    // Zapisywanie Paliwa
-    window.db.drv.cfg.fuelCons = window.safeVal('us-fcons');
-    window.db.drv.cfg.fuelPriceL = window.safeVal('us-fprice');
-    
+    // Zbieranie i zapisywanie wpisów z ręcznych "Ryczałtów"
+    let mF = {
+        pb: {c: window.safeVal('mf-c-pb', 7.0), p: window.safeVal('mf-p-pb', 6.50)},
+        on: {c: window.safeVal('mf-c-on', 6.0), p: window.safeVal('mf-p-on', 6.00)},
+        lpg: {c: window.safeVal('mf-c-lpg', 10.0), p: window.safeVal('mf-p-lpg', 3.00)},
+        ev: {c: window.safeVal('mf-c-ev', 15.0), p: window.safeVal('mf-p-ev', 1.00)}
+    };
+    window.db.drv.cfg.mFuel = mF;
+
+    // Zapisz wybrane źródło i wylicz koszt łączny
     let fSrcEl = document.getElementById('us-fuel-src');
     window.db.drv.cfg.fuelSource = fSrcEl ? fSrcEl.value : 'garage';
 
     if(window.db.drv.cfg.fuelSource === 'manual') {
-        window.db.drv.cfg.fuelPx = (window.db.drv.cfg.fuelCons * window.db.drv.cfg.fuelPriceL) / 100;
+        let totalCostPerKm = 0;
+        selectedF.forEach(t => {
+            // (spalanie na 100km * cena za litr) / 100 = koszt 1 km dla tego paliwa
+            totalCostPerKm += (mF[t].c * mF[t].p) / 100;
+        });
+        window.db.drv.cfg.fuelPx = totalCostPerKm;
     } else {
+        // Jeśli 'garage', zaktualizuj na podstawie realnych paragonów
         if(window.calcFuelioStats) {
             let fs = window.calcFuelioStats();
             if(fs.ck > 0) window.db.drv.cfg.fuelPx = fs.ck;
         }
     }
     
-    // Reszta ustawień
+    // Reszta ustawień (Podatki, leasingi itp.)
     window.db.drv.cfg.cC = window.safeVal('us-cc');
     window.db.drv.cfg.cType = document.getElementById('us-ctype') ? document.getElementById('us-ctype').value : 'month';
     window.db.drv.cfg.bC = window.safeVal('us-bc');
