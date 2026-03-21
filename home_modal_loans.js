@@ -35,7 +35,7 @@ window.hToggleLoanFields = function() {
         document.getElementById('lbl-total-inst').innerText = 'Z ilu rat został wzięty? (Całkowita ilość)';
     }
 
-    // Widoczność sekcji - Pokazujemy row-total-inst również dla PayPo!
+    // Widoczność sekcji
     document.getElementById('row-rates-1').style.display = (isKredyt || isCard) ? 'flex' : 'none'; 
     document.getElementById('row-card-opts').style.display = isCard ? 'flex' : 'none'; 
     document.getElementById('row-rates-2').style.display = (isKredyt || isBNPL) ? 'flex' : 'none'; 
@@ -330,6 +330,7 @@ window.hCreditHoliday = function(loanId) {
     }
 };
 
+// NOWA LOGIKA: Zamykanie długu z PROMPTEM pozwalającym wpisać co do grosza kwotę z PayPo
 window.hPayOffCompletely = function(loanId) { 
     let ln = window.db.home.loans.find(x => x.id == loanId); if(!ln) return; 
     
@@ -344,22 +345,32 @@ window.hPayOffCompletely = function(loanId) {
         let k = parseFloat(ln.kapital) || 0;
         let bor = parseFloat(ln.borrowed) || k;
         let r = parseFloat(ln.rata) || 0;
-        let totInst = parseInt(ln.totalInst) || parseInt(ln.installmentsLeft) || 0;
+        let instL = parseInt(ln.installmentsLeft) || 0;
+        let totInst = parseInt(ln.totalInst) || instL || 0;
+        let paidCount = totInst - instL;
 
-        if (dniOdZakupu <= 30) {
-            let totalZOdsetkami = r * totInst;
-            if (totalZOdsetkami === 0) totalZOdsetkami = bor;
-            let zaplaconoJuz = totalZOdsetkami - k; 
-            realKwotaDoZaplaty = bor - zaplaconoJuz; 
+        if (dniOdZakupu <= 30 && instL === totInst) {
+            realKwotaDoZaplaty = bor; 
+        } else {
+            // Szacunek zniżki (aby podpowiedzieć użytkownikowi), ok. 80% odsetek przyszłych odpada
+            let prowizjaCalkowita = (r * totInst) - bor;
+            if(prowizjaCalkowita < 0) prowizjaCalkowita = 0;
+            let szacowanaZnizka = prowizjaCalkowita * (instL / totInst) * 0.8;
+            realKwotaDoZaplaty = (r * instL) - szacowanaZnizka;
         }
-        if (realKwotaDoZaplaty < 0) realKwotaDoZaplaty = 0;
     }
+    
+    if (realKwotaDoZaplaty < 0) realKwotaDoZaplaty = 0;
 
-    if(window.sysConfirm) {
-        window.sysConfirm("Całkowita Spłata 🏆", `Opłacić całość (${Number(realKwotaDoZaplaty).toFixed(2)} zł) na dziś?`, () => { 
+    // Prompt, który pozwala użytkownikowi wklepać dokładnie to, co widzi w swojej apce bankowej
+    let userAmt = prompt(`Całkowita Spłata 🏆\nPayPo i inne banki często obniżają koszty przy wczesnej spłacie.\n\nPodaj dokładną kwotę do spłaty (na podstawie Twojej aplikacji):`, Number(realKwotaDoZaplaty).toFixed(2));
+
+    if (userAmt !== null) {
+        let finalAmt = parseFloat(userAmt.replace(',', '.'));
+        if (!isNaN(finalAmt) && finalAmt >= 0) {
             let expOrInc = ln.type === 'Prywatny_WPLYW' ? 'inc' : 'exp'; 
             window.db.home.trans.unshift({ 
-                id: Date.now(), type: expOrInc, cat: 'Kredyt / Leasing', v: realKwotaDoZaplaty, 
+                id: Date.now(), type: expOrInc, cat: 'Kredyt / Leasing', v: finalAmt, 
                 d: 'Spłata całości: ' + ln.n, dt: new Date().toLocaleDateString('pl-PL'), 
                 rD: new Date().toISOString(), isPlanned: false, acc: ln.accId || window.db.home.accs[0].id, 
                 loanAction: 'close', loanId: ln.id, principalPaid: ln.kapital, instReduced: ln.installmentsLeft 
@@ -367,8 +378,10 @@ window.hPayOffCompletely = function(loanId) {
             ln.isClosed = true; ln.kapital = 0; ln.installmentsLeft = 0; 
             if(ln.customSchedule) ln.customSchedule.forEach(cs => cs.isPaid = true);
             window.hSyncSchedule(); window.save(); window.render();
-            window.sysAlert("Zrealizowano! 🎉", `Spłacone w całości!`, "success"); 
-        });
+            if(window.sysAlert) window.sysAlert("Zrealizowano! 🎉", `Spłacono i zamknięto!`, "success"); 
+        } else {
+            if(window.sysAlert) window.sysAlert("Błąd", "Nieprawidłowa kwota.", "error"); 
+        }
     }
 };
 
