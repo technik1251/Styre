@@ -102,7 +102,6 @@ window.hCalcCustomTotal = function() {
     }
 };
 
-// --- NAPRAWIONA LOGIKA BNPL (PAYPO) ---
 window.hCalcBNPL = function() {
     let type = document.getElementById('ml-type').value;
     if(type === 'PayPo') {
@@ -110,9 +109,9 @@ window.hCalcBNPL = function() {
         let ilosc = parseInt(document.getElementById('ml-left-inst').value) || 0;
         let koszyk = parseFloat(document.getElementById('ml-borrowed').value) || 0;
         let kapEl = document.getElementById('ml-kapital');
-        
+
         let totalZOdsetkami = rata * ilosc;
-        
+
         // Zabezpieczenie przed wpisaniem rat mniejszych niż koszyk (BNPL zawsze ma darmowy koszyk, raty to koszt)
         if (totalZOdsetkami > 0 && totalZOdsetkami >= koszyk) {
             kapEl.value = totalZOdsetkami.toFixed(2);
@@ -332,14 +331,26 @@ window.hCreditHoliday = function(loanId) {
 window.hPayOffCompletely = function(loanId) { 
     let ln = window.db.home.loans.find(x => x.id == loanId); if(!ln) return; 
     
-    let spłaconyKapitalJuz = (parseFloat(ln.totalInst) - parseFloat(ln.installmentsLeft)) * parseFloat(ln.rata);
-    if(isNaN(spłaconyKapitalJuz)) spłaconyKapitalJuz = 0;
+    let realKwotaDoZaplaty = parseFloat(ln.kapital) || 0; 
     
-    // Używamy zaktualizowanej logiki: jeśli PayPo jest w darmowym 30-dniowym okresie, płaci KOSZYK. Jeśli rozłożone na raty - płaci KOSZYK MINUS SPŁACONY KAPITAŁ.
-    let realKwotaDoZaplaty = ln.kapital; 
-    
-    if (ln.type === 'PayPo' && ln.rata > 0 && ln.totalInst > 0) {
-        realKwotaDoZaplaty = parseFloat(ln.borrowed) - spłaconyKapitalJuz; 
+    if (ln.type === 'PayPo') {
+        let dzis = new Date();
+        let dataZakupu = new Date(ln.startDate || window.getLocalYMD().substring(0,10));
+        let roznicaMs = dzis.getTime() - dataZakupu.getTime();
+        let dniOdZakupu = Math.floor(roznicaMs / (1000 * 60 * 60 * 24));
+
+        let k = parseFloat(ln.kapital) || 0;
+        let bor = parseFloat(ln.borrowed) || k;
+        let r = parseFloat(ln.rata) || 0;
+        let totInst = parseInt(ln.totalInst) || parseInt(ln.installmentsLeft) || 0;
+
+        if (dniOdZakupu <= 30) {
+            // JESTEŚMY W DARMOWYM OKRESIE
+            let totalZOdsetkami = r * totInst;
+            if (totalZOdsetkami === 0) totalZOdsetkami = bor;
+            let zaplaconoJuz = totalZOdsetkami - k; // ile spłacono rat
+            realKwotaDoZaplaty = bor - zaplaconoJuz; // spłaca sam koszyk minus to, co już oddał
+        }
         if (realKwotaDoZaplaty < 0) realKwotaDoZaplaty = 0;
     }
 
@@ -373,9 +384,32 @@ window.hOpenPayLoanModal = function(loanId, transId = null) {
         defVal = (ln.declaredPay === 'min') ? minP : ln.kapital;
         subText = `Zadłużenie: <strong>${Number(ln.kapital||0).toFixed(2)} zł</strong><br>Min. spłata: <strong>${Number(minP||0).toFixed(2)} zł</strong>`;
     } else if (ln.type === 'PayPo') {
-        if(!ln.rata || ln.rata === 0) {
-            defVal = ln.borrowed || ln.kapital; 
-            subText = `Spłacasz całość zakupu w darmowym okresie 30 dni.`;
+        let dzis = new Date();
+        let dataZakupu = new Date(ln.startDate || window.getLocalYMD().substring(0,10));
+        let dniOdZakupu = Math.floor((dzis.getTime() - dataZakupu.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (dniOdZakupu <= 30) {
+            let k = parseFloat(ln.kapital) || 0;
+            let bor = parseFloat(ln.borrowed) || k;
+            let r = parseFloat(ln.rata) || 0;
+            let totInst = parseInt(ln.totalInst) || parseInt(ln.installmentsLeft) || 0;
+            let totalZOdsetkami = r * totInst;
+            if (totalZOdsetkami === 0) totalZOdsetkami = bor;
+
+            let zaplaconoJuz = totalZOdsetkami - k;
+            let zostaloSamegoKoszyka = bor - zaplaconoJuz;
+            if(zostaloSamegoKoszyka < 0) zostaloSamegoKoszyka = 0;
+
+            defVal = zostaloSamegoKoszyka;
+            subText = `Trwa okres darmowy. Spłacasz tylko koszyk bez prowizji! 🛡️`;
+        } else {
+            if(!ln.rata || ln.rata === 0) {
+                defVal = ln.kapital; 
+                subText = `Spłacasz całość zakupu.`;
+            } else {
+                defVal = ln.rata;
+                subText = `Okres darmowy minął. Kwota raty z harmonogramu: <strong>${Number(defVal||0).toFixed(2)} zł</strong>`;
+            }
         }
     } else if (ln.type === 'Prywatny_WYDATEK' || ln.type === 'Prywatny_WPLYW') {
         if (ln.prywMode === 'custom') {
