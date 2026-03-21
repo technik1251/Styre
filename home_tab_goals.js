@@ -175,7 +175,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             let savingsHtmlDetailed = savingsMsg ? `<div style="margin-top:5px; font-size:0.85rem; font-weight:bold; color:${savingsColor};">${savingsMsg}</div>` : '';
             
             // =====================================
-            // OBLICZANIE DAT (ZAAWANSOWANA LOGIKA)
+            // OBLICZANIE DAT (PAYPO EXACT +30 DNI)
             // =====================================
             let nextDateStr = '--';
             let baseNextD = new Date();
@@ -184,10 +184,9 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             if (instL <= 0) {
                 nextDateStr = 'Spłacone 🎉';
             } else if (isBNPL) {
-                // PAYPO: Rata 1 to ZAWSZE +30 dni. Kolejne raty to stały +1 miesiąc do bazy
+                // PAYPO: Bierzemy Datę Zakupu i dodajemy DOKŁADNIE 30 dni dla każdej minionej raty (i aktualnej)
                 let stD = new Date(l.startDate || new Date());
-                stD.setDate(stD.getDate() + 30); 
-                stD.setMonth(stD.getMonth() + paidCount); 
+                stD.setDate(stD.getDate() + (30 * (paidCount + 1))); 
                 nextDateStr = stD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                 baseNextD = stD;
             } else if (isKredyt || (isPryw && l.prywMode === 'equal')) {
@@ -240,10 +239,9 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
                     let lineDisp = i === totInst ? 'none' : 'block';
                     
-                    // Zmiana dat: Pierwsza rata = +30 dni. Kolejne = dodawanie miesiąca
+                    // Magia PayPo: Zawsze twarde +30 dni za każdą iterację raty
                     let instDate = new Date(l.startDate || new Date());
-                    instDate.setDate(instDate.getDate() + 30);
-                    instDate.setMonth(instDate.getMonth() + (i - 1));
+                    instDate.setDate(instDate.getDate() + (30 * i));
                     let rdStr = instDate.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                     
                     detailsHtml += `
