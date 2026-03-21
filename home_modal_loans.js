@@ -330,59 +330,93 @@ window.hCreditHoliday = function(loanId) {
     }
 };
 
-// NOWA LOGIKA: Zamykanie długu z PROMPTEM pozwalającym wpisać co do grosza kwotę z PayPo
+// NOWE: Piękne okno Całkowitej Spłaty z informacją o oszczędnościach i polach do edycji
 window.hPayOffCompletely = function(loanId) { 
     let ln = window.db.home.loans.find(x => x.id == loanId); if(!ln) return; 
     
     let realKwotaDoZaplaty = parseFloat(ln.kapital) || 0; 
-    
+    let oszczednosc = 0;
+
+    let k = parseFloat(ln.kapital) || 0;
+    let bor = parseFloat(ln.borrowed) || k;
+    let r = parseFloat(ln.rata) || 0;
+    let instL = parseInt(ln.installmentsLeft) || 0;
+    let totInst = parseInt(ln.totalInst) || instL || 0;
+
     if (ln.type === 'PayPo') {
         let dzis = new Date();
         let dataZakupu = new Date(ln.startDate || window.getLocalYMD().substring(0,10));
-        let roznicaMs = dzis.getTime() - dataZakupu.getTime();
-        let dniOdZakupu = Math.floor(roznicaMs / (1000 * 60 * 60 * 24));
+        let dniOdZakupu = Math.floor((dzis.getTime() - dataZakupu.getTime()) / (1000 * 60 * 60 * 24));
 
-        let k = parseFloat(ln.kapital) || 0;
-        let bor = parseFloat(ln.borrowed) || k;
-        let r = parseFloat(ln.rata) || 0;
-        let instL = parseInt(ln.installmentsLeft) || 0;
-        let totInst = parseInt(ln.totalInst) || instL || 0;
-        let paidCount = totInst - instL;
+        let totalZOdsetkami = r * totInst;
+        if (totalZOdsetkami === 0) totalZOdsetkami = bor;
+        let prowizjaCalkowita = totalZOdsetkami - bor;
 
         if (dniOdZakupu <= 30 && instL === totInst) {
             realKwotaDoZaplaty = bor; 
+            oszczednosc = prowizjaCalkowita;
         } else {
-            // Szacunek zniżki (aby podpowiedzieć użytkownikowi), ok. 80% odsetek przyszłych odpada
-            let prowizjaCalkowita = (r * totInst) - bor;
-            if(prowizjaCalkowita < 0) prowizjaCalkowita = 0;
-            let szacowanaZnizka = prowizjaCalkowita * (instL / totInst) * 0.8;
-            realKwotaDoZaplaty = (r * instL) - szacowanaZnizka;
+            let paidCount = totInst - instL;
+            let zaplaconoJuz = paidCount * r;
+            let zostaloZCalkowitego = totalZOdsetkami - zaplaconoJuz;
+
+            let szacowanaZnizka = prowizjaCalkowita * (instL / totInst) * 0.8; 
+            realKwotaDoZaplaty = zostaloZCalkowitego - szacowanaZnizka;
+            oszczednosc = szacowanaZnizka;
         }
+    } else if (ln.type === 'Kredyt' || ln.type === 'Leasing') {
+         oszczednosc = (r * instL) - k;
+         realKwotaDoZaplaty = k;
     }
     
     if (realKwotaDoZaplaty < 0) realKwotaDoZaplaty = 0;
+    if (oszczednosc < 0) oszczednosc = 0;
 
-    // Prompt, który pozwala użytkownikowi wklepać dokładnie to, co widzi w swojej apce bankowej
-    let userAmt = prompt(`Całkowita Spłata 🏆\nPayPo i inne banki często obniżają koszty przy wczesnej spłacie.\n\nPodaj dokładną kwotę do spłaty (na podstawie Twojej aplikacji):`, Number(realKwotaDoZaplaty).toFixed(2));
+    let savingsHtml = oszczednosc > 0 
+        ? `<div style="font-size:0.8rem; color:var(--success); margin-bottom:15px; font-weight:bold; background:rgba(34,197,94,0.1); padding:10px; border-radius:8px; border:1px dashed var(--success); text-align:center;">🎉 Spłacając dziś, unikasz ok. ${Number(oszczednosc).toFixed(2)} zł opłat!</div>` 
+        : `<div style="font-size:0.8rem; color:var(--muted); margin-bottom:15px; text-align:center;">Spłacasz całość pozostałego kapitału.</div>`;
 
-    if (userAmt !== null) {
-        let finalAmt = parseFloat(userAmt.replace(',', '.'));
-        if (!isNaN(finalAmt) && finalAmt >= 0) {
-            let expOrInc = ln.type === 'Prywatny_WPLYW' ? 'inc' : 'exp'; 
-            window.db.home.trans.unshift({ 
-                id: Date.now(), type: expOrInc, cat: 'Kredyt / Leasing', v: finalAmt, 
-                d: 'Spłata całości: ' + ln.n, dt: new Date().toLocaleDateString('pl-PL'), 
-                rD: new Date().toISOString(), isPlanned: false, acc: ln.accId || window.db.home.accs[0].id, 
-                loanAction: 'close', loanId: ln.id, principalPaid: ln.kapital, instReduced: ln.installmentsLeft 
-            }); 
-            ln.isClosed = true; ln.kapital = 0; ln.installmentsLeft = 0; 
-            if(ln.customSchedule) ln.customSchedule.forEach(cs => cs.isPaid = true);
-            window.hSyncSchedule(); window.save(); window.render();
-            if(window.sysAlert) window.sysAlert("Zrealizowano! 🎉", `Spłacono i zamknięto!`, "success"); 
-        } else {
-            if(window.sysAlert) window.sysAlert("Błąd", "Nieprawidłowa kwota.", "error"); 
-        }
+    let html = `<div id="m-payoff-comp" class="modal-overlay">
+        <div class="panel" style="width:100%; max-width:340px; background:#09090b; border-color:var(--success);">
+            <h3 style="margin-top:0; color:var(--success);">🏆 Całkowita Spłata</h3>
+            <p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">Zamykasz: <strong>${ln.n}</strong>. Jeśli bank/PayPo zaoferował Ci niższą kwotę za wczesną spłatę, wprowadź ją poniżej.</p>
+            ${savingsHtml}
+            <div class="inp-group" style="margin-bottom:15px;">
+                <label>Dokładna kwota spłaty (zł)</label>
+                <input type="number" step="0.01" id="mpc-val" value="${Number(realKwotaDoZaplaty).toFixed(2)}" class="big-inp" style="color:var(--success); background:rgba(0,0,0,0.5);">
+            </div>
+            <div class="inp-group" style="margin-bottom:20px;">
+                <label>Z którego konta spłacasz?</label>
+                <select id="mpc-acc" style="background:#18181b;">${window.db.home.accs.map(a => `<option value="${a.id}" ${a.id==(ln.accId||window.db.home.accs[0].id)?'selected':''}>${a.n}</option>`).join('')}</select>
+            </div>
+            <button class="btn" style="background:var(--success); color:#000; font-weight:bold; padding:15px;" onclick="window.hExecPayOffCompletely('${loanId}')">ZAKSIĘGUJ I ZAMKNIJ DŁUG</button>
+            <button class="btn" style="background:transparent; color:var(--muted); margin-top:5px; box-shadow:none;" onclick="document.getElementById('m-payoff-comp').remove()">ANULUJ</button>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+};
+
+window.hExecPayOffCompletely = function(loanId) {
+    let val = parseFloat(document.getElementById('mpc-val').value);
+    let accId = document.getElementById('mpc-acc').value;
+
+    if(!val || val < 0) return window.sysAlert ? window.sysAlert("Błąd", "Podaj poprawną kwotę!") : alert("Błąd");
+
+    let ln = window.db.home.loans.find(x => x.id == loanId);
+    if(ln) {
+        let expOrInc = ln.type === 'Prywatny_WPLYW' ? 'inc' : 'exp';
+        window.db.home.trans.unshift({
+            id: Date.now(), type: expOrInc, cat: 'Kredyt / Leasing', v: val,
+            d: 'Spłata całości: ' + ln.n, dt: new Date().toLocaleDateString('pl-PL'),
+            rD: new Date().toISOString(), isPlanned: false, acc: accId,
+            loanAction: 'close', loanId: ln.id, principalPaid: ln.kapital, instReduced: ln.installmentsLeft
+        });
+        ln.isClosed = true; ln.kapital = 0; ln.installmentsLeft = 0;
+        if(ln.customSchedule) ln.customSchedule.forEach(cs => cs.isPaid = true);
+        window.hSyncSchedule(); window.save(); window.render();
+        if(window.sysAlert) window.sysAlert("Zrealizowano! 🎉", `Zobowiązanie spłacone i zamknięte!`, "success");
     }
+    document.getElementById('m-payoff-comp').remove();
 };
 
 window.hOpenPayLoanModal = function(loanId, transId = null) {
