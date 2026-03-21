@@ -175,7 +175,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             let savingsHtmlDetailed = savingsMsg ? `<div style="margin-top:5px; font-size:0.85rem; font-weight:bold; color:${savingsColor};">${savingsMsg}</div>` : '';
             
             // =====================================
-            // OBLICZANIE DAT (PAYPO EXACT +30 DNI)
+            // OBLICZANIE DAT (IDEALNY KALENDARZ PAYPO)
             // =====================================
             let nextDateStr = '--';
             let baseNextD = new Date();
@@ -184,9 +184,10 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             if (instL <= 0) {
                 nextDateStr = 'Spłacone 🎉';
             } else if (isBNPL) {
-                // PAYPO: Bierzemy Datę Zakupu i dodajemy DOKŁADNIE 30 dni dla każdej minionej raty (i aktualnej)
+                // Rata 1 to ZAWSZE data_zakupu + 30 dni. Kolejne raty to Rata 1 + N miesięcy
                 let stD = new Date(l.startDate || new Date());
-                stD.setDate(stD.getDate() + (30 * (paidCount + 1))); 
+                stD.setDate(stD.getDate() + 30); // Ustawiamy 1. ratę (+30 dni od zakupu)
+                stD.setMonth(stD.getMonth() + paidCount); // Dodajemy miesiąc dla każdej opłaconej już raty
                 nextDateStr = stD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                 baseNextD = stD;
             } else if (isKredyt || (isPryw && l.prywMode === 'equal')) {
@@ -239,9 +240,10 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
                     let lineDisp = i === totInst ? 'none' : 'block';
                     
-                    // Magia PayPo: Zawsze twarde +30 dni za każdą iterację raty
+                    // Zmiana dat PayPo
                     let instDate = new Date(l.startDate || new Date());
-                    instDate.setDate(instDate.getDate() + (30 * i));
+                    instDate.setDate(instDate.getDate() + 30); // Zawsze 1 rata = +30 dni od zakupu
+                    instDate.setMonth(instDate.getMonth() + (i - 1)); // Kolejne to + miesiac
                     let rdStr = instDate.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                     
                     detailsHtml += `
