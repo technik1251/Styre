@@ -19,8 +19,8 @@ window.hToggleLoanFields = function() {
         lblKap.innerText = 'Bieżące Zadłużenie na Karcie (zł)';
     }
     else if(isBNPL) {
-        lblBor.innerText = 'Wartość Koszyka (Wartość Towaru)';
-        lblKap.innerText = 'Całkowity Koszt do Spłaty z Prowizją';
+        lblBor.innerText = 'Wartość Koszyka (Wartość Towaru Bez Kosztów)';
+        lblKap.innerText = 'Całkowity Koszt do Spłaty (Z Odsetkami / Po 30 dniach)';
     }
     else if(isPryw) {
         lblBor.innerText = 'Całkowita kwota pożyczki (zł)';
@@ -31,11 +31,11 @@ window.hToggleLoanFields = function() {
         lblKap.innerText = 'Kapitał do spłaty NA DZIŚ (zł)';
     }
 
-    // Widoczność sekcji - DODANO RRSO DLA KARTY (isCard)
+    // Widoczność sekcji
     document.getElementById('row-rates-1').style.display = (isKredyt || isCard) ? 'flex' : 'none'; 
     document.getElementById('row-card-opts').style.display = isCard ? 'flex' : 'none'; 
     document.getElementById('row-rates-2').style.display = (isKredyt || isBNPL) ? 'flex' : 'none'; 
-    document.getElementById('row-total-inst').style.display = isKredyt ? 'block' : 'none'; // Tylko dla Kredytu: z ilu rat wzięty
+    document.getElementById('row-total-inst').style.display = isKredyt ? 'block' : 'none';
     
     document.getElementById('paypo-dates').style.display = isBNPL ? 'flex' : 'none'; 
     document.getElementById('group-day').style.display = (isKredyt || isCard) ? 'block' : 'none'; 
@@ -43,13 +43,13 @@ window.hToggleLoanFields = function() {
     document.getElementById('custom-schedule-box').style.display = isPryw ? 'block' : 'none';
     document.getElementById('pryw-typ-splaty').style.display = isPryw ? 'block' : 'none';
 
-    // Obsługa wyłączania pól w BNPL (Automatyzacja)
+    // Obsługa wyłączania pól w BNPL
     let kapEl = document.getElementById('ml-kapital');
     if(isBNPL) {
-        kapEl.disabled = true; // Zablokowane, system sam przelicza: Rata * Ilość Rat
+        kapEl.disabled = true; 
         kapEl.style.opacity = '0.5';
     } else {
-        kapEl.disabled = false; // Pełna kontrola ręczna dla Kredytów
+        kapEl.disabled = false; 
         kapEl.style.opacity = '1';
     }
 
@@ -102,18 +102,23 @@ window.hCalcCustomTotal = function() {
     }
 };
 
+// --- NAPRAWIONA LOGIKA BNPL (PAYPO) ---
 window.hCalcBNPL = function() {
     let type = document.getElementById('ml-type').value;
     if(type === 'PayPo') {
         let rata = parseFloat(document.getElementById('ml-rata').value) || 0;
         let ilosc = parseInt(document.getElementById('ml-left-inst').value) || 0;
-        let total = rata * ilosc;
+        let koszyk = parseFloat(document.getElementById('ml-borrowed').value) || 0;
+        let kapEl = document.getElementById('ml-kapital');
         
-        if (total > 0) {
-            document.getElementById('ml-kapital').value = total.toFixed(2);
+        let totalZOdsetkami = rata * ilosc;
+        
+        // Zabezpieczenie przed wpisaniem rat mniejszych niż koszyk (BNPL zawsze ma darmowy koszyk, raty to koszt)
+        if (totalZOdsetkami > 0 && totalZOdsetkami >= koszyk) {
+            kapEl.value = totalZOdsetkami.toFixed(2);
         } else {
-            let koszyk = parseFloat(document.getElementById('ml-borrowed').value) || 0;
-            document.getElementById('ml-kapital').value = koszyk > 0 ? koszyk.toFixed(2) : '';
+            // Jeśli ktoś wpisze ratę, z której suma jest mniejsza niż koszyk, wyświetla koszyk.
+            kapEl.value = koszyk > 0 ? koszyk.toFixed(2) : '';
         }
     }
 };
@@ -245,7 +250,6 @@ window.hSaveLoan = function(id) {
         d = parseInt(document.getElementById('ml-pryw-day').value) || 10;
     }
     
-    // ZAPIS RRSO DLA KARTY I KREDYTU
     let p = (isKredyt || isCard) ? (parseFloat(document.getElementById('ml-pct').value) || 0) : 0; 
     
     let startDate = window.getLocalYMD().substring(0,10);
@@ -331,6 +335,7 @@ window.hPayOffCompletely = function(loanId) {
     let spłaconyKapitalJuz = (parseFloat(ln.totalInst) - parseFloat(ln.installmentsLeft)) * parseFloat(ln.rata);
     if(isNaN(spłaconyKapitalJuz)) spłaconyKapitalJuz = 0;
     
+    // Używamy zaktualizowanej logiki: jeśli PayPo jest w darmowym 30-dniowym okresie, płaci KOSZYK. Jeśli rozłożone na raty - płaci KOSZYK MINUS SPŁACONY KAPITAŁ.
     let realKwotaDoZaplaty = ln.kapital; 
     
     if (ln.type === 'PayPo' && ln.rata > 0 && ln.totalInst > 0) {
@@ -369,8 +374,8 @@ window.hOpenPayLoanModal = function(loanId, transId = null) {
         subText = `Zadłużenie: <strong>${Number(ln.kapital||0).toFixed(2)} zł</strong><br>Min. spłata: <strong>${Number(minP||0).toFixed(2)} zł</strong>`;
     } else if (ln.type === 'PayPo') {
         if(!ln.rata || ln.rata === 0) {
-            defVal = ln.kapital; 
-            subText = `Spłacasz całość zakupu bez odsetek.`;
+            defVal = ln.borrowed || ln.kapital; 
+            subText = `Spłacasz całość zakupu w darmowym okresie 30 dni.`;
         }
     } else if (ln.type === 'Prywatny_WYDATEK' || ln.type === 'Prywatny_WPLYW') {
         if (ln.prywMode === 'custom') {
