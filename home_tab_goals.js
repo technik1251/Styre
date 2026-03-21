@@ -26,13 +26,13 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             let roznicaMs = dzis.getTime() - dataZakupu.getTime();
             let dniOdZakupu = Math.floor(roznicaMs / (1000 * 60 * 60 * 24));
             
-            if (dniOdZakupu > 30) {
-                sumBNPL += k; // Minęło 30 dni = Płaci całkowity kapitał (z odsetkami)
+            if (dniOdZakupu > 30 || parseInt(l.installmentsLeft) < parseInt(l.totalInst) || parseInt(l.totalInst) > 1) {
+                sumBNPL += k; 
             } else {
                 let paidCount = parseInt(l.totalInst) - parseInt(l.installmentsLeft);
                 let splaconyKapitalJuz = paidCount * r;
                 let doZaplaty = bor - splaconyKapitalJuz;
-                sumBNPL += Math.max(0, doZaplaty); // W darmowym okresie = tylko koszyk
+                sumBNPL += Math.max(0, doZaplaty); 
             }
         }
         else if(l.type === 'Prywatny_WPLYW') sumPrywInc += k;
@@ -141,7 +141,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                 let roznicaMs = dzis.getTime() - dataZakupu.getTime();
                 let dniOdZakupu = Math.floor(roznicaMs / (1000 * 60 * 60 * 24));
 
-                if (dniOdZakupu <= 30) {
+                if (dniOdZakupu <= 30 && instL === totInst && totInst <= 1) {
                     valToPayText = bor - splaconyKapitalJuz; 
                     if(valToPayText < 0) valToPayText = 0;
                     valToPayLbl = 'WARTOŚĆ ZAKUPU / ZADŁUŻENIE';
@@ -167,7 +167,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                         savingsMsg = `Spłacając dziś całość, unikasz ${Number(oszczednoscDnia).toFixed(2)} zł opłat! 🛍️`;
                         savingsColor = 'var(--info)';
                     }
-                    bnplAlert = `<div style="color:var(--danger); font-size:0.75rem; font-weight:bold; margin-top:5px;">Minęło 30 dni. Doliczono koszty operatora. ⚠️</div>`;
+                    bnplAlert = `<div style="color:var(--danger); font-size:0.75rem; font-weight:bold; margin-top:5px;">Minęło 30 dni lub rozłożono. Doliczono koszty operatora. ⚠️</div>`;
                 }
             }
 
@@ -175,7 +175,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             let savingsHtmlDetailed = savingsMsg ? `<div style="margin-top:5px; font-size:0.85rem; font-weight:bold; color:${savingsColor};">${savingsMsg}</div>` : '';
             
             // =====================================
-            // OBLICZANIE DAT (PAYPO +30 DNI)
+            // OBLICZANIE DAT (ZAAWANSOWANA LOGIKA)
             // =====================================
             let nextDateStr = '--';
             let baseNextD = new Date();
@@ -184,9 +184,10 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             if (instL <= 0) {
                 nextDateStr = 'Spłacone 🎉';
             } else if (isBNPL) {
-                // PAYPO: Rata 1 to +30 dni, Rata 2 to +60 dni itd.
+                // PAYPO: Rata 1 to ZAWSZE +30 dni. Kolejne raty to stały +1 miesiąc do bazy
                 let stD = new Date(l.startDate || new Date());
-                stD.setDate(stD.getDate() + (30 * (paidCount + 1))); 
+                stD.setDate(stD.getDate() + 30); 
+                stD.setMonth(stD.getMonth() + paidCount); 
                 nextDateStr = stD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                 baseNextD = stD;
             } else if (isKredyt || (isPryw && l.prywMode === 'equal')) {
@@ -220,8 +221,8 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                 </div>`;
 
                 if (prowizja > 0) {
-                    let pColor = isFreePeriod ? 'var(--muted)' : 'var(--warning)';
-                    let pText = isFreePeriod ? `(Ominiesz płacąc do ${daysLeft} dni)` : `Naliczono po 30 dniach`;
+                    let pColor = (isFreePeriod && instL === totInst) ? 'var(--muted)' : 'var(--warning)';
+                    let pText = (isFreePeriod && instL === totInst) ? `(Ominiesz płacąc do ${daysLeft} dni)` : `Naliczono po 30 dniach`;
                     
                     detailsHtml += `
                     <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
@@ -239,16 +240,17 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
                     let lineDisp = i === totInst ? 'none' : 'block';
                     
-                    // Zmiana dat dla poszczególnych rat PayPo: +30 dni każda rata
+                    // Zmiana dat: Pierwsza rata = +30 dni. Kolejne = dodawanie miesiąca
                     let instDate = new Date(l.startDate || new Date());
-                    instDate.setDate(instDate.getDate() + (30 * i));
+                    instDate.setDate(instDate.getDate() + 30);
+                    instDate.setMonth(instDate.getMonth() + (i - 1));
                     let rdStr = instDate.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                     
                     detailsHtml += `
                     <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
                         <div style="display:${lineDisp}; width:2px; background:${isPaid?'var(--info)':'rgba(255,255,255,0.1)'}; position:absolute; left:13px; top:28px; bottom:-18px;"></div>
                         <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.7rem; z-index:1; flex-shrink:0;">${isPaid?sIcon:i}</div>
-                        <div style="flex:1; padding-top:2px;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem;">Rata nr ${i}</strong><br><small style="color:var(--muted)">${isPaid?'Opłacona':(isCurrent?`Spłać do: ${rdStr}`:`Planowana: ${rdStr}`)}</small></div>
+                        <div style="flex:1; padding-top:2px;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem;">Rata nr ${i}</strong><br><small style="color:var(--muted)">${isPaid?'Opłacona':(isCurrent?`Spłać do: ${nextDateStr}`:`Planowana: ${rdStr}`)}</small></div>
                         <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem; padding-top:2px; text-decoration:${isPaid?'line-through':'none'};">${Number(rat).toFixed(2)} zł</strong>
                     </div>`;
                 }
