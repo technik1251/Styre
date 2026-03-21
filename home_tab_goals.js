@@ -22,15 +22,18 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             sumBankiRaty += r;
         }
         else if(l.type === 'PayPo') {
-            // LOGIKA PAYPO: Sumuje koszyk jeśli < 30 dni, w przeciwnym razie cały kapitał z prowizją
+            // LOGIKA PAYPO: Nadrzędna zasada 30 dni darmowych
             let dataZakupu = new Date(l.startDate || window.getLocalYMD().substring(0,10));
             let roznicaMs = dzis.getTime() - dataZakupu.getTime();
             let dniOdZakupu = Math.floor(roznicaMs / (1000 * 60 * 60 * 24));
             
-            if (dniOdZakupu > 30 || parseInt(l.installmentsLeft) < parseInt(l.totalInst) || parseInt(l.totalInst) > 1) {
-                sumBNPL += k; // Minął okres lub rozłożono = płaci z odsetkami
+            if (dniOdZakupu > 30) {
+                sumBNPL += k; // Minęło 30 dni = Płaci całkowity kapitał (z odsetkami)
             } else {
-                sumBNPL += bor; // Okres darmowy = płaci tylko koszyk
+                let paidCount = parseInt(l.totalInst) - parseInt(l.installmentsLeft);
+                let splaconyKapitalJuz = paidCount * r;
+                let doZaplaty = bor - splaconyKapitalJuz;
+                sumBNPL += Math.max(0, doZaplaty); // W darmowym okresie = tylko koszyk
             }
         }
         else if(l.type === 'Prywatny_WPLYW') sumPrywInc += k;
@@ -125,6 +128,9 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             let valToPayLbl = isPryw ? 'DO SPŁATY NA DZIŚ' : 'KAPITAŁ DO SPŁATY';
             let bnplAlert = '';
 
+            let paidCount = totInst - instL;
+            let splaconyKapitalJuz = paidCount * rat;
+
             if (isKredyt) {
                 let totalCostRemaining = rat * instL; 
                 let oszczednosc = totalCostRemaining - kap;
@@ -137,28 +143,36 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                 let roznicaMs = dzis.getTime() - dataZakupu.getTime();
                 let dniOdZakupu = Math.floor(roznicaMs / (1000 * 60 * 60 * 24));
 
-                if (dniOdZakupu <= 30 && instL === totInst && totInst <= 1) {
-                    // W DARMOWYM OKRESIE
-                    valToPayText = bor; 
+                if (dniOdZakupu <= 30) {
+                    // W DARMOWYM OKRESIE (30 DNI RZĄDZI, NIEZALEŻNIE OD ILOŚCI RAT!)
+                    valToPayText = bor - splaconyKapitalJuz; 
+                    if(valToPayText < 0) valToPayText = 0;
+                    
                     valToPayLbl = 'WARTOŚĆ ZAKUPU / ZADŁUŻENIE';
-                    savingsMsg = `Spłać do 30 dni, by ominąć prowizję! 🛡️`;
-                    savingsColor = 'var(--success)';
+                    
+                    let oszczednoscDnia = (rat * instL) - valToPayText; 
+                    if(oszczednoscDnia > 0) {
+                        savingsMsg = `Spłacając dziś, unikasz ${Number(oszczednoscDnia).toFixed(2)} zł opłat! 🛍️`;
+                        savingsColor = 'var(--info)';
+                    } else {
+                        savingsMsg = `Spłać do 30 dni, by ominąć prowizję! 🛡️`;
+                        savingsColor = 'var(--success)';
+                    }
+                    bnplAlert = `<div style="color:var(--success); font-size:0.75rem; font-weight:bold; margin-top:5px;">Trwa okres darmowy (Zostało ${30 - dniOdZakupu} dni) ⏳</div>`;
                 } else {
-                    // PO TERMINIE LUB RATY
-                    valToPayText = kap;
+                    // PO TERMINIE 30 DNI
+                    valToPayText = kap; 
                     valToPayLbl = 'ZADŁUŻENIE (KOSZYK + PROWIZJA)';
                     
-                    let paidCount = totInst - instL;
-                    let splaconyKapitalJuz = paidCount * rat;
                     let doZaplatyNatychmiast = bor - splaconyKapitalJuz;
                     if(doZaplatyNatychmiast < 0) doZaplatyNatychmiast = 0;
                     let oszczednoscDnia = (rat * instL) - doZaplatyNatychmiast; 
                     
                     if(oszczednoscDnia > 0) {
-                        savingsMsg = `Spłacając dziś, unikasz ${Number(oszczednoscDnia).toFixed(2)} zł opłat! 🛍️`;
+                        savingsMsg = `Spłacając dziś całośc, unikasz ${Number(oszczednoscDnia).toFixed(2)} zł opłat! 🛍️`;
                         savingsColor = 'var(--info)';
                     }
-                    bnplAlert = `<div style="color:var(--danger); font-size:0.75rem; font-weight:bold; margin-top:5px;">Minęło 30 dni lub rozłożono na raty. ⚠️</div>`;
+                    bnplAlert = `<div style="color:var(--danger); font-size:0.75rem; font-weight:bold; margin-top:5px;">Minęło 30 dni. Doliczono koszty operatora. ⚠️</div>`;
                 }
             }
 
@@ -168,7 +182,6 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             // OBLICZANIE DATY
             let nextDateStr = '--';
             let baseNextD = new Date();
-            let paidCount = totInst - instL;
             if (paidCount < 0) paidCount = 0;
 
             if (instL <= 0) {
@@ -186,58 +199,53 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             if(isBNPL) {
                 let deadline = new Date(l.startDate || new Date());
                 deadline.setDate(deadline.getDate() + 30); 
-                let isFreePeriod = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24)) >= 0;
+                let daysLeft = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24));
+                let isFreePeriod = daysLeft >= 0;
 
                 detailsHtml = `<div style="margin-top:15px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
                 
-                if(isFreePeriod && instL === totInst && totInst <= 1) {
-                    detailsHtml += `
-                    <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
-                        <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid var(--success); color:var(--success); display:flex; align-items:center; justify-content:center; font-size:0.85rem; z-index:1; flex-shrink:0;">⏳</div>
-                        <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Spłata całości</strong><br><small style="color:var(--success)">Do ${deadline.toLocaleDateString('pl-PL')}</small></div>
-                        <strong style="color:#fff; font-size:0.9rem; padding-top:2px;">${Number(bor).toFixed(2)} zł</strong>
-                    </div>`;
-                } else {
-                    pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
-                    let prowizja = (rat * totInst) - bor; 
+                pct = totInst > 0 ? (paidCount / totInst) * 100 : 0;
+                let prowizja = (rat * totInst) - bor; 
+                
+                detailsHtml += `
+                <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
+                    <div style="width:2px; background:var(--info); position:absolute; left:13px; top:28px; bottom:-18px;"></div>
+                    <div style="width:28px; height:28px; border-radius:50%; background:var(--info); color:#000; display:flex; align-items:center; justify-content:center; font-size:0.85rem; z-index:1; flex-shrink:0;">🛍️</div>
+                    <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Wartość zakupu</strong><br><small style="color:var(--muted)">Data: ${l.startDate || '--'}</small></div>
+                    <strong style="color:#fff; font-size:0.9rem; padding-top:2px;">${Number(bor).toFixed(2)} zł</strong>
+                </div>`;
+
+                if (prowizja > 0) {
+                    let pColor = isFreePeriod ? 'var(--muted)' : 'var(--warning)';
+                    let pText = isFreePeriod ? `(Ominiesz płacąc do ${daysLeft} dni)` : `Naliczono po 30 dniach`;
                     
                     detailsHtml += `
                     <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
                         <div style="width:2px; background:var(--info); position:absolute; left:13px; top:28px; bottom:-18px;"></div>
-                        <div style="width:28px; height:28px; border-radius:50%; background:var(--info); color:#000; display:flex; align-items:center; justify-content:center; font-size:0.85rem; z-index:1; flex-shrink:0;">🛍️</div>
-                        <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Wartość zakupu</strong><br><small style="color:var(--muted)">Data: ${l.startDate || '--'}</small></div>
-                        <strong style="color:#fff; font-size:0.9rem; padding-top:2px;">${Number(bor).toFixed(2)} zł</strong>
+                        <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${pColor}; color:${pColor}; display:flex; align-items:center; justify-content:center; font-size:0.85rem; z-index:1; flex-shrink:0;">📈</div>
+                        <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Koszty operatora</strong><br><small style="color:${pColor};">${pText}</small></div>
+                        <strong style="color:${pColor}; font-size:0.9rem; padding-top:2px;">+${Number(prowizja).toFixed(2)} zł</strong>
                     </div>`;
-
-                    if (prowizja > 0) {
-                        detailsHtml += `
-                        <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
-                            <div style="width:2px; background:var(--info); position:absolute; left:13px; top:28px; bottom:-18px;"></div>
-                            <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid var(--warning); color:var(--warning); display:flex; align-items:center; justify-content:center; font-size:0.85rem; z-index:1; flex-shrink:0;">📈</div>
-                            <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Koszty operatora</strong></div>
-                            <strong style="color:var(--warning); font-size:0.9rem; padding-top:2px;">+${Number(prowizja).toFixed(2)} zł</strong>
-                        </div>`;
-                    }
+                }
+                
+                for(let i=1; i<=totInst; i++) {
+                    let isPaid = i <= paidCount;
+                    let isCurrent = i === paidCount + 1;
+                    let sColor = isPaid ? 'var(--info)' : (isCurrent ? 'var(--warning)' : 'var(--muted)');
+                    let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
+                    let lineDisp = i === totInst ? 'none' : 'block';
                     
-                    for(let i=1; i<=totInst; i++) {
-                        let isPaid = i <= paidCount;
-                        let isCurrent = i === paidCount + 1;
-                        let sColor = isPaid ? 'var(--info)' : (isCurrent ? 'var(--warning)' : 'var(--muted)');
-                        let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
-                        let lineDisp = i === totInst ? 'none' : 'block';
-                        
-                        let instDate = new Date(baseNextD);
-                        instDate.setMonth(instDate.getMonth() + (i - (paidCount + 1)));
-                        let rdStr = instDate.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
-                        
-                        detailsHtml += `
-                        <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
-                            <div style="display:${lineDisp}; width:2px; background:${isPaid?'var(--info)':'rgba(255,255,255,0.1)'}; position:absolute; left:13px; top:28px; bottom:-18px;"></div>
-                            <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.7rem; z-index:1; flex-shrink:0;">${isPaid?sIcon:i}</div>
-                            <div style="flex:1; padding-top:2px;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem;">Rata nr ${i}</strong><br><small style="color:var(--muted)">${isPaid?'Opłacona':(isCurrent?`Spłać do: ${nextDateStr}`:`Planowana: ${rdStr}`)}</small></div>
-                            <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem; padding-top:2px; text-decoration:${isPaid?'line-through':'none'};">${Number(rat).toFixed(2)} zł</strong>
-                        </div>`;
-                    }
+                    let instDate = new Date(baseNextD);
+                    instDate.setMonth(instDate.getMonth() + (i - (paidCount + 1)));
+                    let rdStr = instDate.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
+                    
+                    detailsHtml += `
+                    <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
+                        <div style="display:${lineDisp}; width:2px; background:${isPaid?'var(--info)':'rgba(255,255,255,0.1)'}; position:absolute; left:13px; top:28px; bottom:-18px;"></div>
+                        <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid ${sColor}; color:${sColor}; display:flex; align-items:center; justify-content:center; font-size:0.7rem; z-index:1; flex-shrink:0;">${isPaid?sIcon:i}</div>
+                        <div style="flex:1; padding-top:2px;"><strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem;">Rata nr ${i}</strong><br><small style="color:var(--muted)">${isPaid?'Opłacona':(isCurrent?`Spłać do: ${nextDateStr}`:`Planowana: ${rdStr}`)}</small></div>
+                        <strong style="color:${isPaid?'var(--muted)':'#fff'}; font-size:0.9rem; padding-top:2px; text-decoration:${isPaid?'line-through':'none'};">${Number(rat).toFixed(2)} zł</strong>
+                    </div>`;
                 }
                 detailsHtml += `</div>`;
             } 
@@ -321,7 +329,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                         <div style="display:flex; justify-content:space-between; align-items:flex-end;">
                             <div>
                                 <span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">${valToPayLbl}</span>
-                                <div style="font-size:1.8rem; font-weight:900; color:#fff; letter-spacing:-1px;">${Number(valToPayText).toFixed(2)} zł</div>
+                                <div style="font-size:1.8rem; font-weight:900; color:#fff; letter-spacing:-1px;">${Number(valToPayText || 0).toFixed(2)} zł</div>
                                 ${bnplAlert}
                             </div>
                             <div style="text-align:right;">
@@ -392,6 +400,35 @@ window.rHomeGoals = function(h, t, nav, hdr) {
         loansHtml = hideScrollStyle + `<div class="hide-scroll" style="display:flex; overflow-x:auto; gap:15px; scroll-snap-type: x mandatory; padding-bottom:15px; width:100%; margin:0; padding: 0 15px;">${mappedLoans}</div>`;
     }
 
+    let legacyDebtsHtml = '';
+    if(h.debts && h.debts.filter(d => !d.isClosed).length > 0) {
+        legacyDebtsHtml = `
+        <div class="section-lbl" style="color:var(--warning); border-color:var(--warning); margin-top:30px;">⏳ Stare wpisy (Do przeniesienia)</div>
+        <div class="panel" style="border-color:var(--warning); background:linear-gradient(145deg, #18181b, #09090b);">
+            <p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-bottom:15px;">Masz tu stare wpisy. Użyj przycisku migracji, aby łatwo zamienić je w nowoczesny Harmonogram w sekcji Zobowiązań!</p>
+            <div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">
+                ${h.debts.filter(d => !d.isClosed).map(d => { 
+                    let amt = parseFloat(d.amount) || 0; 
+                    return `
+                    <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:16px; margin-bottom:15px; border-left:4px solid var(--warning);">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div>
+                                <strong style="color:#fff; font-size:1.15rem; display:block; margin-bottom:4px;">${d.person}</strong>
+                                <span style="font-size:0.75rem; color:var(--muted);">Kwota: <strong style="color:var(--warning); font-size:1.1rem;">${Number(amt || 0).toFixed(2)} zł</strong></span>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-end;">
+                                <div style="display:flex; gap:5px;">
+                                    <button style="background:rgba(239,68,68,0.15); color:var(--danger); border:none; padding:6px; border-radius:8px; cursor:pointer; font-size:0.8rem;" onclick="window.hDelDebtMistake(${d.id})">🗑️ USUŃ CAŁKIEM</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn" style="background:rgba(14,165,233,0.1); color:var(--info); border:1px solid rgba(14,165,233,0.3); border-radius:8px; padding:10px; width:100%; font-size:0.75rem; font-weight:bold; margin-top:12px; box-shadow:none;" onclick="window.hConvertDebtToInstallments(${d.id})">🔄 MIGRACJA: PRZENIEŚ DO NOWYCH ZOBOWIĄZAŃ</button>
+                    </div>`; 
+                }).join('')}
+            </div>
+        </div>`;
+    }
+
     let appContainer = document.getElementById('app');
     if(appContainer) {
         appContainer.innerHTML = hdr + `
@@ -405,7 +442,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
         ${loansHtml}
         
         <div class="section-lbl" style="color:var(--success); border-color:var(--success); margin-top:10px;">🎯 Skarbonki / Cele Oszczędnościowe</div>
-        <div style="padding: 10px 15px; margin-bottom:80px;">
+        <div style="padding: 10px 15px;">
             <div style="text-align:center; margin-bottom:15px;">
                 <button class="btn" style="background:linear-gradient(135deg, var(--success), #16a34a); color:#fff; border-radius:12px; font-weight:900; box-shadow:0 4px 20px rgba(34,197,94,0.4); width:auto; padding:12px 25px; font-size:0.9rem;" onclick="window.hOpenPiggyModal()">+ DODAJ CEL</button>
             </div>
@@ -446,6 +483,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                 </div>`;
             }).join('') || '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:10px 0;">Brak aktywnych celów.</div>'}
         </div>
+        ${legacyDebtsHtml}
         ` + nav;
     }
 };
