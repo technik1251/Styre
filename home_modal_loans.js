@@ -20,7 +20,9 @@ window.hToggleLoanFields = function() {
     }
     else if(isBNPL) {
         lblBor.innerText = 'Wartość Koszyka (Wartość Towaru Bez Kosztów)';
-        lblKap.innerText = 'Całkowity Koszt do Spłaty (Z Odsetkami / Po 30 dniach)';
+        lblKap.innerText = 'Zadłużenie na dziś (Z Prowizją / Po 30 dniach)';
+        document.getElementById('lbl-left-inst').innerText = 'Ile rat POZOSTAŁO?';
+        document.getElementById('lbl-total-inst').innerText = 'Z ilu rat wzięto (ŁĄCZNIE)?';
     }
     else if(isPryw) {
         lblBor.innerText = 'Całkowita kwota pożyczki (zł)';
@@ -29,13 +31,15 @@ window.hToggleLoanFields = function() {
     else {
         lblBor.innerText = 'Początkowa Kwota Umowy (zł)';
         lblKap.innerText = 'Kapitał do spłaty NA DZIŚ (zł)';
+        document.getElementById('lbl-left-inst').innerText = 'Ile rat ZOSTALO?';
+        document.getElementById('lbl-total-inst').innerText = 'Z ilu rat został wzięty? (Całkowita ilość)';
     }
 
-    // Widoczność sekcji
+    // Widoczność sekcji - Pokazujemy row-total-inst również dla PayPo!
     document.getElementById('row-rates-1').style.display = (isKredyt || isCard) ? 'flex' : 'none'; 
     document.getElementById('row-card-opts').style.display = isCard ? 'flex' : 'none'; 
     document.getElementById('row-rates-2').style.display = (isKredyt || isBNPL) ? 'flex' : 'none'; 
-    document.getElementById('row-total-inst').style.display = isKredyt ? 'block' : 'none';
+    document.getElementById('row-total-inst').style.display = (isKredyt || isBNPL) ? 'block' : 'none';
     
     document.getElementById('paypo-dates').style.display = isBNPL ? 'flex' : 'none'; 
     document.getElementById('group-day').style.display = (isKredyt || isCard) ? 'block' : 'none'; 
@@ -106,17 +110,15 @@ window.hCalcBNPL = function() {
     let type = document.getElementById('ml-type').value;
     if(type === 'PayPo') {
         let rata = parseFloat(document.getElementById('ml-rata').value) || 0;
-        let ilosc = parseInt(document.getElementById('ml-left-inst').value) || 0;
+        let iloscZostalo = parseInt(document.getElementById('ml-left-inst').value) || 0;
         let koszyk = parseFloat(document.getElementById('ml-borrowed').value) || 0;
         let kapEl = document.getElementById('ml-kapital');
-
-        let totalZOdsetkami = rata * ilosc;
-
-        // Zabezpieczenie przed wpisaniem rat mniejszych niż koszyk (BNPL zawsze ma darmowy koszyk, raty to koszt)
-        if (totalZOdsetkami > 0 && totalZOdsetkami >= koszyk) {
-            kapEl.value = totalZOdsetkami.toFixed(2);
+        
+        let pozostaleZOdsetkami = rata * iloscZostalo;
+        
+        if (pozostaleZOdsetkami > 0) {
+            kapEl.value = pozostaleZOdsetkami.toFixed(2);
         } else {
-            // Jeśli ktoś wpisze ratę, z której suma jest mniejsza niż koszyk, wyświetla koszyk.
             kapEl.value = koszyk > 0 ? koszyk.toFixed(2) : '';
         }
     }
@@ -152,12 +154,12 @@ window.hOpenLoanModal = function(id = null, forceCard = false) {
         
         <div id="row-rates-2" class="inp-row" style="margin-bottom:12px; display:flex;">
             <div class="inp-group" id="group-rata"><label>Kwota JEDNEJ raty (zł)</label><input type="number" step="0.01" id="ml-rata" value="${ln?(ln.rata||''):''}" oninput="window.hCalcBNPL()"></div>
-            <div class="inp-group" style="flex:1;"><label>Ile rat ZOSTALO?</label><input type="number" id="ml-left-inst" value="${ln?(ln.installmentsLeft||''):''}" oninput="window.hCalcBNPL()"></div>
+            <div class="inp-group" style="flex:1;"><label id="lbl-left-inst">Ile rat ZOSTALO?</label><input type="number" id="ml-left-inst" value="${ln?(ln.installmentsLeft||''):''}" oninput="window.hCalcBNPL()"></div>
         </div>
 
         <div class="inp-group" id="row-total-inst" style="margin-bottom:12px; display:none;">
-            <label>Z ilu rat został wzięty? (Całkowita ilość)</label>
-            <input type="number" id="ml-total-inst" value="${ln?(ln.totalInst||''):''}">
+            <label id="lbl-total-inst">Z ilu rat został wzięty? (Całkowita ilość)</label>
+            <input type="number" id="ml-total-inst" value="${ln?(ln.totalInst||''):''}" oninput="window.hCalcBNPL()">
         </div>
 
         <div class="inp-group" style="margin-bottom:15px;"><label id="lbl-kapital">Całkowita kwota do spłaty na dziś (zł)</label><input type="number" step="0.01" id="ml-kapital" value="${ln?(ln.kapital||''):''}" style="border-color:var(--danger); color:var(--danger); background:rgba(239,68,68,0.05);"></div>
@@ -228,7 +230,7 @@ window.hSaveLoan = function(id) {
     if (isBNPL) {
         r = parseFloat(document.getElementById('ml-rata').value) || 0;
         i = parseInt(document.getElementById('ml-left-inst').value) || 0;
-        ti = i; 
+        ti = parseInt(document.getElementById('ml-total-inst').value) || i; 
         if (r > 0 && i > 0) k = r * i; 
         else k = bor; 
     } else if (isKredyt) {
@@ -345,11 +347,10 @@ window.hPayOffCompletely = function(loanId) {
         let totInst = parseInt(ln.totalInst) || parseInt(ln.installmentsLeft) || 0;
 
         if (dniOdZakupu <= 30) {
-            // JESTEŚMY W DARMOWYM OKRESIE
             let totalZOdsetkami = r * totInst;
             if (totalZOdsetkami === 0) totalZOdsetkami = bor;
-            let zaplaconoJuz = totalZOdsetkami - k; // ile spłacono rat
-            realKwotaDoZaplaty = bor - zaplaconoJuz; // spłaca sam koszyk minus to, co już oddał
+            let zaplaconoJuz = totalZOdsetkami - k; 
+            realKwotaDoZaplaty = bor - zaplaconoJuz; 
         }
         if (realKwotaDoZaplaty < 0) realKwotaDoZaplaty = 0;
     }
