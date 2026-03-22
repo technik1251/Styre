@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: home_tab_acc_set.js - Zakładki Konta i Ustawienia (Ekskluzywne Premium)
+// PLIK: home_tab_acc_set.js - Zakładki Konta i Ustawienia (Kompaktowa Wersja Premium)
 // ==========================================
 
 window.rHomeAccSet = function(h, t, nav, hdr) {
@@ -17,7 +17,7 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                 if (val > 0) totalAccBal += val;
             }
             
-            let allocBar = '<div style="width:100%; height:6px; border-radius:3px; overflow:hidden; display:flex; margin-bottom:25px; background:rgba(255,255,255,0.05); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">';
+            let allocBar = '<div style="width:100%; height:6px; border-radius:3px; overflow:hidden; display:flex; margin-bottom:20px; background:rgba(255,255,255,0.05); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">';
             for(let i=0; i<accs.length; i++) {
                 let a = accs[i];
                 let bal = parseFloat(balances[a.id]) || 0; 
@@ -28,9 +28,9 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
             }
             allocBar += '</div>';
             
-            let topActions = '<div style="display:flex; gap:12px; margin-bottom:10px;">' +
-                '<button class="btn" style="background:linear-gradient(135deg, #d4af37 0%, #aa801a 100%); color:#000; border-radius:14px; font-weight:900; box-shadow:0 6px 20px rgba(212, 175, 55, 0.3); flex:2; padding:16px 10px; font-size:0.85rem; letter-spacing:1px; margin:0; border:none;" onclick="if(typeof window.hOpenAccModal===\'function\') window.hOpenAccModal()">+ DODAJ PORTFEL</button>' +
-                '<button class="btn" style="background:rgba(255,255,255,0.05); color:#fff; border-radius:14px; font-weight:900; flex:1; padding:16px 10px; font-size:0.85rem; letter-spacing:1px; margin:0; border:1px solid rgba(255,255,255,0.1);" onclick="window.switchTab(\'add\'); window.hTransType=\'transfer\'; window.render();">🔄 PRZELEW</button>' +
+            let topActions = '<div style="display:flex; gap:10px; margin-bottom:15px;">' +
+                '<button class="btn" style="background:linear-gradient(135deg, #d4af37 0%, #aa801a 100%); color:#000; border-radius:10px; font-weight:900; box-shadow:0 4px 15px rgba(212, 175, 55, 0.3); flex:2; padding:12px 10px; font-size:0.8rem; letter-spacing:1px; margin:0; border:none;" onclick="if(typeof window.hOpenAccModal===\'function\') window.hOpenAccModal()">+ DODAJ PORTFEL</button>' +
+                '<button class="btn" style="background:rgba(255,255,255,0.05); color:#fff; border-radius:10px; font-weight:900; flex:1; padding:12px 10px; font-size:0.8rem; letter-spacing:1px; margin:0; border:1px solid rgba(255,255,255,0.1);" onclick="window.switchTab(\'add\'); window.hTransType=\'transfer\'; window.render();">🔄 PRZELEW</button>' +
             '</div>';
 
             let accHtml = '';
@@ -39,40 +39,35 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                 let bal = parseFloat(balances[a.id]) || 0; 
                 let pct = totalAccBal > 0 && bal > 0 ? ((bal / totalAccBal) * 100).toFixed(0) : 0;
                 
-                // Elegancka karta konta (Styl Apple Wallet / Revolut Metal)
-                accHtml += '<div class="panel" style="background:linear-gradient(145deg, #1c1c1e 0%, #0d0d0f 100%); padding:22px; border:1px solid rgba(255,255,255,0.03); margin-bottom:20px; border-radius:24px; position:relative; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.6);">' +
-                    // Świecąca poświata w tle (zgodna z kolorem konta)
-                    '<div style="position:absolute; top:-40px; right:-40px; width:150px; height:150px; border-radius:50%; background:'+a.c+'; filter:blur(60px); opacity:0.15; z-index:0; pointer-events:none;"></div>' +
+                // ZNACZNIE MNIEJSZE KARTY (padding 15px zamiast 22px, mniejsze czcionki)
+                accHtml += '<div class="panel" style="background:linear-gradient(145deg, #1c1c1e 0%, #0d0d0f 100%); padding:15px; border:1px solid rgba(255,255,255,0.03); margin-bottom:15px; border-radius:16px; position:relative; overflow:hidden; box-shadow:0 6px 15px rgba(0,0,0,0.5);">' +
+                    '<div style="position:absolute; top:-30px; right:-30px; width:100px; height:100px; border-radius:50%; background:'+a.c+'; filter:blur(40px); opacity:0.15; z-index:0; pointer-events:none;"></div>' +
                     
                     '<div style="position:relative; z-index:1;">' +
-                        // Nagłówek Karty (Ikona + Nazwa + Menu Admina)
                         '<div style="display:flex; justify-content:space-between; align-items:flex-start;">' +
-                            '<div style="display:flex; align-items:center; gap:15px;">' +
-                                '<div style="width:48px; height:48px; border-radius:14px; background:'+a.c+'22; display:flex; align-items:center; justify-content:center; font-size:1.6rem; border:1px solid '+a.c+'44; box-shadow: inset 0 2px 5px rgba(255,255,255,0.1);">'+(a.i || '💳')+'</div>' +
+                            '<div style="display:flex; align-items:center; gap:12px;">' +
+                                '<div style="width:38px; height:38px; border-radius:10px; background:'+a.c+'22; display:flex; align-items:center; justify-content:center; font-size:1.3rem; border:1px solid '+a.c+'44; box-shadow: inset 0 2px 5px rgba(255,255,255,0.1);">'+(a.i || '💳')+'</div>' +
                                 '<div>' +
-                                    '<strong style="font-size:1.2rem; color:#fff; letter-spacing:0.5px;">'+(a.n || 'Konto')+'</strong>' +
-                                    '<span style="color:var(--muted); display:block; margin-top:3px; font-size:0.7rem; text-transform:uppercase; letter-spacing:1px;">Konto Premium • '+pct+'%</span>' +
+                                    '<strong style="font-size:1rem; color:#fff; letter-spacing:0.5px;">'+(a.n || 'Konto')+'</strong>' +
+                                    '<span style="color:var(--muted); display:block; margin-top:2px; font-size:0.65rem; text-transform:uppercase; letter-spacing:1px;">Udział: '+pct+'%</span>' +
                                 '</div>' +
                             '</div>' +
                             
-                            // Dyskretne menu administracyjne
-                            '<div style="display:flex; gap:10px; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">' +
-                                '<span style="font-size:1rem; cursor:pointer; opacity:0.7;" onclick="if(typeof window.hOpenAccModal===\'function\') window.hOpenAccModal(\''+a.id+'\')">✏️</span>' +
-                                '<span style="font-size:1rem; cursor:pointer; opacity:0.7;" onclick="if(typeof window.hShowIconPicker===\'function\') window.hShowIconPicker(\''+a.id+'\')">🎨</span>' +
-                                '<span style="font-size:1rem; cursor:pointer; opacity:0.7;" onclick="if(typeof window.hDelAcc===\'function\') window.hDelAcc(\''+a.id+'\')">🗑️</span>' +
+                            '<div style="display:flex; gap:8px; background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">' +
+                                '<span style="font-size:0.9rem; cursor:pointer; opacity:0.8;" onclick="if(typeof window.hOpenAccModal===\'function\') window.hOpenAccModal(\''+a.id+'\')">✏️</span>' +
+                                '<span style="font-size:0.9rem; cursor:pointer; opacity:0.8;" onclick="if(typeof window.hShowIconPicker===\'function\') window.hShowIconPicker(\''+a.id+'\')">🎨</span>' +
+                                '<span style="font-size:0.9rem; cursor:pointer; opacity:0.8;" onclick="if(typeof window.hDelAcc===\'function\') window.hDelAcc(\''+a.id+'\')">🗑️</span>' +
                             '</div>' +
                         '</div>' +
                         
-                        // Wielka Kwota
-                        '<div style="margin-top:30px; margin-bottom:25px;">' +
-                            '<span style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; font-weight:bold; letter-spacing:2px;">Dostępne Środki</span><br>' +
-                            '<strong style="color:'+(bal >= 0 ? '#fff' : 'var(--danger)')+'; font-size:2.6rem; letter-spacing:-1px; display:block; margin-top:5px; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">'+Number(bal).toFixed(2)+' zł</strong>' +
+                        '<div style="margin-top:15px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:flex-end;">' +
+                            '<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Dostępne Środki</span>' +
+                            '<strong style="color:'+(bal >= 0 ? '#fff' : 'var(--danger)')+'; font-size:1.8rem; letter-spacing:-1px; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">'+Number(bal).toFixed(2)+' zł</strong>' +
                         '</div>' +
                         
-                        // Przyciski Akcji (Pills)
-                        '<div style="display:flex; gap:12px;">' +
-                            '<button style="flex:1; background:rgba(34,197,94,0.1); color:var(--success); border:1px solid rgba(34,197,94,0.2); border-radius:14px; padding:14px; font-weight:900; font-size:0.75rem; letter-spacing:1px; cursor:pointer;" onclick="window.hTempValue=\'\'; window.hTransType=\'inc\'; window.hSelAcc=\''+a.id+'\'; window.switchTab(\'add\')">+ WPŁYW</button>' +
-                            '<button style="flex:1; background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.2); border-radius:14px; padding:14px; font-weight:900; font-size:0.75rem; letter-spacing:1px; cursor:pointer;" onclick="window.hTempValue=\'\'; window.hTransType=\'exp\'; window.hSelAcc=\''+a.id+'\'; window.switchTab(\'add\')">- WYDATEK</button>' +
+                        '<div style="display:flex; gap:8px;">' +
+                            '<button style="flex:1; background:rgba(34,197,94,0.1); color:var(--success); border:1px solid rgba(34,197,94,0.2); border-radius:10px; padding:10px; font-weight:900; font-size:0.7rem; letter-spacing:0.5px; cursor:pointer;" onclick="window.hTempValue=\'\'; window.hTransType=\'inc\'; window.hSelAcc=\''+a.id+'\'; window.switchTab(\'add\')">+ WPŁYW</button>' +
+                            '<button style="flex:1; background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.2); border-radius:10px; padding:10px; font-weight:900; font-size:0.7rem; letter-spacing:0.5px; cursor:pointer;" onclick="window.hTempValue=\'\'; window.hTransType=\'exp\'; window.hSelAcc=\''+a.id+'\'; window.switchTab(\'add\')">- WYDATEK</button>' +
                         '</div>' +
                     '</div>' +
                 '</div>';
@@ -83,7 +78,7 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                 appContainer.innerHTML = hdr + 
                 '<div class="dash-hero" style="padding-bottom:10px;">' +
                     '<p style="letter-spacing:2px; color:#d4af37; font-weight:bold; font-size:0.7rem;">STYREOS PRO</p>' +
-                    '<h1 style="color:#fff; font-size:2.5rem; margin-bottom:20px; font-weight:900; letter-spacing:-1px;">Twój Kapitał</h1>' +
+                    '<h1 style="color:#fff; font-size:2rem; margin-bottom:15px; font-weight:900; letter-spacing:-1px;">Twój Kapitał</h1>' +
                     '<div style="font-size:0.7rem; color:var(--muted); margin-bottom:10px; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Struktura Majątku Netto</div>' +
                     allocBar + topActions +
                 '</div>' +
