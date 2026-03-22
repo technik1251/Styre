@@ -17,6 +17,9 @@ window.rHomeOps = function(h, t, nav, hdr) {
         let plannedSum = 0; 
         let dashCats = {};
         
+        let accStats = {};
+        h.accs.forEach(a => accStats[a.id] = { in: 0, out: 0 });
+        
         h.trans.forEach(x => {
             let d = new Date(x.rD); 
             let v = parseFloat(x.v) || 0;
@@ -25,13 +28,33 @@ window.rHomeOps = function(h, t, nav, hdr) {
                     if(x.type === 'exp') { 
                         currExp += v; 
                         dashCats[x.cat] = (dashCats[x.cat] || 0) + v; 
+                        if(accStats[x.acc]) accStats[x.acc].out += v;
                     }
-                    if(x.type === 'inc') currInc += v; 
+                    if(x.type === 'inc') {
+                        currInc += v; 
+                        if(accStats[x.acc]) accStats[x.acc].in += v;
+                    }
                 } else if (x.type === 'exp') { 
                     plannedSum += v; 
                 }
             }
         });
+
+        // STATYSTYKI KONT NA PULPICIE (Pulse)
+        let accPulseHtml = `<div style="display:flex; gap:10px; overflow-x:auto; padding:15px 15px 5px;" class="hide-scroll">` + 
+        h.accs.map(a => {
+            let bal = parseFloat(balances[a.id]) || 0;
+            let sIn = accStats[a.id]?.in || 0;
+            let sOut = accStats[a.id]?.out || 0;
+            return `<div onclick="window.switchTab('acc')" style="min-width:130px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; cursor:pointer;">
+                <div style="font-size:0.75rem; color:var(--muted); margin-bottom:5px; display:flex; align-items:center; gap:5px;"><span>${a.i}</span> ${a.n}</div>
+                <strong style="color:#fff; font-size:1.1rem; display:block; margin-bottom:8px;">${Number(bal).toFixed(2)} zł</strong>
+                <div style="display:flex; justify-content:space-between; font-size:0.65rem; border-top:1px dashed rgba(255,255,255,0.1); padding-top:6px;">
+                    <span style="color:var(--success)">+${Number(sIn).toFixed(0)}</span>
+                    <span style="color:var(--danger)">-${Number(sOut).toFixed(0)}</span>
+                </div>
+            </div>`;
+        }).join('') + `</div>`;
 
         // ALERTY LIMITÓW - ASYSTENT STYREOS
         let limitAlertsHtml = '';
@@ -140,7 +163,6 @@ window.rHomeOps = function(h, t, nav, hdr) {
             </div>`; 
         }).join('');
 
-        // EMPTY STATE DLA OSTATNICH OPERACJI
         if (!dashRecentTrans) {
             dashRecentTrans = `
             <div style="background:rgba(255,255,255,0.02); border:1px dashed rgba(255,255,255,0.1); border-radius:16px; padding:30px 20px; text-align:center; margin-top:10px;">
@@ -152,13 +174,14 @@ window.rHomeOps = function(h, t, nav, hdr) {
         }
 
         let safeBalance = globalBalance - plannedSum;
+        let hideScrollStyle = `<style>.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }</style>`;
         
         let appContainer = document.getElementById('app');
         if(appContainer) {
-            appContainer.innerHTML = hdr + `
-            <div style="background: linear-gradient(180deg, rgba(20,184,166,0.15) 0%, var(--bg) 100%); padding: 30px 20px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); border-bottom-left-radius:30px; border-bottom-right-radius:30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            appContainer.innerHTML = hdr + hideScrollStyle + `
+            <div style="background: linear-gradient(180deg, rgba(20,184,166,0.15) 0%, var(--bg) 100%); padding: 30px 20px 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); border-bottom-left-radius:30px; border-bottom-right-radius:30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
                 <p style="margin:0 0 5px 0; font-size:0.8rem; color:var(--muted); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Bezpieczne Saldo Netto</p>
-                <h1 style="margin:0; font-size:3.8rem; font-weight:900; color:${safeBalance >= 0 ? '#fff' : 'var(--danger)'}; letter-spacing:-1.5px;">${Number(safeBalance || 0).toFixed(2)} zł</h1>
+                <h1 style="margin:0; font-size:2.8rem; font-weight:900; color:${safeBalance >= 0 ? '#fff' : 'var(--danger)'}; letter-spacing:-1px;">${Number(safeBalance || 0).toFixed(2)} zł</h1>
                 
                 <div style="margin-top:15px; display:flex; justify-content:space-between; font-size:0.75rem; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); padding:10px 15px; border-radius:12px;">
                     <div style="text-align:left; cursor:pointer;" onclick="window.switchTab('acc')">
@@ -182,9 +205,12 @@ window.rHomeOps = function(h, t, nav, hdr) {
                     </div>
                 </div>
             </div>
+            
+            ${accPulseHtml}
             ${finalInsights}
             ${upcomingHtml}
             ${miniPiggyHtml}
+            
             <div class="section-lbl" style="color:#fff; border-color:rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; margin-top:20px;">Ostatnie operacje</div>
             <div style="padding: 0 15px 30px;">
                 ${dashRecentTrans}
@@ -241,7 +267,6 @@ window.rHomeOps = function(h, t, nav, hdr) {
         
         let memChips = `<div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:5px;">` + h.members.map(m => `<div class="chip ${window.hMem === m ? 'active' : ''}" style="padding:8px 16px; flex-shrink:0; ${window.hMem === m ? 'background:var(--life);color:#000;border-color:var(--life)' : 'color:var(--muted)'}" onclick="window.hMem='${m}'; window.render();">${m}</div>`).join('') + `</div>`; 
 
-        // Nadpisanie głównej akcji, by dodać KONFETTI przy przychodzie
         let oldAction = window.hAction;
         window.hAction = function() {
             if(window.hTransType === 'inc' && window.shootConfetti) window.shootConfetti();
@@ -351,7 +376,6 @@ window.rHomeOps = function(h, t, nav, hdr) {
         let bilans = sumInc - sumExp; 
         let mapBtnHtml = `<button class="btn" style="background:rgba(14, 165, 233, 0.15); color:var(--info); border:1px dashed rgba(14, 165, 233, 0.4); border-radius:12px; font-weight:bold; padding:12px; margin-bottom:20px; display:flex; align-items:center; justify-content:center; gap:10px; width:100%;" onclick="window.sysAlert('Funkcja PRO', 'Mapa Finansów (Geotagowanie wydatków i nawigacja Google Maps) będzie wkrótce dostępna w wersji StyreOS PRO! 🗺️', 'info')"><span style="font-size:1.1rem;">📍</span> POKAŻ WYDATKI NA MAPIE (Wkrótce PRO)</button>`;
 
-        // ZABIEGI UX: Empty States dla Wykresów
         let expEmptyHtml = sumExp === 0 ? `
             <div style="text-align:center; padding:30px 10px;">
                 <div style="font-size:3rem; margin-bottom:10px;">📊</div>
@@ -510,7 +534,6 @@ window.rHomeOps = function(h, t, nav, hdr) {
             return `<div class="date-group" style="margin-top:20px; display:flex; justify-content:space-between; font-weight:bold; font-size:0.85rem; color:var(--muted); text-transform:uppercase; padding:0 10px;"><span>${date}</span> <span><span style="color:var(--success)">+${Number(dayInc||0).toFixed(0)}</span> / <span style="color:var(--danger)">-${Number(dayExp||0).toFixed(0)}</span></span></div><div class="panel" style="margin-top:5px; padding:5px 15px; border-radius:12px;">${itemsHtml}</div>`; 
         }).join(''); 
         
-        // EMPTY STATE DLA KALENDARZA
         if(!calHtml) {
             calHtml = `
             <div style="text-align:center; padding:40px 20px;">
