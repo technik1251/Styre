@@ -27,16 +27,17 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             dataZakupu.setHours(12, 0, 0, 0);
             let dniOdZakupu = Math.floor((dzis.getTime() - dataZakupu.getTime()) / (1000 * 60 * 60 * 24));
             
+            // PAYPO: Darmowy okres = 31 dni
             let isConverted = l.isConverted || (parseInt(l.totalInst) > 1);
 
-            if (dniOdZakupu > 30 || isConverted) {
-                sumBNPL += k; // Po 30 dniach lub rozłożeniu kapitałem jest koszyk + prowizja
+            if (dniOdZakupu > 31 || isConverted) {
+                sumBNPL += k; 
             } else {
                 let paidCount = parseInt(l.totalInst) - parseInt(l.installmentsLeft);
                 if(paidCount < 0 || isNaN(paidCount)) paidCount = 0;
                 let splaconyKapitalJuz = paidCount * r;
                 let doZaplaty = bor - splaconyKapitalJuz;
-                sumBNPL += Math.max(0, doZaplaty); // W darmowym okresie kapitałem jest sam koszyk
+                sumBNPL += Math.max(0, doZaplaty); 
             }
         }
         else if(l.type === 'Prywatny_WPLYW') sumPrywInc += k;
@@ -150,9 +151,9 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                 let dataZakupu = new Date(l.startDate || window.getLocalYMD().substring(0,10));
                 dataZakupu.setHours(12, 0, 0, 0);
                 let dniOdZakupu = Math.floor((dzis.getTime() - dataZakupu.getTime()) / (1000 * 60 * 60 * 24));
-                let pozostaloDniDarmowych = 30 - dniOdZakupu;
+                let pozostaloDniDarmowych = 31 - dniOdZakupu;
 
-                if (!isConverted) {
+                if (!isConverted && dniOdZakupu <= 31) {
                     // STAN KOSZYKA (PRZED ROZŁOŻENIEM)
                     valToPayText = bor; 
                     valToPayLbl = 'WARTOŚĆ KOSZYKA (DO SPŁATY)';
@@ -165,10 +166,10 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     bnplAlert = `<div style="color:${timeCol}; font-size:0.75rem; font-weight:bold; margin-top:5px;">${timeMsg}</div>`;
                     
                     let dRata = new Date(l.startDate || new Date());
-                    dRata.setDate(dRata.getDate() + 30);
+                    dRata.setDate(dRata.getDate() + 31);
                     nextDateStr = dRata.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                 } else {
-                    // STAN RATALNY (PO ROZŁOŻENIU)
+                    // STAN RATALNY (PO ROZŁOŻENIU LUB 31 DNIACH)
                     valToPayText = kap; 
                     valToPayLbl = 'ZADŁUŻENIE (KOSZYK + PROWIZJA)';
                     
@@ -182,10 +183,9 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     }
                     bnplAlert = `<div style="color:var(--warning); font-size:0.75rem; font-weight:bold; margin-top:5px;">Rozłożono na raty. Harmonogram w toku. 📉</div>`;
                     
-                    // Sztywne obliczanie dat dla PayPo (+31, +61, +91, +120)
                     if (instL > 0) {
-                        let offsets = [31, 61, 91, 120, 150, 180];
-                        let offset = offsets[paidCount] || (30 * (paidCount + 1));
+                        let offsets = [31, 61, 91, 120, 151, 181];
+                        let offset = offsets[paidCount] || (31 * (paidCount + 1));
                         let stD = new Date(l.startDate || new Date());
                         stD.setHours(12, 0, 0, 0);
                         stD.setDate(stD.getDate() + offset); 
@@ -219,7 +219,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                 
                 if (!isConverted) {
                     let deadline = new Date(l.startDate || new Date());
-                    deadline.setDate(deadline.getDate() + 30);
+                    deadline.setDate(deadline.getDate() + 31);
                     let daysLeft = Math.ceil((deadline - dzis) / (1000 * 60 * 60 * 24));
                     let dlColor = daysLeft >= 0 ? 'var(--success)' : 'var(--danger)';
 
@@ -250,7 +250,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                         <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
                             <div style="width:2px; background:var(--info); position:absolute; left:13px; top:28px; bottom:-18px;"></div>
                             <div style="width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid var(--warning); color:var(--warning); display:flex; align-items:center; justify-content:center; font-size:0.85rem; z-index:1; flex-shrink:0;">📈</div>
-                            <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Koszty operatora</strong><br><small style="color:var(--warning);">Naliczono po 30 dniach / Przy rozłożeniu</small></div>
+                            <div style="flex:1; padding-top:2px;"><strong style="color:#fff; font-size:0.9rem;">Koszty operatora</strong><br><small style="color:var(--warning);">Naliczono po 31 dniach / Przy rozłożeniu</small></div>
                             <strong style="color:var(--warning); font-size:0.9rem; padding-top:2px;">+${Number(prowizja).toFixed(2)} zł</strong>
                         </div>`;
                     }
@@ -262,9 +262,8 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                         let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
                         let lineDisp = i === totInst ? 'none' : 'block';
                         
-                        // PayPo sztywne daty: 31, 61, 91, 120
-                        let offsets = [31, 61, 91, 120, 150, 180];
-                        let offset = offsets[i - 1] || (30 * i);
+                        let offsets = [31, 61, 91, 120, 151, 181];
+                        let offset = offsets[i - 1] || (31 * i);
                         
                         let dRata = new Date(l.startDate || new Date());
                         dRata.setHours(12, 0, 0, 0);
@@ -346,6 +345,8 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             let ratyStr = (totInst > instL && totInst > 0) ? `${instL} z ${totInst}` : `${instL}`;
 
             if(!isCompact) {
+                let mainTitle = isPrywInc ? 'OCZEKUJĘ ZWROTU:' : (isBNPL ? 'WARTOŚĆ ZAKUPU / ZADŁUŻENIE' : 'KAPITAŁ DO SPŁATY');
+                
                 return `
                 <div class="panel" style="flex: 0 0 85%; min-width: 280px; max-width: 340px; scroll-snap-align: center; padding:0; border:1px solid ${isKredyt ? 'var(--danger)' : '#27272a'}; border-radius:24px; overflow:hidden; margin-bottom:0; background:#18181b;">
                     <div style="padding:20px 20px 10px; position:relative;">
@@ -382,16 +383,14 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                         <div id="ldet_${l.id}" style="display:none; margin-bottom:12px;">${detailsHtml}</div>
                     </div>
                     
-                    ${(!isBNPL || isConverted) ? `
                     <div style="padding:0 20px 20px; display:flex; flex-direction:column; gap:10px;">
-                        <button style="background:${cTheme}; color:${isPrywInc?'#000':'#fff'}; width:100%; padding:15px; border-radius:14px; font-weight:bold; font-size:0.9rem; border:none; box-shadow:0 6px 15px ${cBg}; cursor:pointer;" onclick="window.hOpenPayLoanModal('${l.id}')">${isPrywInc ? '📥 ODBIERZ WPŁATĘ' : '💸 SPŁAĆ RATĘ'}</button>
+                        <button style="background:${cTheme}; color:${isPrywInc?'#000':'#fff'}; width:100%; padding:15px; border-radius:14px; font-weight:bold; font-size:0.9rem; border:none; box-shadow:0 6px 15px ${cBg}; cursor:pointer;" onclick="${isBNPL ? `window.hPayOffCompletely('${l.id}')` : `window.hOpenPayLoanModal('${l.id}')`}">${isPrywInc ? '📥 ODBIERZ WPŁATĘ' : (isBNPL ? '🏆 SPŁAĆ CAŁOŚĆ' : '💸 SPŁAĆ RATĘ')}</button>
                         <div style="display:flex; gap:10px;">
-                            <button style="background:rgba(14,165,233,0.2); color:var(--info); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(14,165,233,0.4);" onclick="window.hOverpayLoan('${l.id}')">💰 DOWOLNA K.</button>
+                            <button style="background:rgba(14,165,233,0.2); color:var(--info); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(14,165,233,0.4);" onclick="${isBNPL ? `window.hOpenPayLoanModal('${l.id}')` : `window.hOverpayLoan('${l.id}')`}">${isBNPL ? '💸 SPŁAĆ RATĘ' : '💰 DOWOLNA K.'}</button>
                             ${isKredyt ? `<button style="background:rgba(245,158,11,0.2); color:var(--warning); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(245,158,11,0.4);" onclick="window.hCreditHoliday('${l.id}')">🏖️ ODROCZ</button>` : ''}
-                            <button style="background:rgba(34,197,94,0.2); color:var(--success); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(34,197,94,0.4);" onclick="window.hPayOffCompletely('${l.id}')">🏆 ZAMKNIJ</button>
+                            ${!isBNPL ? `<button style="background:rgba(34,197,94,0.2); color:var(--success); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(34,197,94,0.4);" onclick="window.hPayOffCompletely('${l.id}')">🏆 ZAMKNIJ</button>` : ''}
                         </div>
                     </div>
-                    ` : ''}
                 </div>`;
             } else {
                 let rataTxt = (isPryw && l.prywMode === 'custom') ? '' : `Rata: <strong style="color:#fff">${Number(rat || 0).toFixed(2)} zł</strong>`;
@@ -421,14 +420,13 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     </div>
                     <div id="ldet_${l.id}" style="display:none; margin-bottom:12px;">${detailsHtml}</div>
                     
-                    ${(!isBNPL || isConverted) ? `
                     <div style="display:flex; gap:6px;">
-                        <button style="background:${cTheme}; color:${isPrywInc?'#000':'#fff'}; flex:1; padding:8px 0; border-radius:8px; font-weight:bold; font-size:0.75rem; border:none; cursor:pointer;" onclick="window.hOpenPayLoanModal('${l.id}')">💸 ${isPrywInc?'ODBIERZ':'SPŁAĆ RATĘ'}</button>
-                        <button style="background:rgba(14,165,233,0.15); color:var(--info); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(14,165,233,0.3); cursor:pointer;" onclick="window.hOverpayLoan('${l.id}')">💰</button>
+                        <button style="background:${cTheme}; color:${isPrywInc?'#000':'#fff'}; flex:1; padding:8px 0; border-radius:8px; font-weight:bold; font-size:0.75rem; border:none; cursor:pointer;" onclick="${isBNPL ? `window.hPayOffCompletely('${l.id}')` : `window.hOpenPayLoanModal('${l.id}')`}">💸 ${isPrywInc?'ODBIERZ':(isBNPL?'🏆 SPŁAĆ CAŁOŚĆ':'SPŁAĆ RATĘ')}</button>
+                        <button style="background:rgba(14,165,233,0.15); color:var(--info); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(14,165,233,0.3); cursor:pointer;" onclick="${isBNPL ? `window.hOpenPayLoanModal('${l.id}')` : `window.hOverpayLoan('${l.id}')`}">${isBNPL ? '💸' : '💰'}</button>
                         ${isKredyt ? `<button style="background:rgba(245,158,11,0.15); color:var(--warning); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(245,158,11,0.3); cursor:pointer;" onclick="window.hCreditHoliday('${l.id}')">🏖️</button>` : ''}
-                        <button style="background:rgba(34,197,94,0.15); color:var(--success); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(34,197,94,0.3); cursor:pointer;" onclick="window.hPayOffCompletely('${l.id}')">🏆</button>
+                        ${!isBNPL ? `<button style="background:rgba(34,197,94,0.15); color:var(--success); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(34,197,94,0.3); cursor:pointer;" onclick="window.hPayOffCompletely('${l.id}')">🏆</button>` : ''}
                     </div>
-                    ` : ''}
+                    
                 </div>`;
             }
         }).join('');
