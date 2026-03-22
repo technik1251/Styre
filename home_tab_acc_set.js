@@ -40,27 +40,28 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                 let pct = totalAccBal > 0 && bal > 0 ? ((bal / totalAccBal) * 100).toFixed(0) : 0;
                 
                 accHtml += '<div class="panel" style="background:linear-gradient(145deg, #18181b, #09090b); padding:20px; border:1px solid rgba(255,255,255,0.05); border-left:4px solid '+a.c+'; margin-bottom:15px; border-radius:16px; position:relative; box-shadow:0 8px 20px rgba(0,0,0,0.4);">' +
-                    '<div style="display:flex; justify-content:space-between; align-items:flex-start;">' +
-                        '<div style="display:flex; align-items:center; gap:15px;">' +
+                    '<div style="position:absolute; right:-20px; top:-20px; width:100px; height:100px; border-radius:50%; background:'+a.c+'; filter:blur(40px); opacity:0.1; z-index:0; pointer-events:none;"></div>' +
+                    '<div style="position:relative; z-index:1;">' +
+                        '<div style="position:absolute; right:0; top:0; display:flex; gap:15px; background:rgba(0,0,0,0.5); padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">' +
+                            '<span style="font-size:1.1rem; cursor:pointer;" onclick="if(typeof window.hOpenAccModal===\'function\') window.hOpenAccModal(\''+a.id+'\')">✏️</span>' +
+                            '<span style="font-size:1.1rem; cursor:pointer;" onclick="if(typeof window.hShowIconPicker===\'function\') window.hShowIconPicker(\''+a.id+'\')">🎨</span>' +
+                            '<span style="font-size:1.1rem; cursor:pointer;" onclick="if(typeof window.hDelAcc===\'function\') window.hDelAcc(\''+a.id+'\')">🗑️</span>' +
+                        '</div>' +
+                        '<div style="display:flex; align-items:center; gap:15px; margin-top:10px;">' +
                             '<div style="width:45px; height:45px; border-radius:12px; background:'+a.c+'22; display:flex; align-items:center; justify-content:center; font-size:1.6rem; border:1px solid '+a.c+'55;">'+(a.i || '💳')+'</div>' +
                             '<div>' +
                                 '<strong style="font-size:1.2rem; color:#fff;">'+(a.n || 'Konto')+'</strong>' +
                                 '<small style="color:var(--muted); display:block; margin-top:2px; font-size:0.75rem;">Udział: '+pct+'%</small>' +
                             '</div>' +
                         '</div>' +
-                        '<div style="display:flex; gap:12px; background:rgba(0,0,0,0.4); padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">' +
-                            '<span style="font-size:1rem; cursor:pointer;" onclick="if(typeof window.hOpenAccModal===\'function\') window.hOpenAccModal(\''+a.id+'\')">✏️</span>' +
-                            '<span style="font-size:1rem; cursor:pointer;" onclick="if(typeof window.hShowIconPicker===\'function\') window.hShowIconPicker(\''+a.id+'\')">🎨</span>' +
-                            '<span style="font-size:1rem; cursor:pointer;" onclick="if(typeof window.hDelAcc===\'function\') window.hDelAcc(\''+a.id+'\')">🗑️</span>' +
+                        '<div style="margin-top:25px; margin-bottom:20px; background:rgba(255,255,255,0.02); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.05);">' +
+                            '<span style="font-size:0.8rem; color:var(--muted); text-transform:uppercase;">Bieżące saldo</span>' +
+                            '<strong style="color:'+(bal >= 0 ? '#fff' : 'var(--danger)')+'; font-size:1.6rem; letter-spacing:-1px;">'+Number(bal).toFixed(2)+' zł</strong>' +
                         '</div>' +
-                    '</div>' +
-                    '<div style="margin-top:20px; margin-bottom:20px;">' +
-                        '<span style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Bieżące saldo</span><br>' +
-                        '<strong style="color:'+(bal >= 0 ? '#fff' : 'var(--danger)')+'; font-size:2.2rem; letter-spacing:-1px;">'+Number(bal).toFixed(2)+' zł</strong>' +
-                    '</div>' +
-                    '<div style="display:flex; gap:10px;">' +
-                        '<button style="flex:1; background:rgba(34,197,94,0.15); color:var(--success); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:12px; font-weight:bold; font-size:0.8rem; cursor:pointer;" onclick="window.hTransType=\'inc\'; window.hSelAcc=\''+a.id+'\'; window.switchTab(\'add\')">+ WPŁYW</button>' +
-                        '<button style="flex:1; background:rgba(239,68,68,0.15); color:var(--danger); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:12px; font-weight:bold; font-size:0.8rem; cursor:pointer;" onclick="window.hTransType=\'exp\'; window.hSelAcc=\''+a.id+'\'; window.switchTab(\'add\')">- WYDATEK</button>' +
+                        '<div style="display:flex; gap:10px;">' +
+                            '<button style="flex:1; background:rgba(34,197,94,0.15); color:var(--success); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:12px; font-weight:bold; font-size:0.8rem; cursor:pointer;" onclick="window.hTempValue=\'\'; window.hTransType=\'inc\'; window.hSelAcc=\''+a.id+'\'; window.switchTab(\'add\')">+ WPŁYW</button>' +
+                            '<button style="flex:1; background:rgba(239,68,68,0.15); color:var(--danger); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:12px; font-weight:bold; font-size:0.8rem; cursor:pointer;" onclick="window.hTempValue=\'\'; window.hTransType=\'exp\'; window.hSelAcc=\''+a.id+'\'; window.switchTab(\'add\')">- WYDATEK</button>' +
+                        '</div>' +
                     '</div>' +
                 '</div>';
             }
@@ -75,7 +76,7 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                     allocBar + topActions +
                 '</div>' +
                 '<div style="padding: 10px 15px;">' + accHtml + '</div>' +
-                '<div style="padding-bottom:60px;"></div>' + nav; 
+                '<div style="padding-bottom:60px;"></div>' + (nav||''); 
             }
         }
 
@@ -158,14 +159,14 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                         '<span style="font-size:1.5rem;">☕</span> POSTAW MI KAWĘ' +
                     '</a>' +
                 '</div>' +
-                '<div style="padding-bottom:60px;"></div>' + nav; 
+                '<div style="padding-bottom:60px;"></div>' + (nav||''); 
             }
         } 
     } catch(err) {
         console.error(err);
         let appContainer = document.getElementById('app');
         if(appContainer) {
-            appContainer.innerHTML = '<div style="padding:40px 20px; text-align:center; color:white;"><h3>Błąd w Kontach (home_tab_acc_set)</h3><p style="color:var(--danger);">' + err.message + '</p><button style="padding:15px; background:#fff; color:#000; font-weight:bold; border-radius:12px; border:none; margin-top:20px;" onclick="window.location.reload()">ODŚWIEŻ</button></div>' + (nav || '');
+            appContainer.innerHTML = '<div style="padding:40px 20px; text-align:center; color:white;"><h3>Błąd w Kontach</h3><p style="color:var(--danger);">' + err.message + '</p><button style="padding:15px; background:#fff; color:#000; font-weight:bold; border-radius:12px; border:none; margin-top:20px;" onclick="window.location.reload()">ODŚWIEŻ</button></div>' + (nav || '');
         }
     }
 };
