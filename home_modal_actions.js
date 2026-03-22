@@ -99,7 +99,6 @@ function executeDeleteTrans(id) {
                 if(tr.instReduced) ln.installmentsLeft = (parseInt(ln.installmentsLeft)||0) + parseInt(tr.instReduced); 
                 if(tr.loanAction === 'close') ln.isClosed = false; 
                 
-                // Cofanie transz prywatnych
                 if(ln.type === 'Prywatny_WPLYW' || ln.type === 'Prywatny_WYDATEK') {
                     if (ln.customSchedule) {
                         let transza = ln.customSchedule.find(cs => cs.id == tr.transzaId);
@@ -111,6 +110,10 @@ function executeDeleteTrans(id) {
         if(tr.piggyAction === 'deposit') { 
             let pg = window.db.home.piggy.find(x => x.id == tr.piggyId); 
             if(pg) { pg.saved = (parseFloat(pg.saved)||0) - (parseFloat(tr.amount)||0); if(pg.saved < 0) pg.saved = 0; } 
+        } 
+        if(tr.piggyAction === 'withdraw') { 
+            let pg = window.db.home.piggy.find(x => x.id == tr.piggyId); 
+            if(pg) { pg.saved = (parseFloat(pg.saved)||0) + (parseFloat(tr.amount)||0); } 
         } 
     } 
     window.db.home.trans = window.db.home.trans.filter(x => x.id != id); 
@@ -141,38 +144,156 @@ window.hSaveEditTrans = function(id) {
     document.getElementById('m-edit-h-trans').remove(); 
 };
 
-// --- SKARBONKI / CELE ---
+// --- SKARBONKI / CELE (MODUŁ PREMIUM) ---
 window.hOpenPiggyModal = function() { 
-    let html = `<div id="m-piggy" class="modal-overlay"><div class="panel" style="width:100%; max-width:380px; background:#09090b; border-color:var(--success);"><h3 style="margin-top:0; color:var(--success);">🎯 Cel Oszczędnościowy</h3><div class="inp-group" style="margin-bottom:10px;"><label>Cel (np. Wakacje)</label><input type="text" id="mp-n"></div><div class="inp-row" style="margin-bottom:10px;"><div class="inp-group"><label>Docelowo (zł)</label><input type="number" id="mp-target"></div><div class="inp-group"><label>Już masz (zł)</label><input type="number" id="mp-saved" value="0"></div></div><div class="inp-group" style="margin-bottom:20px;"><label>Data końcowa</label><input type="date" id="mp-date"></div><button class="btn btn-success" onclick="window.hSavePiggy()">ZAPISZ CEL</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-piggy').remove()">ANULUJ</button></div></div>`; 
+    let html = `<div id="m-piggy" class="modal-overlay">
+        <div class="panel" style="width:100%; max-width:380px; background:#09090b; border-color:var(--success);">
+            <h3 style="margin-top:0; color:var(--success);">🎯 Nowa Skarbonka</h3>
+            <div class="inp-row" style="margin-bottom:10px;">
+                <div class="inp-group" style="flex: 0 0 70px;">
+                    <label>Ikona</label>
+                    <input type="text" id="mp-icon" value="🐷" style="text-align:center; font-size:1.5rem; padding:8px;">
+                </div>
+                <div class="inp-group" style="flex:1;">
+                    <label>Na co zbierasz? (Cel)</label>
+                    <input type="text" id="mp-n" placeholder="np. Wakacje, Laptop">
+                </div>
+            </div>
+            <div class="inp-row" style="margin-bottom:10px;">
+                <div class="inp-group">
+                    <label>Kwota docelowa (zł)</label>
+                    <input type="number" id="mp-target" placeholder="np. 5000">
+                </div>
+                <div class="inp-group">
+                    <label>Wkład własny (zł)</label>
+                    <input type="number" id="mp-saved" value="0">
+                </div>
+            </div>
+            <div class="inp-group" style="margin-bottom:20px;">
+                <label>Do kiedy chcesz to zebrać? (Deadline)</label>
+                <input type="date" id="mp-date">
+            </div>
+            <button class="btn btn-success" onclick="window.hSavePiggy()">ZAPISZ CEL</button>
+            <button class="btn" style="background:transparent; color:var(--muted); margin-top:5px; box-shadow:none;" onclick="document.getElementById('m-piggy').remove()">ANULUJ</button>
+        </div>
+    </div>`; 
     document.body.insertAdjacentHTML('beforeend', html); 
 };
 
 window.hSavePiggy = function() { 
-    let n = document.getElementById('mp-n').value; let t = parseFloat(document.getElementById('mp-target').value); 
-    let s = parseFloat(document.getElementById('mp-saved').value) || 0; let d = document.getElementById('mp-date').value; 
-    if(!n || !t) return window.sysAlert ? window.sysAlert("Błąd", "Wymagane pola.") : alert("Wymagane"); 
-    window.db.home.piggy.push({id: Date.now(), n:n, target:t, saved:s, deadline: d}); window.save(); window.render(); document.getElementById('m-piggy').remove(); 
+    let n = document.getElementById('mp-n').value; 
+    let t = parseFloat(document.getElementById('mp-target').value); 
+    let s = parseFloat(document.getElementById('mp-saved').value) || 0; 
+    let d = document.getElementById('mp-date').value; 
+    let icon = document.getElementById('mp-icon').value || '🎯';
+    
+    if(!n || !t) return window.sysAlert ? window.sysAlert("Błąd", "Podaj nazwę i kwotę celu.", "error") : alert("Wymagane pola"); 
+    
+    window.db.home.piggy.push({id: Date.now(), n:n, target:t, saved:s, deadline: d, icon: icon}); 
+    window.save(); window.render(); 
+    document.getElementById('m-piggy').remove(); 
+    if(window.sysAlert) window.sysAlert("Skarbonka utworzona!", "Powodzenia w oszczędzaniu!", "success");
 };
 
+// Wpłacanie na Skarbonkę
 window.hAddFundsPiggy = function(id) { 
     let pg = window.db.home.piggy.find(x => x.id == id); if(!pg) return; 
-    let html = `<div id="m-add-funds" class="modal-overlay"><div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--success);"><h3 style="margin-top:0; color:var(--success);">🐷 Zasil: ${pg.n}</h3><div class="inp-group" style="margin-bottom:15px;"><input type="number" id="maf-val" placeholder="np. 100" class="big-inp" style="color:var(--success); background:rgba(0,0,0,0.5);"></div><div class="inp-group" style="margin-bottom:20px;"><label>Konto</label><select id="maf-acc" style="background:#18181b;">${window.db.home.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join('')}</select></div><button class="btn btn-success" onclick="window.hSaveFundsPiggy('${id}')">WPŁAĆ</button><button class="btn" style="background:transparent; color:var(--muted); margin-top:5px;" onclick="document.getElementById('m-add-funds').remove()">ANULUJ</button></div></div>`; 
+    let html = `<div id="m-add-funds" class="modal-overlay">
+        <div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--success);">
+            <div style="text-align:center; font-size:3rem; margin-bottom:10px;">${pg.icon || '🐷'}</div>
+            <h3 style="margin-top:0; color:var(--success); text-align:center;">Wpłać: ${pg.n}</h3>
+            <div class="inp-group" style="margin-bottom:15px;">
+                <input type="number" id="maf-val" placeholder="np. 100" class="big-inp" style="color:var(--success); background:rgba(0,0,0,0.5);">
+            </div>
+            <div class="inp-group" style="margin-bottom:20px;">
+                <label>Pobierz z konta (Wydatek)</label>
+                <select id="maf-acc" style="background:#18181b;">${window.db.home.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join('')}</select>
+            </div>
+            <button class="btn btn-success" onclick="window.hSaveFundsPiggy('${id}')">ZAKSIĘGUJ WPŁATĘ</button>
+            <button class="btn" style="background:transparent; color:var(--muted); margin-top:5px; box-shadow:none;" onclick="document.getElementById('m-add-funds').remove()">ANULUJ</button>
+        </div>
+    </div>`; 
     document.body.insertAdjacentHTML('beforeend', html); 
 };
 
 window.hSaveFundsPiggy = function(id) { 
-    let val = parseFloat(document.getElementById('maf-val').value); let accId = document.getElementById('maf-acc').value; 
-    if(!val || val <= 0) return alert("Błąd wpłaty"); let pg = window.db.home.piggy.find(x => x.id == id); 
+    let val = parseFloat(document.getElementById('maf-val').value); 
+    let accId = document.getElementById('maf-acc').value; 
+    if(!val || val <= 0) return window.sysAlert ? window.sysAlert("Błąd", "Nieprawidłowa kwota", "error") : alert("Błąd wpłaty"); 
+    
+    let pg = window.db.home.piggy.find(x => x.id == id); 
     if(pg) { 
         let dObj = new Date(); dObj.setHours(12,0,0); 
-        window.db.home.trans.unshift({ id:Date.now(), type:'exp', cat:'Oszczędności / Skarbonka', acc:accId, d:`Cel: ${pg.n}`, v:val, who:window.db.userName, dt:dObj.toLocaleDateString('pl-PL'), rD:dObj.toISOString(), isPlanned: false, piggyAction: 'deposit', piggyId: pg.id, amount: val }); 
-        pg.saved += val; window.save(); window.render(); 
+        window.db.home.trans.unshift({ 
+            id:Date.now(), type:'exp', cat:'Oszczędności / Skarbonka', acc:accId, 
+            d:`Skarbonka: ${pg.n}`, v:val, who:window.db.userName, 
+            dt:dObj.toLocaleDateString('pl-PL'), rD:dObj.toISOString(), 
+            isPlanned: false, piggyAction: 'deposit', piggyId: pg.id, amount: val 
+        }); 
+        pg.saved += val; 
+        window.save(); window.render(); 
+        if(window.sysAlert) window.sysAlert("Odkładamy! 💸", `Wpłacono ${Number(val).toFixed(2)} zł na cel.`, "success");
     } 
     document.getElementById('m-add-funds').remove(); 
 };
 
+// NOWE: Rozbijanie Skarbonki (Wypłata awaryjna na konto)
+window.hWithdrawFundsPiggy = function(id) {
+    let pg = window.db.home.piggy.find(x => x.id == id); if(!pg) return;
+    let html = `<div id="m-withdraw-funds" class="modal-overlay">
+        <div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--danger);">
+            <div style="text-align:center; font-size:3rem; margin-bottom:10px;">🔨</div>
+            <h3 style="margin-top:0; color:var(--danger); text-align:center;">Rozbij: ${pg.n}</h3>
+            <p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px; text-align:center;">Dostępne środki do wypłaty: <strong style="color:#fff;">${Number(pg.saved||0).toFixed(2)} zł</strong></p>
+            <div class="inp-group" style="margin-bottom:15px;">
+                <input type="number" id="mwf-val" placeholder="Kwota wypłaty" class="big-inp" style="color:var(--danger); background:rgba(0,0,0,0.5);">
+            </div>
+            <div class="inp-group" style="margin-bottom:20px;">
+                <label>Gdzie przelać te środki? (Wpływ)</label>
+                <select id="mwf-acc" style="background:#18181b;">${window.db.home.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join('')}</select>
+            </div>
+            <button class="btn btn-danger" onclick="window.hExecWithdrawPiggy('${id}')">WYPŁAĆ ŚRODKI</button>
+            <button class="btn" style="background:transparent; color:var(--muted); margin-top:5px; box-shadow:none;" onclick="document.getElementById('m-withdraw-funds').remove()">ANULUJ</button>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+};
+
+window.hExecWithdrawPiggy = function(id) {
+    let val = parseFloat(document.getElementById('mwf-val').value); 
+    let accId = document.getElementById('mwf-acc').value;
+    
+    if(!val || val <= 0) return window.sysAlert ? window.sysAlert("Błąd", "Nieprawidłowa kwota", "error") : alert("Błąd wpłaty"); 
+    
+    let pg = window.db.home.piggy.find(x => x.id == id);
+    if(pg) {
+        if(val > pg.saved) return window.sysAlert ? window.sysAlert("Odmowa", "Próbujesz wypłacić więcej, niż masz odłożone w tej Skarbonce!", "error") : alert("Brak środków w celu!");
+        
+        let dObj = new Date(); dObj.setHours(12,0,0);
+        window.db.home.trans.unshift({ 
+            id:Date.now(), type:'inc', cat:'Inne Wpływy', acc:accId, 
+            d:`Wypłata z Celu: ${pg.n}`, v:val, who:window.db.userName, 
+            dt:dObj.toLocaleDateString('pl-PL'), rD:dObj.toISOString(), 
+            isPlanned: false, piggyAction: 'withdraw', piggyId: pg.id, amount: val 
+        });
+        
+        pg.saved -= val; 
+        if(pg.saved < 0) pg.saved = 0;
+        
+        window.save(); window.render();
+        if(window.sysAlert) window.sysAlert("Rozbito! 🔨", `Środki powróciły na konto.`, "info");
+    }
+    document.getElementById('m-withdraw-funds').remove();
+};
+
 window.hDelPiggy = function(id) { 
-    if(window.sysConfirm) { window.sysConfirm("Usuwanie", "Usunąć cel?", () => { window.db.home.piggy = window.db.home.piggy.filter(x => x.id != id); window.save(); window.render(); }); } 
+    let pg = window.db.home.piggy.find(x => x.id == id);
+    if(pg && pg.saved > 0) {
+        if(window.sysAlert) return window.sysAlert("Odmowa", "Najpierw wypłać zgromadzone środki ('Rozbij Skarbonkę'), zanim usuniesz cel trwale!", "error");
+        return;
+    }
+    
+    if(window.sysConfirm) { window.sysConfirm("Usuwanie Skarbonki", "Na pewno trwale usunąć ten cel?", () => { window.db.home.piggy = window.db.home.piggy.filter(x => x.id != id); window.save(); window.render(); }); } 
     else { window.db.home.piggy = window.db.home.piggy.filter(x => x.id != id); window.save(); window.render(); } 
 };
 
