@@ -72,8 +72,8 @@ window.rHomeOps = function(h, t, nav, hdr) {
         let accPulseHtml = `<div style="display:flex; gap:10px; overflow-x:auto; padding:15px 15px 5px;" class="hide-scroll">` + 
         h.accs.map(a => {
             let bal = parseFloat(balances[a.id]) || 0;
-            let sIn = accStats[a.id]?.in || 0;
-            let sOut = accStats[a.id]?.out || 0;
+            let sIn = accStats[a.id] ? accStats[a.id].in : 0;
+            let sOut = accStats[a.id] ? accStats[a.id].out : 0;
             return `<div onclick="window.switchTab('acc')" style="min-width:130px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; cursor:pointer;">
                 <div style="font-size:0.75rem; color:var(--muted); margin-bottom:5px; display:flex; align-items:center; gap:5px;"><span>${a.i}</span> ${a.n}</div>
                 <strong style="color:#fff; font-size:1.1rem; display:block; margin-bottom:8px;">${Number(bal).toFixed(2)} zł</strong>
@@ -160,7 +160,12 @@ window.rHomeOps = function(h, t, nav, hdr) {
             let isExp = x.type === 'exp'; 
             let isTrans = x.type === 'transfer'; 
             let cd = isExp ? (C_EXP[x.cat] || {c:'#ef4444',i:'💸'}) : (isTrans ? {c:'#8b5cf6',i:'🔄'} : (C_INC[x.cat] || {c:'#22c55e',i:'💵'})); 
-            let accName = isTrans ? `Z ${h.accs.find(a=>a.id===x.fromAcc)?.n || 'Konta'}` : (h.accs.find(a=>a.id===x.acc)?.n || 'Konto'); 
+            
+            let fAccObj = h.accs.find(a => a.id === x.fromAcc);
+            let tAccObj = h.accs.find(a => a.id === x.toAcc);
+            let regAccObj = h.accs.find(a => a.id === x.acc);
+            
+            let accName = isTrans ? `Z ${fAccObj ? fAccObj.n : 'Konta'} na ${tAccObj ? tAccObj.n : 'Konto'}` : (regAccObj ? regAccObj.n : 'Konto'); 
             let catName = isTrans ? 'Przelew' : x.cat; 
             let sign = isExp ? '-' : (isTrans ? '' : '+'); 
             let color = isExp ? 'var(--danger)' : (isTrans ? '#fff' : 'var(--success)'); 
@@ -169,7 +174,7 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                     <div style="display:flex; align-items:center; gap:15px; flex:1;">
                         <div style="width:40px; height:40px; border-radius:50%; background:${cd.c}22; border:1px solid ${cd.c}55; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0;">${cd.i}</div>
-                        <div><strong style="font-size:0.9rem; color:#fff; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">${catName}</strong><small style="color:var(--muted); display:block; margin-top:2px;">${accName} • ${x.dt}</small></div>
+                        <div><strong style="font-size:0.9rem; color:#fff; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">${catName}</strong><small style="color:var(--muted); display:block; margin-top:4px;">${accName} • ${x.dt}</small></div>
                     </div>
                     <div style="text-align:right;"><strong style="color:${color}; font-size:1rem; white-space:nowrap;">${sign}${Number(v || 0).toFixed(2)} zł</strong></div>
                 </div>
@@ -288,14 +293,6 @@ window.rHomeOps = function(h, t, nav, hdr) {
         
         let memChips = h.members.length > 1 ? `<div style="margin-bottom:15px;"><label style="font-size:0.65rem; color:var(--muted); font-weight:bold; text-transform:uppercase; display:block; margin-bottom:6px;">Kto wykonuje?</label><div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:5px;" class="hide-scroll">` + h.members.map(m => `<div class="chip ${window.hMem === m ? 'active' : ''}" style="padding:6px 12px; font-size:0.75rem; flex-shrink:0; ${window.hMem === m ? 'background:var(--life);color:#000;border-color:var(--life)' : 'color:var(--muted)'}" onclick="window.hMem='${m}'; window.hTempValue=document.getElementById('h-v').value; window.hTempNote=document.getElementById('h-d').value; window.render();">${m}</div>`).join('') + `</div></div>` : ''; 
 
-        let oldAction = window.hAction;
-        window.hAction = function() {
-            if(window.hTransType === 'inc' && window.shootConfetti) window.shootConfetti();
-            window.hTempValue = ''; 
-            window.hTempNote = '';
-            oldAction();
-        };
-
         let appContainer = document.getElementById('app');
         if(appContainer) {
             appContainer.innerHTML = hdr + `<style>.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }</style>` + `
@@ -329,7 +326,7 @@ window.rHomeOps = function(h, t, nav, hdr) {
                     <div class="inp-group" style="flex:1;"><label style="font-size:0.65rem;">Data</label><input type="date" id="h-date" value="${todayStr}" style="background:rgba(255,255,255,0.05); padding:10px; font-size:0.8rem;"></div>
                     ${!isTrans ? `<div class="inp-group" style="flex:1;"><label style="font-size:0.65rem;">Powtarzaj</label><select id="h-recurring" style="background:rgba(255,255,255,0.05); padding:10px; font-size:0.8rem;"><option value="none">Nie</option><option value="month">Co miesiąc 🔄</option></select></div>` : ''}
                 </div>
-                <button class="btn" style="background:${col}; color:#fff; font-size:1rem; font-weight:900; padding:15px; box-shadow:0 8px 15px ${col}44;" onclick="window.hAction()">${isTrans?'WYKONAJ PRZELEW':'ZAPISZ TRANSAKCJĘ'}</button>
+                <button class="btn" style="background:${col}; color:#fff; font-size:1rem; font-weight:900; padding:15px; box-shadow:0 8px 15px ${col}44;" onclick="if(window.hTransType==='inc' && window.shootConfetti){window.shootConfetti();} window.hAction(); window.hTempValue=''; window.hTempNote='';">${isTrans?'WYKONAJ PRZELEW':'ZAPISZ TRANSAKCJĘ'}</button>
             </div>
             <div style="padding-bottom:60px;"></div>` + nav; 
         }
@@ -521,7 +518,13 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 let isExp = x.type === 'exp'; 
                 let isTrans = x.type === 'transfer'; 
                 let cd = isExp ? (C_EXP[x.cat] || {c:'#ef4444',i:'💸'}) : (isTrans ? {c:'#8b5cf6',i:'🔄'} : (C_INC[x.cat] || {c:'#22c55e',i:'💵'})); 
-                let accName = isTrans ? `Z ${h.accs.find(a=>a.id===x.fromAcc)?.n || 'Konta'} na ${h.accs.find(a=>a.id===x.toAcc)?.n || 'Konto'}` : (h.accs.find(a=>a.id===x.acc)?.n || 'Konto'); 
+                
+                let fAccObj = h.accs.find(a => a.id === x.fromAcc);
+                let tAccObj = h.accs.find(a => a.id === x.toAcc);
+                let regAccObj = h.accs.find(a => a.id === x.acc);
+                
+                let accName = isTrans ? `Z ${fAccObj ? fAccObj.n : 'Konta'} na ${tAccObj ? tAccObj.n : 'Konto'}` : (regAccObj ? regAccObj.n : 'Konto'); 
+                
                 let catName = isTrans ? 'Przelew' : x.cat; 
                 let planLbl = x.isPlanned ? `<span style="color:var(--warning); font-size:0.6rem; margin-left:5px;">(PLAN)</span>` : ''; 
                 
@@ -567,12 +570,4 @@ window.rHomeOps = function(h, t, nav, hdr) {
         }
 
         let filterButtons = `<div style="display:flex; gap:10px; padding: 10px 15px 15px; border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:10px;"><button onclick="window.hHistFilter='all'; window.render()" style="flex:1; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:${window.hHistFilter==='all'?'rgba(255,255,255,0.1)':'transparent'}; color:#fff; font-size:0.8rem;">Wszystko</button><button onclick="window.hHistFilter='inc'; window.render()" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--success); background:${window.hHistFilter==='inc'?'rgba(34,197,94,0.1)':'transparent'}; color:var(--success); font-size:0.8rem;">Wpływy</button><button onclick="window.hHistFilter='exp'; window.render()" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--danger); background:${window.hHistFilter==='exp'?'rgba(239,68,68,0.1)':'transparent'}; color:var(--danger); font-size:0.8rem;">Wydatki</button></div>`;
-        let monthNavHtml = `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 20px; margin-bottom:10px;"><button style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:8px 15px; border-radius:8px; font-weight:bold;" onclick="window.hChangeMonth(-1)"><</button><strong style="text-transform:uppercase; color:var(--warning); font-size:1.1rem; letter-spacing:1px;">${mName}</strong><button style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:8px 15px; border-radius:8px; font-weight:bold;" onclick="window.hChangeMonth(1)">></button></div>`;
-        let searchHtml = `<input type="text" placeholder="Szukaj transakcji (np. Biedronka, 150)..." style="background:#000; border:1px solid rgba(255,255,255,0.1); width:calc(100% - 30px); margin:0 15px 15px; padding:12px; border-radius:12px; color:#fff;" oninput="window.hSearchQuery=this.value; window.render();" value="${window.hSearchQuery || ''}">`;
-        
-        let appContainer = document.getElementById('app');
-        if(appContainer) {
-            appContainer.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:0;"><p>HISTORIA I KALENDARZ</p></div>${switchHtml}${monthNavHtml}${searchHtml}${filterButtons}${monthlySummaryHtml}<div style="padding:0 15px 60px;">${calHtml}</div>` + nav; 
-        }
-    }
-};
+        let monthNavHtml = `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 20px; margin-bottom:10px;"><button style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:8px 15px; border-radius:8px; font-weight:bold;" onclick="window.hChangeMonth(-1)"><</button><strong style="text-transform:uppercase; color:var(--warning); font-size:1.1rem; letter-spacing:1px
