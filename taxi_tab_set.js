@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_set.js - Zakładka Opcje (Akordeony Premium)
+// PLIK: taxi_tab_set.js - Zakładka Opcje (Akordeony Premium + Kawa)
 // ==========================================
 
 // --- FUNKCJA ZWIJANIA / ROZWIJANIA (AKORDEONY) ---
@@ -56,7 +56,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
 
         let q = d.q || {s:9, w:39, t1:3.2, t2:4, t3:6.4, t4:8};
 
-        // Style dla inputów w opcjach (mniejsze i zgrabniejsze)
+        // Style dla inputów w opcjach
         let inpStyle = 'background:rgba(0,0,0,0.5); border-radius:10px; padding:12px; font-size:0.85rem; border:1px solid rgba(255,255,255,0.05); color:#fff; width:100%; box-sizing:border-box;';
         let lblStyle = 'font-size:0.65rem; color:var(--muted); font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:block;';
 
@@ -207,7 +207,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
         '</div>';
 
         // 5. PODATKI I PROWIZJE PŁATNOŚCI
-        html += '<div class="panel" style="padding:0; border-radius:16px; margin-bottom:12px; overflow:hidden; border:1px solid rgba(14,165,233,0.3); background:linear-gradient(145deg, #0c4a6e, #09090b); box-shadow:0 6px 15px rgba(0,0,0,0.3);">' +
+        html += '<div class="panel" style="padding:0; border-radius:16px; margin-bottom:20px; overflow:hidden; border:1px solid rgba(14,165,233,0.3); background:linear-gradient(145deg, #0c4a6e, #09090b); box-shadow:0 6px 15px rgba(0,0,0,0.3);">' +
             '<div onclick="window.toggleAccordion(\'acc-tax\')" style="padding:15px 20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(14,165,233,0.05);">' +
                 '<strong style="color:var(--info); font-size:0.8rem; letter-spacing:1px; text-transform:uppercase;"><span style="font-size:1.2rem; margin-right:8px;">⚖️</span> Podatki i Prowizje</strong>' +
                 '<span id="acc-tax-icon" style="color:var(--muted);">🔽</span>' +
@@ -236,6 +236,16 @@ window.rDrvSet = function(d, t, nav, hdr) {
                 '</div>' +
                 '<div class="inp-group" style="margin:0;"><label style="'+lblStyle+'">Prowizja Voucherów (%) (Opcj.)</label><input type="number" id="us-vf" value="'+vouchF+'" placeholder="0" step="0.1" style="'+inpStyle+'"></div>' +
             '</div>' +
+        '</div>';
+
+        // 6. WSPARCIE (KUP KAWĘ) - Świecący, oddzielny panel
+        html += '<div class="panel" style="padding:25px 20px; border-radius:16px; margin-bottom:20px; text-align:center; border:1px solid rgba(255,221,0,0.3); background:linear-gradient(145deg, #1a1a00, #09090b); box-shadow:0 8px 25px rgba(255,221,0,0.15);">' +
+            '<div style="font-size:3rem; margin-bottom:10px; animation: pulse 2s infinite;">☕</div>' +
+            '<h3 style="color:#ffdd00; margin:0 0 10px 0; font-size:1.1rem; letter-spacing:1px; text-transform:uppercase;">Wesprzyj Projekt</h3>' +
+            '<p style="font-size:0.8rem; color:var(--muted); margin-bottom:20px; line-height:1.5;">Podoba Ci się StyreOS? Pomóż utrzymać serwery i rozwijać nowe funkcje. Każda wirtualna kawa przybliża nas do wydania wersji PRO!</p>' +
+            '<a href="https://buycoffee.to/styreos" target="_blank" style="background:linear-gradient(135deg, #ffdd00, #f59e0b); color:#000; font-weight:900; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:10px; padding:16px; border-radius:14px; box-shadow: 0 6px 20px rgba(255, 221, 0, 0.3); font-size:1rem; letter-spacing:1px;">' +
+                '<span style="font-size:1.4rem;">☕</span> POSTAW KAWĘ' +
+            '</a>' +
         '</div>';
 
         html += '</div>'; // Koniec padding kontenera
@@ -401,5 +411,5 @@ window.dSaveUS = function() {
     
     if(typeof window.save === 'function') window.save(); 
     if(typeof window.render === 'function') window.render();
-    if(typeof window.sysAlert === 'function') window.sysAlert("Zapisano!", "Opcje zaktualizowane. Garaż dopasowany!", "success");
+    if(typeof window.sysAlert === 'function') window.sysAlert("Zapisano!", "Opcje zaktualizowane.", "success");
 };
