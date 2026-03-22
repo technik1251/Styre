@@ -22,94 +22,11 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
         }); 
         allocBar += `</div>`;
         
-        let proBankBtn = `
-        <div style="margin: 20px 0 10px; padding: 15px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(14, 165, 233, 0.1)); border: 1px dashed rgba(139, 92, 246, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.1); transition: 0.3s;" onclick="window.sysAlert('Open Banking & AI (PRO)', 'W wersji StyreOS PRO połączysz aplikację bezpośrednio ze swoim bankiem (np. mBank, Revolut). Algorytmy AI same rozpoznają, że płatność w Żabce to Zakupy, a na Orlenie to Paliwo, i same wrzucą je do statystyk! 🏦🤖', 'info')">
-            <div style="font-size: 1.8rem; margin-bottom: 5px;">🔗</div>
-            <strong style="color: #c084fc; font-size: 0.95rem; display: block; text-transform: uppercase;">Automatyczna Synchronizacja z Bankiem</strong>
-            <span style="font-size: 0.75rem; color: var(--muted); margin-top: 4px; display: block;">Sztuczna inteligencja i Open Banking same skategoryzują Twoje wydatki (np. Żabka ➔ Zakupy). Wkrótce w wersji PRO! Kliknij po szczegóły.</span>
-        </div>`;
-        
         let topActions = `
-        <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-            <button class="btn" style="background:linear-gradient(135deg, var(--life), #0d9488); color:#000; border-radius:12px; font-weight:900; box-shadow:0 4px 20px rgba(20,184,166,0.4); flex:1; min-width:100px; padding:12px 10px; font-size:0.8rem; margin:0;" onclick="window.hOpenAccModal()">+ KONTO</button>
-            <button class="btn" style="background:rgba(245,158,11,0.2); color:var(--warning); border-radius:12px; font-weight:900; flex:1; min-width:100px; padding:12px 10px; font-size:0.8rem; margin:0; border:1px solid rgba(245,158,11,0.3);" onclick="window.hOpenLoanModal(null, true)">+ KARTA</button>
-            <button class="btn" style="background:rgba(255,255,255,0.1); color:#fff; border-radius:12px; font-weight:900; flex:1; min-width:100px; padding:12px 10px; font-size:0.8rem; margin:0; border:1px solid rgba(255,255,255,0.2);" onclick="window.switchTab('add'); window.hTransType='transfer'; window.render();">🔄 PRZELEW</button>
+        <div style="display:flex; gap:10px; margin-bottom:20px;">
+            <button class="btn" style="background:linear-gradient(135deg, var(--life), #0d9488); color:#000; border-radius:12px; font-weight:900; box-shadow:0 4px 20px rgba(20,184,166,0.4); flex:2; padding:12px 10px; font-size:0.8rem; margin:0;" onclick="window.hOpenAccModal()">+ DODAJ KONTO</button>
+            <button class="btn" style="background:rgba(255,255,255,0.1); color:#fff; border-radius:12px; font-weight:900; flex:1; padding:12px 10px; font-size:0.8rem; margin:0; border:1px solid rgba(255,255,255,0.2);" onclick="window.switchTab('add'); window.hTransType='transfer'; window.render();">🔄 PRZELEW</button>
         </div>`;
-
-        let activeCards = h.loans.filter(l => !l.isClosed && l.type === 'Karta');
-        let cardsHtml = '';
-        if(activeCards.length > 0) {
-            let hideScrollStyle = `<style>.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }</style>`;
-            let mappedCards = activeCards.map(c => {
-                let kap = parseFloat(c.kapital) || 0; 
-                let bor = parseFloat(c.borrowed) || 0;
-                let pctBank = parseFloat(c.pct) || 0; 
-                let pct = bor > 0 ? (kap / bor) * 100 : 0; 
-                if(pct > 100) pct = 100;
-                
-                let avail = bor - kap; 
-                if(avail < 0) avail = 0;
-                
-                let minP = (kap * (c.minPayPct || 5)) / 100;
-                if(minP < 50 && kap > 0) minP = Math.min(50, kap);
-                
-                let monthlyInt = (kap * (pctBank / 100)) / 12;
-                
-                let declaredText = c.declaredPay === 'min' ? 'Minimalna kwota' : '100% (Całość)';
-                let motivation = '';
-                
-                if (kap > 0) {
-                    if (c.declaredPay === '100') {
-                        motivation = `<div style="font-size:0.7rem; color:var(--success); margin-top:10px; font-weight:bold; text-align:center; background:rgba(34,197,94,0.1); padding:8px; border-radius:8px; border:1px solid rgba(34,197,94,0.2);">💡 Spłacasz całość w okresie bezodsetkowym. Używasz pieniędzy banku za darmo! 🚀</div>`;
-                    } else {
-                        motivation = `<div style="font-size:0.7rem; color:var(--danger); margin-top:10px; font-weight:bold; text-align:center; background:rgba(239,68,68,0.1); padding:8px; border-radius:8px; border:1px solid rgba(239,68,68,0.2);">⚠️ Spłacając tylko minimum, w tym miesiącu zapłacisz bankowi ok. <strong style="color:var(--danger);">${Number(monthlyInt || 0).toFixed(2)} zł</strong> odsetek!</div>`;
-                    }
-                } else {
-                    motivation = `<div style="font-size:0.7rem; color:var(--success); margin-top:10px; font-weight:bold; text-align:center;">Świetnie! Karta jest w pełni spłacona. 🏆</div>`;
-                }
-
-                let detailsGrid = `
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">
-                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">🗓️ Cykl spłaty</span><br><strong style="color:#fff; font-size:0.85rem;">Do ${c.day || 10} dnia m-ca</strong></div>
-                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">📊 Oprocentowanie</span><br><strong style="color:#fff; font-size:0.85rem;">${Number(pctBank || 0).toFixed(2)}%</strong></div>
-                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">💳 Limit Karty</span><br><strong style="color:#fff; font-size:0.85rem;">${Number(bor || 0).toFixed(2)} zł</strong></div>
-                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">📉 Szac. Odsetki</span><br><strong style="color:var(--danger); font-size:0.85rem;">${Number(monthlyInt || 0).toFixed(2)} zł/m-c</strong></div>
-                </div>`;
-
-                return `
-                <div class="panel" style="flex: 0 0 90%; max-width: 380px; scroll-snap-align: center; padding:15px; border-left:4px solid var(--warning); margin-bottom:0; background:linear-gradient(145deg, #18181b, #09090b);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div style="display:flex; align-items:center; gap:15px;">
-                            <div style="width:45px; height:45px; border-radius:12px; background:rgba(245,158,11,0.1); display:flex; align-items:center; justify-content:center; font-size:1.6rem; border:1px solid rgba(245,158,11,0.3);">💳</div>
-                            <div><strong style="font-size:1.2rem; color:#fff;">${c.n}</strong><small style="color:var(--muted); display:block; margin-top:2px; font-size:0.75rem;">Dzień spłaty: ${c.day || 10}</small></div>
-                        </div>
-                        <div style="text-align:right;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Zadłużenie</span><br><strong style="color:var(--warning); font-size:1.4rem;">${Number(kap || 0).toFixed(2)} zł</strong></div>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-top:15px; margin-bottom:5px;">
-                        <span style="color:var(--success)">Dostępne: ${Number(avail || 0).toFixed(2)} zł</span><span style="color:var(--muted)">Limit: ${Number(bor || 0).toFixed(2)} zł</span>
-                    </div>
-                    <div style="width:100%; height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden;">
-                        <div style="width:${pct}%; background:var(--warning); height:100%;"></div>
-                    </div>
-                    
-                    <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:10px; margin-top:15px; display:flex; justify-content:space-between; font-size:0.75rem;"><span style="color:var(--muted);">Min. spłata:<br><strong style="color:#fff;">${Number(minP || 0).toFixed(2)} zł</strong></span><span style="color:var(--muted); text-align:right;">Zadeklarowano:<br><strong style="color:var(--info);">${declaredText}</strong></span></div>
-                    
-                    ${motivation}
-                    
-                    <div style="text-align:center; margin-top:15px;">
-                        <span onclick="let el=document.getElementById('cdet_${c.id}'); let txt=this; if(el.style.display==='none'){el.style.display='block'; txt.innerHTML='🔼 Zwiń szczegóły';}else{el.style.display='none'; txt.innerHTML='🔽 Rozwiń szczegóły';}" style="color:var(--info); font-size:0.75rem; cursor:pointer; font-weight:bold; display:inline-block; padding:5px;">🔽 Rozwiń szczegóły</span>
-                    </div>
-                    <div id="cdet_${c.id}" style="display:none; margin-bottom:12px;">${detailsGrid}</div>
-                    
-                    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:15px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">
-                        <button style="flex:2; background:rgba(34,197,94,0.15); color:var(--success); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:12px 5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="window.hOpenPayLoanModal('${c.id}')">💸 SPŁAĆ ZADŁUŻENIE</button>
-                        <button style="flex:1; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 5px; font-size:0.8rem; cursor:pointer;" onclick="window.hOpenLoanModal('${c.id}')">✏️ Edytuj</button>
-                        <button style="background:rgba(239,68,68,0.15); color:var(--danger); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:12px 15px; cursor:pointer;" onclick="window.hDelLoan('${c.id}')">🗑️</button>
-                    </div>
-                </div>`;
-            }).join('');
-            cardsHtml = `<div class="section-lbl" style="color:var(--warning); border-color:var(--warning); margin-top:20px;">💳 Karty Kredytowe</div>` + hideScrollStyle + `<div class="hide-scroll" style="display:flex; overflow-x:auto; gap:15px; scroll-snap-type: x mandatory; padding-bottom:15px; width:100%; margin:0; padding: 0 15px;">${mappedCards}</div>`;
-        }
 
         let appContainer = document.getElementById('app');
         if(appContainer) {
@@ -121,32 +38,33 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                 ${allocBar}
                 ${topActions}
             </div>
-            ${cardsHtml}
+            
             <div style="padding: 10px 15px;">
-                <div class="section-lbl" style="color:#fff; border-color:rgba(255,255,255,0.1); margin-top:10px;">🏦 Konta i Portfele</div>
                 ${h.accs.map(a => {
                     let bal = parseFloat(balances[a.id]) || 0; 
                     let pct = totalAccBal > 0 && bal > 0 ? ((bal / totalAccBal) * 100).toFixed(0) : 0;
                     return `
-                    <div class="panel" style="padding:15px; border-left:4px solid ${a.c}; margin-bottom:15px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="panel" style="padding:15px; border-left:4px solid ${a.c}; margin-bottom:15px; position:relative;">
+                        <div style="position:absolute; right:10px; top:10px; display:flex; gap:10px;">
+                            <button style="background:transparent; border:none; color:var(--muted); font-size:1.1rem; cursor:pointer;" onclick="window.hOpenAccModal('${a.id}')">✏️</button>
+                            <button style="background:transparent; border:none; color:var(--muted); font-size:1.1rem; cursor:pointer;" onclick="window.hShowIconPicker('${a.id}')">🎨</button>
+                            <button style="background:transparent; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer;" onclick="window.hDelAcc('${a.id}')">🗑️</button>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
                             <div style="display:flex; align-items:center; gap:15px;">
-                                <div style="width:50px; height:50px; border-radius:50%; background:${a.c}22; display:flex; align-items:center; justify-content:center; font-size:1.8rem; border:1px solid ${a.c}55;">${a.i}</div>
+                                <div style="width:45px; height:45px; border-radius:50%; background:${a.c}22; display:flex; align-items:center; justify-content:center; font-size:1.6rem; border:1px solid ${a.c}55;">${a.i}</div>
                                 <div>
-                                    <strong style="font-size:1.2rem; color:#fff;">${a.n}</strong>
-                                    <small style="color:var(--muted); display:block; margin-top:2px; font-size:0.75rem;">Bieżące saldo (${pct}%)</small>
+                                    <strong style="font-size:1.1rem; color:#fff;">${a.n}</strong>
+                                    <small style="color:var(--muted); display:block; margin-top:2px; font-size:0.75rem;">Udział: ${pct}%</small>
                                 </div>
                             </div>
-                            <strong style="color:${bal >= 0 ? '#fff' : 'var(--danger)'}; font-size:1.4rem;">${Number(bal || 0).toFixed(2)} zł</strong>
                         </div>
-                        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:15px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">
-                            <button style="flex:1; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 5px; font-size:0.75rem; cursor:pointer;" onclick="window.hOpenAccModal('${a.id}')">✏️ Edytuj</button>
-                            <button style="flex:1; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 5px; font-size:0.75rem; cursor:pointer;" onclick="window.hShowIconPicker('${a.id}')">🎨 Ikona</button>
-                            <button style="background:rgba(239,68,68,0.15); color:var(--danger); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:10px 15px; cursor:pointer;" onclick="window.hDelAcc('${a.id}')">🗑️</button>
+                        <div style="margin-top:10px; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.8rem; color:var(--muted);">Bieżące saldo:</span>
+                            <strong style="color:${bal >= 0 ? '#fff' : 'var(--danger)'}; font-size:1.3rem;">${Number(bal || 0).toFixed(2)} zł</strong>
                         </div>
                     </div>`;
                 }).join('')}
-                ${proBankBtn}
             </div>` + nav; 
         }
     }
@@ -213,7 +131,7 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                     <div class="inp-group"><label>Miesięczny Limit (zł)</label><input type="number" id="hb-val" placeholder="np. 500"></div>
                 </div>
                 <button class="btn" style="background:var(--plan); color:#fff; padding:15px; margin-bottom:10px;" onclick="window.hSetBudget()">ZAPISZ LIMIT</button>
-                <p style="font-size:0.7rem; color:var(--muted); text-align:center; line-height:1.4; margin:0;">Asystent AI powiadomi Cię na ekranie głównym (Przegląd), gdy przekroczysz 75% wydatków na wyznaczony limit.</p>
+                <p style="font-size:0.7rem; color:var(--muted); text-align:center; line-height:1.4; margin:0;">Asystent AI powiadomi Cię na ekranie głównym, gdy przekroczysz 75% wydatków na wyznaczony limit.</p>
             </div>
         
             <div class="section-lbl" style="color:#ffdd00; border-color:#ffdd00; margin-top:30px;">☕ Wsparcie projektu StyreOS</div>
