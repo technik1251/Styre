@@ -164,7 +164,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     let oszczednoscDnia = (rat * instL) - doZaplatyNatychmiast; 
                     
                     if(oszczednoscDnia > 0) {
-                        savingsMsg = `Spłacając dziś całość, unikasz opłat! 🛍️`;
+                        savingsMsg = `Spłacając dziś całość, unikasz ${Number(oszczednoscDnia).toFixed(2)} zł opłat! 🛍️`;
                         savingsColor = 'var(--info)';
                     }
                     bnplAlert = `<div style="color:var(--danger); font-size:0.75rem; font-weight:bold; margin-top:5px;">Minęło 30 dni lub rozłożono. Doliczono koszty operatora. ⚠️</div>`;
@@ -175,7 +175,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             let savingsHtmlDetailed = savingsMsg ? `<div style="margin-top:5px; font-size:0.85rem; font-weight:bold; color:${savingsColor};">${savingsMsg}</div>` : '';
             
             // =====================================
-            // OBLICZANIE DAT (SZTYWNE +30 DNI)
+            // OBLICZANIE DAT (PayPo: Ścisłe dodawanie milisekund = sztywne 30 dni!)
             // =====================================
             let nextDateStr = '--';
             let baseNextD = new Date();
@@ -184,13 +184,14 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             if (instL <= 0) {
                 nextDateStr = 'Spłacone 🎉';
             } else if (isBNPL) {
-                // PAYPO: Rata N to dokładnie = Data Zakupu + (30 * N) dni
+                // Twarde liczenie równych 30 dób (nie "miesięcy")
                 let stD = new Date(l.startDate || new Date());
+                stD.setHours(12, 0, 0, 0); // Bezpieczny punkt dnia, by uniknąć zmiany daty przez czas zimowy/letni
                 stD.setDate(stD.getDate() + (30 * (paidCount + 1))); 
                 nextDateStr = stD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                 baseNextD = stD;
             } else if (isKredyt || (isPryw && l.prywMode === 'equal')) {
-                // KREDYTY: Sztywny dzień miesiąca
+                // KREDYTY: Zwykłe dni miesiąca
                 let stD = new Date(l.startDate || new Date());
                 let payDay = l.day || 10;
                 baseNextD = new Date(stD.getFullYear(), stD.getMonth(), payDay);
@@ -201,9 +202,10 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             }
 
             if(isBNPL) {
-                let deadline = new Date(l.startDate || new Date());
-                deadline.setDate(deadline.getDate() + 30); 
-                let daysLeft = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24));
+                let dL = new Date(l.startDate || new Date());
+                dL.setHours(12, 0, 0, 0);
+                dL.setDate(dL.getDate() + 30);
+                let daysLeft = Math.ceil((dL - new Date()) / (1000 * 60 * 60 * 24));
                 let isFreePeriod = daysLeft >= 0;
 
                 detailsHtml = `<div style="margin-top:15px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">`;
@@ -239,10 +241,11 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
                     let lineDisp = i === totInst ? 'none' : 'block';
                     
-                    // Sztywno + 30 dni za każdą ratę
-                    let instDate = new Date(l.startDate || new Date());
-                    instDate.setDate(instDate.getDate() + (30 * i));
-                    let rdStr = instDate.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
+                    // Sztywno + 30 dni na KAŻDĄ RATĘ OD DATY ZAKUPU
+                    let dRata = new Date(l.startDate || new Date());
+                    dRata.setHours(12, 0, 0, 0);
+                    dRata.setDate(dRata.getDate() + (30 * i));
+                    let rdStr = dRata.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                     
                     detailsHtml += `
                     <div style="display:flex; gap:12px; margin-bottom:15px; position:relative; align-items:flex-start;">
@@ -357,11 +360,11 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     </div>
                     
                     <div style="padding:0 20px 20px; display:flex; flex-direction:column; gap:10px;">
-                        <button style="background:${cTheme}; color:${isPrywInc?'#000':'#fff'}; width:100%; padding:15px; border-radius:14px; font-weight:bold; font-size:0.9rem; border:none; box-shadow:0 6px 15px ${cBg}; cursor:pointer;" onclick="${isBNPL ? `window.hPayOffCompletely('${l.id}')` : `window.hOpenPayLoanModal('${l.id}')`}">${isPrywInc ? '📥 ODBIERZ WPŁATĘ' : (isBNPL ? '💸 SPŁAĆ CAŁOŚĆ' : '💸 SPŁAĆ RATĘ')}</button>
+                        <button style="background:${cTheme}; color:${isPrywInc?'#000':'#fff'}; width:100%; padding:15px; border-radius:14px; font-weight:bold; font-size:0.9rem; border:none; box-shadow:0 6px 15px ${cBg}; cursor:pointer;" onclick="${isBNPL ? `window.hOpenPayLoanModal('${l.id}')` : `window.hOpenPayLoanModal('${l.id}')`}">${isPrywInc ? '📥 ODBIERZ WPŁATĘ' : (isBNPL ? '💸 SPŁAĆ RATĘ / KOSZYK' : '💸 SPŁAĆ RATĘ')}</button>
                         <div style="display:flex; gap:10px;">
-                            <button style="background:rgba(14,165,233,0.2); color:var(--info); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(14,165,233,0.4);" onclick="${isBNPL ? `window.hOpenPayLoanModal('${l.id}')` : `window.hOverpayLoan('${l.id}')`}">${isBNPL ? '✂️ NA RATY' : '💰 DOWOLNA K.'}</button>
+                            <button style="background:rgba(14,165,233,0.2); color:var(--info); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(14,165,233,0.4);" onclick="${isBNPL ? `window.hPayOffCompletely('${l.id}')` : `window.hOverpayLoan('${l.id}')`}">${isBNPL ? '🏆 ZAMKNIJ (CAŁOŚĆ)' : '💰 DOWOLNA K.'}</button>
                             ${isKredyt ? `<button style="background:rgba(245,158,11,0.2); color:var(--warning); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(245,158,11,0.4);" onclick="window.hCreditHoliday('${l.id}')">🏖️ ODROCZ</button>` : ''}
-                            <button style="background:rgba(34,197,94,0.2); color:var(--success); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(34,197,94,0.4);" onclick="window.hPayOffCompletely('${l.id}')">🏆 ZAMKNIJ</button>
+                            ${!isBNPL ? `<button style="background:rgba(34,197,94,0.2); color:var(--success); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(34,197,94,0.4);" onclick="window.hPayOffCompletely('${l.id}')">🏆 ZAMKNIJ</button>` : ''}
                         </div>
                     </div>
                 </div>`;
@@ -395,10 +398,10 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     <div id="ldet_${l.id}" style="display:none; margin-bottom:12px;">${detailsHtml}</div>
                     
                     <div style="display:flex; gap:6px;">
-                        <button style="background:${cTheme}; color:${isPrywInc?'#000':'#fff'}; flex:1; padding:8px 0; border-radius:8px; font-weight:bold; font-size:0.75rem; border:none; cursor:pointer;" onclick="${isBNPL ? `window.hPayOffCompletely('${l.id}')` : `window.hOpenPayLoanModal('${l.id}')`}">💸 ${isPrywInc?'ODBIERZ':(isBNPL?'SPŁAĆ CAŁOŚĆ':'SPŁAĆ RATĘ')}</button>
-                        <button style="background:rgba(14,165,233,0.15); color:var(--info); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(14,165,233,0.3); cursor:pointer;" onclick="${isBNPL ? `window.hOpenPayLoanModal('${l.id}')` : `window.hOverpayLoan('${l.id}')`}">${isBNPL ? '✂️' : '💰'}</button>
+                        <button style="background:${cTheme}; color:${isPrywInc?'#000':'#fff'}; flex:1; padding:8px 0; border-radius:8px; font-weight:bold; font-size:0.75rem; border:none; cursor:pointer;" onclick="${isBNPL ? `window.hOpenPayLoanModal('${l.id}')` : `window.hOpenPayLoanModal('${l.id}')`}">💸 ${isPrywInc?'ODBIERZ':(isBNPL?'SPŁAĆ RATĘ/KOSZYK':'SPŁAĆ RATĘ')}</button>
+                        <button style="background:rgba(14,165,233,0.15); color:var(--info); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(14,165,233,0.3); cursor:pointer;" onclick="${isBNPL ? `window.hPayOffCompletely('${l.id}')` : `window.hOverpayLoan('${l.id}')`}">${isBNPL ? '🏆' : '💰'}</button>
                         ${isKredyt ? `<button style="background:rgba(245,158,11,0.15); color:var(--warning); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(245,158,11,0.3); cursor:pointer;" onclick="window.hCreditHoliday('${l.id}')">🏖️</button>` : ''}
-                        <button style="background:rgba(34,197,94,0.15); color:var(--success); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(34,197,94,0.3); cursor:pointer;" onclick="window.hPayOffCompletely('${l.id}')">🏆</button>
+                        ${!isBNPL ? `<button style="background:rgba(34,197,94,0.15); color:var(--success); width:38px; border-radius:8px; font-size:0.9rem; border:1px solid rgba(34,197,94,0.3); cursor:pointer;" onclick="window.hPayOffCompletely('${l.id}')">🏆</button>` : ''}
                     </div>
                     
                 </div>`;
