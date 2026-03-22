@@ -330,7 +330,6 @@ window.hCreditHoliday = function(loanId) {
     }
 };
 
-// NOWE: Piękne okno Całkowitej Spłaty z informacją o oszczędnościach i polach do edycji
 window.hPayOffCompletely = function(loanId) { 
     let ln = window.db.home.loans.find(x => x.id == loanId); if(!ln) return; 
     
@@ -345,7 +344,9 @@ window.hPayOffCompletely = function(loanId) {
 
     if (ln.type === 'PayPo') {
         let dzis = new Date();
+        dzis.setHours(12, 0, 0, 0);
         let dataZakupu = new Date(ln.startDate || window.getLocalYMD().substring(0,10));
+        dataZakupu.setHours(12, 0, 0, 0);
         let dniOdZakupu = Math.floor((dzis.getTime() - dataZakupu.getTime()) / (1000 * 60 * 60 * 24));
 
         let totalZOdsetkami = r * totInst;
@@ -432,32 +433,13 @@ window.hOpenPayLoanModal = function(loanId, transId = null) {
         defVal = (ln.declaredPay === 'min') ? minP : ln.kapital;
         subText = `Zadłużenie: <strong>${Number(ln.kapital||0).toFixed(2)} zł</strong><br>Min. spłata: <strong>${Number(minP||0).toFixed(2)} zł</strong>`;
     } else if (ln.type === 'PayPo') {
-        let dzis = new Date();
-        let dataZakupu = new Date(ln.startDate || window.getLocalYMD().substring(0,10));
-        let dniOdZakupu = Math.floor((dzis.getTime() - dataZakupu.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (dniOdZakupu <= 30) {
-            let k = parseFloat(ln.kapital) || 0;
-            let bor = parseFloat(ln.borrowed) || k;
-            let r = parseFloat(ln.rata) || 0;
-            let totInst = parseInt(ln.totalInst) || parseInt(ln.installmentsLeft) || 0;
-            let totalZOdsetkami = r * totInst;
-            if (totalZOdsetkami === 0) totalZOdsetkami = bor;
-
-            let zaplaconoJuz = totalZOdsetkami - k;
-            let zostaloSamegoKoszyka = bor - zaplaconoJuz;
-            if(zostaloSamegoKoszyka < 0) zostaloSamegoKoszyka = 0;
-
-            defVal = zostaloSamegoKoszyka;
-            subText = `Trwa okres darmowy. Spłacasz tylko koszyk bez prowizji! 🛡️`;
+        // Twarda zasada: okienko płatności ratalnej ZAWSZE podpowiada ratę, nie wartość koszyka
+        if(!ln.rata || ln.rata === 0) {
+            defVal = ln.kapital; 
+            subText = `Spłacasz całość zakupu.`;
         } else {
-            if(!ln.rata || ln.rata === 0) {
-                defVal = ln.kapital; 
-                subText = `Spłacasz całość zakupu.`;
-            } else {
-                defVal = ln.rata;
-                subText = `Okres darmowy minął. Kwota raty z harmonogramu: <strong>${Number(defVal||0).toFixed(2)} zł</strong>`;
-            }
+            defVal = ln.rata;
+            subText = `Kwota raty z harmonogramu: <strong>${Number(defVal||0).toFixed(2)} zł</strong>`;
         }
     } else if (ln.type === 'Prywatny_WYDATEK' || ln.type === 'Prywatny_WPLYW') {
         if (ln.prywMode === 'custom') {
