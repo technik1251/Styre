@@ -50,12 +50,12 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                         '<div style="display:flex; align-items:center; gap:15px; margin-top:10px;">' +
                             '<div style="width:45px; height:45px; border-radius:12px; background:'+a.c+'22; display:flex; align-items:center; justify-content:center; font-size:1.6rem; border:1px solid '+a.c+'55;">'+(a.i || '💳')+'</div>' +
                             '<div>' +
-                                '<strong style="font-size:1.2rem; color:#fff;">'+(a.n || 'Konto')+'</strong>' +
+                                '<strong style="font-size:1.2rem; color:#fff; display:block;">'+(a.n || 'Konto')+'</strong>' +
                                 '<small style="color:var(--muted); display:block; margin-top:2px; font-size:0.75rem;">Udział: '+pct+'%</small>' +
                             '</div>' +
                         '</div>' +
                         '<div style="margin-top:25px; margin-bottom:20px; background:rgba(255,255,255,0.02); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.05);">' +
-                            '<span style="font-size:0.8rem; color:var(--muted); text-transform:uppercase;">Bieżące saldo</span>' +
+                            '<span style="font-size:0.8rem; color:var(--muted); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Bieżące saldo</span>' +
                             '<strong style="color:'+(bal >= 0 ? '#fff' : 'var(--danger)')+'; font-size:1.6rem; letter-spacing:-1px;">'+Number(bal).toFixed(2)+' zł</strong>' +
                         '</div>' +
                         '<div style="display:flex; gap:10px;">' +
@@ -166,7 +166,7 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
         console.error(err);
         let appContainer = document.getElementById('app');
         if(appContainer) {
-            appContainer.innerHTML = '<div style="padding:40px 20px; text-align:center; color:white;"><h3>Błąd w Kontach</h3><p style="color:var(--danger);">' + err.message + '</p><button style="padding:15px; background:#fff; color:#000; font-weight:bold; border-radius:12px; border:none; margin-top:20px;" onclick="window.location.reload()">ODŚWIEŻ</button></div>' + (nav || '');
+            appContainer.innerHTML = '<div style="padding:40px 20px; text-align:center; color:white;"><h3>Błąd w Kontach (home_tab_acc_set)</h3><p style="color:var(--danger);">' + err.message + '</p><button style="padding:15px; background:#fff; color:#000; font-weight:bold; border-radius:12px; border:none; margin-top:20px;" onclick="window.location.reload()">ODŚWIEŻ</button></div>' + (nav || '');
         }
     }
 };
