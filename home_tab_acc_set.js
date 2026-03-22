@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: home_tab_acc_set.js - Zakładki Konta i Ustawienia (Kompaktowa Wersja Premium)
+// PLIK: home_tab_acc_set.js - Zakładki Konta i Ustawienia (Z Kartami Kredytowymi)
 // ==========================================
 
 window.rHomeAccSet = function(h, t, nav, hdr) {
@@ -11,6 +11,8 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
         // ==========================================
         if(t === 'acc') { 
             let accs = h.accs || [];
+            let loans = h.loans || [];
+            
             let totalAccBal = 0; 
             for(let i=0; i<accs.length; i++) {
                 let val = parseFloat(balances[accs[i].id]) || 0;
@@ -28,9 +30,10 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
             }
             allocBar += '</div>';
             
-            let topActions = '<div style="display:flex; gap:10px; margin-bottom:15px;">' +
-                '<button class="btn" style="background:linear-gradient(135deg, #d4af37 0%, #aa801a 100%); color:#000; border-radius:10px; font-weight:900; box-shadow:0 4px 15px rgba(212, 175, 55, 0.3); flex:2; padding:12px 10px; font-size:0.8rem; letter-spacing:1px; margin:0; border:none;" onclick="if(typeof window.hOpenAccModal===\'function\') window.hOpenAccModal()">+ DODAJ PORTFEL</button>' +
-                '<button class="btn" style="background:rgba(255,255,255,0.05); color:#fff; border-radius:10px; font-weight:900; flex:1; padding:12px 10px; font-size:0.8rem; letter-spacing:1px; margin:0; border:1px solid rgba(255,255,255,0.1);" onclick="window.switchTab(\'add\'); window.hTransType=\'transfer\'; window.render();">🔄 PRZELEW</button>' +
+            let topActions = '<div style="display:flex; gap:8px; margin-bottom:15px;">' +
+                '<button class="btn" style="background:linear-gradient(135deg, var(--life), #0d9488); color:#000; border-radius:10px; font-weight:900; box-shadow:0 4px 15px rgba(20,184,166,0.3); flex:1; padding:12px 5px; font-size:0.75rem; letter-spacing:1px; margin:0; border:none;" onclick="if(typeof window.hOpenAccModal===\'function\') window.hOpenAccModal()">+ KONTO</button>' +
+                '<button class="btn" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#000; border-radius:10px; font-weight:900; box-shadow:0 4px 15px rgba(245,158,11,0.3); flex:1; padding:12px 5px; font-size:0.75rem; letter-spacing:1px; margin:0; border:none;" onclick="if(typeof window.hOpenLoanModal===\'function\') window.hOpenLoanModal(null, true)">+ KARTA</button>' +
+                '<button class="btn" style="background:rgba(255,255,255,0.05); color:#fff; border-radius:10px; font-weight:900; flex:1; padding:12px 5px; font-size:0.75rem; letter-spacing:1px; margin:0; border:1px solid rgba(255,255,255,0.1);" onclick="window.switchTab(\'add\'); window.hTransType=\'transfer\'; window.render();">🔄 PRZELEW</button>' +
             '</div>';
 
             let accHtml = '';
@@ -39,10 +42,8 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                 let bal = parseFloat(balances[a.id]) || 0; 
                 let pct = totalAccBal > 0 && bal > 0 ? ((bal / totalAccBal) * 100).toFixed(0) : 0;
                 
-                // ZNACZNIE MNIEJSZE KARTY (padding 15px zamiast 22px, mniejsze czcionki)
                 accHtml += '<div class="panel" style="background:linear-gradient(145deg, #1c1c1e 0%, #0d0d0f 100%); padding:15px; border:1px solid rgba(255,255,255,0.03); margin-bottom:15px; border-radius:16px; position:relative; overflow:hidden; box-shadow:0 6px 15px rgba(0,0,0,0.5);">' +
                     '<div style="position:absolute; top:-30px; right:-30px; width:100px; height:100px; border-radius:50%; background:'+a.c+'; filter:blur(40px); opacity:0.15; z-index:0; pointer-events:none;"></div>' +
-                    
                     '<div style="position:relative; z-index:1;">' +
                         '<div style="display:flex; justify-content:space-between; align-items:flex-start;">' +
                             '<div style="display:flex; align-items:center; gap:12px;">' +
@@ -52,25 +53,99 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                                     '<span style="color:var(--muted); display:block; margin-top:2px; font-size:0.65rem; text-transform:uppercase; letter-spacing:1px;">Udział: '+pct+'%</span>' +
                                 '</div>' +
                             '</div>' +
-                            
                             '<div style="display:flex; gap:8px; background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">' +
                                 '<span style="font-size:0.9rem; cursor:pointer; opacity:0.8;" onclick="if(typeof window.hOpenAccModal===\'function\') window.hOpenAccModal(\''+a.id+'\')">✏️</span>' +
                                 '<span style="font-size:0.9rem; cursor:pointer; opacity:0.8;" onclick="if(typeof window.hShowIconPicker===\'function\') window.hShowIconPicker(\''+a.id+'\')">🎨</span>' +
                                 '<span style="font-size:0.9rem; cursor:pointer; opacity:0.8;" onclick="if(typeof window.hDelAcc===\'function\') window.hDelAcc(\''+a.id+'\')">🗑️</span>' +
                             '</div>' +
                         '</div>' +
-                        
                         '<div style="margin-top:15px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:flex-end;">' +
                             '<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Dostępne Środki</span>' +
                             '<strong style="color:'+(bal >= 0 ? '#fff' : 'var(--danger)')+'; font-size:1.8rem; letter-spacing:-1px; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">'+Number(bal).toFixed(2)+' zł</strong>' +
                         '</div>' +
-                        
                         '<div style="display:flex; gap:8px;">' +
                             '<button style="flex:1; background:rgba(34,197,94,0.1); color:var(--success); border:1px solid rgba(34,197,94,0.2); border-radius:10px; padding:10px; font-weight:900; font-size:0.7rem; letter-spacing:0.5px; cursor:pointer;" onclick="window.hTempValue=\'\'; window.hTransType=\'inc\'; window.hSelAcc=\''+a.id+'\'; window.switchTab(\'add\')">+ WPŁYW</button>' +
                             '<button style="flex:1; background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.2); border-radius:10px; padding:10px; font-weight:900; font-size:0.7rem; letter-spacing:0.5px; cursor:pointer;" onclick="window.hTempValue=\'\'; window.hTransType=\'exp\'; window.hSelAcc=\''+a.id+'\'; window.switchTab(\'add\')">- WYDATEK</button>' +
                         '</div>' +
                     '</div>' +
                 '</div>';
+            }
+
+            // KARTY KREDYTOWE
+            let activeCards = [];
+            for(let i=0; i<loans.length; i++) {
+                if(!loans[i].isClosed && loans[i].type === 'Karta') {
+                    activeCards.push(loans[i]);
+                }
+            }
+
+            let cardsHtml = '';
+            if(activeCards.length > 0) {
+                let mappedCards = '';
+                for(let i=0; i<activeCards.length; i++) {
+                    let c = activeCards[i];
+                    let kap = parseFloat(c.kapital) || 0; 
+                    let bor = parseFloat(c.borrowed) || 0;
+                    let pctBank = parseFloat(c.pct) || 0; 
+                    let pct = bor > 0 ? (kap / bor) * 100 : 0; 
+                    if(pct > 100) pct = 100;
+                    
+                    let avail = bor - kap; 
+                    if(avail < 0) avail = 0;
+                    
+                    let minP = (kap * (c.minPayPct || 5)) / 100;
+                    if(minP < 50 && kap > 0) minP = Math.min(50, kap);
+                    
+                    let monthlyInt = (kap * (pctBank / 100)) / 12;
+                    let declaredText = c.declaredPay === 'min' ? 'Minimalna kwota' : '100% (Całość)';
+                    let motivation = '';
+                    
+                    if (kap > 0) {
+                        if (c.declaredPay === '100') {
+                            motivation = '<div style="font-size:0.7rem; color:var(--success); margin-top:10px; font-weight:bold; text-align:center; background:rgba(34,197,94,0.1); padding:8px; border-radius:8px; border:1px solid rgba(34,197,94,0.2);">💡 Spłacasz całość w okresie bezodsetkowym. Używasz pieniędzy banku za darmo! 🚀</div>';
+                        } else {
+                            motivation = '<div style="font-size:0.7rem; color:var(--danger); margin-top:10px; font-weight:bold; text-align:center; background:rgba(239,68,68,0.1); padding:8px; border-radius:8px; border:1px solid rgba(239,68,68,0.2);">⚠️ Spłacając tylko minimum, w tym miesiącu zapłacisz bankowi ok. <strong style="color:var(--danger);">'+Number(monthlyInt || 0).toFixed(2)+' zł</strong> odsetek!</div>';
+                        }
+                    } else {
+                        motivation = '<div style="font-size:0.7rem; color:var(--success); margin-top:10px; font-weight:bold; text-align:center;">Świetnie! Karta jest w pełni spłacona. 🏆</div>';
+                    }
+
+                    let detailsGrid = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.05); text-align:left;">' +
+                        '<div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">🗓️ Cykl spłaty</span><br><strong style="color:#fff; font-size:0.85rem;">Do '+ (c.day || 10) +' dnia m-ca</strong></div>' +
+                        '<div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">📊 Oprocentowanie</span><br><strong style="color:#fff; font-size:0.85rem;">'+Number(pctBank || 0).toFixed(2)+'%</strong></div>' +
+                        '<div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">💳 Limit Karty</span><br><strong style="color:#fff; font-size:0.85rem;">'+Number(bor || 0).toFixed(2)+' zł</strong></div>' +
+                        '<div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">📉 Szac. Odsetki</span><br><strong style="color:var(--danger); font-size:0.85rem;">'+Number(monthlyInt || 0).toFixed(2)+' zł/m-c</strong></div>' +
+                    '</div>';
+
+                    mappedCards += '<div class="panel" style="flex: 0 0 90%; max-width: 380px; scroll-snap-align: center; padding:15px; border-left:4px solid var(--warning); margin-bottom:0; background:linear-gradient(145deg, #18181b, #09090b); border-radius:16px;">' +
+                        '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                            '<div style="display:flex; align-items:center; gap:15px;">' +
+                                '<div style="width:40px; height:40px; border-radius:10px; background:rgba(245,158,11,0.1); display:flex; align-items:center; justify-content:center; font-size:1.4rem; border:1px solid rgba(245,158,11,0.3);">💳</div>' +
+                                '<div><strong style="font-size:1.1rem; color:#fff;">'+(c.n)+'</strong><small style="color:var(--muted); display:block; margin-top:2px; font-size:0.75rem;">Dzień spłaty: '+(c.day || 10)+'</small></div>' +
+                            '</div>' +
+                            '<div style="text-align:right;"><span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Zadłużenie</span><br><strong style="color:var(--warning); font-size:1.2rem;">'+Number(kap || 0).toFixed(2)+' zł</strong></div>' +
+                        '</div>' +
+                        '<div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-top:15px; margin-bottom:5px;">' +
+                            '<span style="color:var(--success)">Dostępne: '+Number(avail || 0).toFixed(2)+' zł</span><span style="color:var(--muted)">Limit: '+Number(bor || 0).toFixed(2)+' zł</span>' +
+                        '</div>' +
+                        '<div style="width:100%; height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden;">' +
+                            '<div style="width:'+pct+'%; background:var(--warning); height:100%;"></div>' +
+                        '</div>' +
+                        '<div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:10px; margin-top:15px; display:flex; justify-content:space-between; font-size:0.75rem;"><span style="color:var(--muted);">Min. spłata:<br><strong style="color:#fff;">'+Number(minP || 0).toFixed(2)+' zł</strong></span><span style="color:var(--muted); text-align:right;">Zadeklarowano:<br><strong style="color:var(--info);">'+declaredText+'</strong></span></div>' +
+                        motivation +
+                        '<div style="text-align:center; margin-top:15px;">' +
+                            '<span onclick="let el=document.getElementById(\'cdet_'+c.id+'\'); let txt=this; if(el.style.display===\'none\'){el.style.display=\'block\'; txt.innerHTML=\'🔼 Zwiń szczegóły\';}else{el.style.display=\'none\'; txt.innerHTML=\'🔽 Rozwiń szczegóły\';}" style="color:var(--info); font-size:0.75rem; cursor:pointer; font-weight:bold; display:inline-block; padding:5px;">🔽 Rozwiń szczegóły</span>' +
+                        '</div>' +
+                        '<div id="cdet_'+c.id+'" style="display:none; margin-bottom:12px;">'+detailsGrid+'</div>' +
+                        '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:15px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">' +
+                            '<button style="flex:2; background:rgba(34,197,94,0.15); color:var(--success); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:12px 5px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="if(typeof window.hOpenPayLoanModal===\'function\') window.hOpenPayLoanModal(\''+c.id+'\')">💸 SPŁAĆ ZADŁUŻENIE</button>' +
+                            '<button style="flex:1; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 5px; font-size:0.8rem; cursor:pointer;" onclick="if(typeof window.hOpenLoanModal===\'function\') window.hOpenLoanModal(\''+c.id+'\')">✏️ Edytuj</button>' +
+                            '<button style="background:rgba(239,68,68,0.15); color:var(--danger); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:12px 15px; cursor:pointer;" onclick="if(typeof window.hDelLoan===\'function\') window.hDelLoan(\''+c.id+'\')">🗑️</button>' +
+                        '</div>' +
+                    '</div>';
+                }
+                cardsHtml = '<div class="section-lbl" style="color:var(--warning); border-color:var(--warning); margin-top:20px; font-weight:bold;">💳 Karty Kredytowe</div>' +
+                            '<div class="hide-scroll" style="display:flex; overflow-x:auto; gap:15px; scroll-snap-type: x mandatory; padding-bottom:15px; width:100%; margin:0; padding: 0 15px;">' + mappedCards + '</div>';
             }
 
             let appContainer = document.getElementById('app');
@@ -83,6 +158,7 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                     allocBar + topActions +
                 '</div>' +
                 '<div style="padding: 10px 15px;">' + accHtml + '</div>' +
+                cardsHtml +
                 '<div style="padding-bottom:80px;"></div>' + (nav||''); 
             }
         }
