@@ -1,58 +1,14 @@
 // ==========================================
-// PLIK: taxi_tab_panel.js - Zakładki Panel (Term) i Wyniki (Stats) + Edytor ODO
+// PLIK: taxi_tab_panel.js - Zakładki Panel (Term) i Wyniki (Stats)
 // ==========================================
 
-// --- NOWOCZESNA EDYCJA LICZNIKA (MODAL PREMIUM) ---
-window.dEditGlobalOdo = function() {
-    let d = window.db.drv || {};
-    let oldOdo = Number(d.odo||0).toFixed(0);
-    
-    let html = '<div style="text-align:center; padding:10px 0;">' +
-        '<div style="font-size:3rem; margin-bottom:15px;">✏️</div>' +
-        '<h3 style="color:#fff; margin:0 0 10px 0; font-size:1.1rem; letter-spacing:0.5px;">Edytuj Stan Licznika</h3>' +
-        '<p style="font-size:0.75rem; color:var(--muted); margin-bottom:20px; padding: 0 10px;">Podaj aktualny przebieg całego pojazdu (ODO). Zmiana wpłynie na statystyki i koszty paliwa.</p>' +
-        
-        '<div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:14px; padding:15px; margin-bottom:20px;">' +
-            '<div style="display:flex; justify-content:center; align-items:center; gap:8px;">' +
-                '<input type="number" id="mod-global-odo-val" placeholder="0" value="'+oldOdo+'" style="color:#fff; border:none; background:transparent; font-size:3rem; font-weight:900; text-align:center; width:140px; padding:0; outline:none;">' +
-                '<span style="font-size:1.4rem; font-weight:bold; color:var(--muted); margin-top:14px;">KM</span>' +
-            '</div>' +
-        '</div>' +
-        
-        '<div style="display:flex; gap:10px; padding:0 10px;">' +
-            '<button class="btn" style="flex:1; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:900; padding:15px; border-radius:12px; border:none; box-shadow:0 6px 15px rgba(16,185,129,0.3);" onclick="window.dSaveGlobalOdo('+oldOdo+')">ZAPISZ ODO</button>' +
-            '<button class="btn" style="flex:1; background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1); border-radius:12px; box-shadow:none; padding:15px; font-weight:bold;" onclick="if(typeof window.closeModal===\'function\') window.closeModal()">ANULUJ</button>' +
-        '</div>' +
-    '</div>';
-    
-    if(typeof window.openModal==='function') window.openModal(html);
-};
-
-window.dSaveGlobalOdo = function(oldOdo) {
-    let valEl = document.getElementById('mod-global-odo-val');
-    if(!valEl) return;
-    let newOdo = parseFloat(valEl.value);
-    
-    if(isNaN(newOdo) || newOdo < 0) {
-        if(typeof window.sysAlert==='function') window.sysAlert("Błąd!", "Podaj poprawny przebieg (ODO)!", "error");
-        return;
-    }
-    
-    if(newOdo < oldOdo) {
-        if(typeof window.sysAlert==='function') window.sysAlert("Uwaga!", "Licznik nie może się cofać!", "warning");
-        return;
-    }
-    
-    window.db.drv.odo = newOdo;
-    if(typeof window.save === 'function') window.save();
-    if(typeof window.closeModal === 'function') window.closeModal();
-    if(typeof window.render === 'function') window.render();
-    if(typeof window.sysAlert==='function') window.sysAlert("Gotowe!", "Licznik zaktualizowany do "+newOdo+" KM.", "success");
-};
-
-// --- GŁÓWNA FUNKCJA RENDERUJĄCA PANEL I WYNIKI ---
 window.rDrvPanel = function(d, t, nav, hdr) {
     try {
+        let appContainer = document.getElementById('app');
+        if(!appContainer) return;
+        
+        let act = ''; // Zmienna na HTML głównej zawartości
+
         // ==========================================
         // ZAKŁADKA: PANEL (TERM) - TRWAJĄCA ZMIANA
         // ==========================================
@@ -123,7 +79,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             let fuelC = curK * (cfg.fuelPx || 0);
             let n = g - tax - pFee - cf - vf - fuelC - dailyFix;
             
-            let stoperHtml = '<div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 8px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-size: 0.65rem; color: var(--driver); text-transform:uppercase; font-weight:800; letter-spacing:1px; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.1);">🔒 Śledzenie GPS wkrótce!</div>';
+            let stoperHtml = '<div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 8px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-size: 0.65rem; color: var(--driver); text-transform:uppercase; font-weight:800; letter-spacing:1px;">🔒 Śledzenie GPS wkrótce!</div>';
             if(d.sh && d.sh.on) {
                 if(d.liveRideStart) {
                     let isWaiting = d.sh.rWS !== null;
@@ -172,37 +128,33 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             if(d.sh && d.sh.on) {
                 if(d.plat === 'apps') {
                     breakdownHtml = '<div style="display:flex; justify-content:space-between; gap:6px; margin-top:12px; padding:0 5px;">' +
-                        '<div style="flex:1; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:var(--success); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Gotówka</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumCash).toFixed(2)+'</strong></div>' +
-                        '<div style="flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:#fff; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Uber</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumUber).toFixed(2)+'</strong></div>' +
-                        '<div style="flex:1; background:rgba(34,211,238,0.05); border:1px solid rgba(34,211,238,0.2); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:#22d3ee; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Bolt</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumBolt).toFixed(2)+'</strong></div>' +
+                        '<div style="flex:1; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:var(--success); text-transform:uppercase; font-weight:bold;">Gotówka</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumCash).toFixed(2)+'</strong></div>' +
+                        '<div style="flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:#fff; text-transform:uppercase; font-weight:bold;">Uber</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumUber).toFixed(2)+'</strong></div>' +
+                        '<div style="flex:1; background:rgba(34,211,238,0.05); border:1px solid rgba(34,211,238,0.2); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:#22d3ee; text-transform:uppercase; font-weight:bold;">Bolt</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumBolt).toFixed(2)+'</strong></div>' +
                     '</div>';
                 } else {
                     breakdownHtml = '<div style="display:flex; justify-content:space-between; gap:6px; margin-top:12px; padding:0 5px;">' +
-                        '<div style="flex:1; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:var(--success); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Gotówka</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumCash).toFixed(2)+'</strong></div>' +
-                        '<div style="flex:1; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.2); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:#3b82f6; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Karta</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumCard).toFixed(2)+'</strong></div>' +
-                        '<div style="flex:1; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.2); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:#a855f7; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Voucher</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumVouch).toFixed(2)+'</strong></div>' +
+                        '<div style="flex:1; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:var(--success); text-transform:uppercase; font-weight:bold;">Gotówka</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumCash).toFixed(2)+'</strong></div>' +
+                        '<div style="flex:1; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.2); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:#3b82f6; text-transform:uppercase; font-weight:bold;">Karta</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumCard).toFixed(2)+'</strong></div>' +
+                        '<div style="flex:1; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.2); border-radius:10px; padding:8px; text-align:center;"><span style="font-size:0.55rem; color:#a855f7; text-transform:uppercase; font-weight:bold;">Voucher</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(sumVouch).toFixed(2)+'</strong></div>' +
                     '</div>';
                 }
             }
 
-            let act = '';
             if (d.sh && d.sh.on) {
-                act = '<div class="dash-hero" style="padding-bottom:15px; background:linear-gradient(180deg, rgba(20,184,166,0.05) 0%, transparent 100%); margin-bottom:12px;">' +
+                act += '<div class="dash-hero" style="padding-bottom:15px; background:linear-gradient(180deg, rgba(20,184,166,0.05) 0%, transparent 100%); margin-bottom:12px;">' +
                     '<p style="font-size:0.6rem; font-weight:bold; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:2px;">'+displayLabel+'</p>' +
                     '<h1 style="font-size:2.4rem; color:'+(displayVal>=0?'var(--success)':'var(--danger)')+'; font-weight:900; letter-spacing:-1px; margin:0;">'+Number(displayVal||0).toFixed(2)+' zł</h1>' +
-                    
                     '<div style="display:flex; justify-content:center; gap:8px; margin-top:10px; margin-bottom:12px;">' +
                         '<button class="chip '+(!showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.7rem; border-radius:16px; font-weight:bold;" onclick="window.db.drv.panelMode=\'net\';window.render()">Netto (Operacyjne)</button>' +
                         '<button class="chip '+(showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.7rem; border-radius:16px; font-weight:bold;" onclick="window.db.drv.panelMode=\'gross\';window.render()">Brutto (Utarg)</button>' +
                     '</div>' +
-                    
                     '<div style="margin-top: 10px; padding: 0 10px;">' +
                         '<div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--muted); margin-bottom:4px; font-weight:bold;"><span>Cel: '+goal+' zł</span><span style="color:'+(progressPct>=100?'var(--success)':'#fff')+';">'+Number(progressPct||0).toFixed(0)+'%</span></div>' +
                         '<div style="width:100%; background:rgba(255,255,255,0.05); height:6px; border-radius:3px; overflow:hidden;"><div style="width:'+progressPct+'%; background:'+(progressPct>=100?'var(--success)':'var(--driver)')+'; height:100%; transition:width 0.5s;"></div></div>' +
                         '<div style="font-size:0.65rem; color:var(--muted); text-align:center; margin-top:6px;">'+etaHtml+'</div>' +
                     '</div>' +
                     breakdownHtml +
-                    
                     '<div style="display:flex; justify-content:center; gap:8px; margin-top:15px; padding:0 5px;">' +
                         '<div style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:8px; border-radius:12px; display:flex; flex-direction:column; justify-content:center;">' +
                             '<span style="font-size:0.55rem; color:var(--muted); text-transform:uppercase; font-weight:bold; margin-bottom:2px;">Czas pracy:</span>' +
@@ -213,41 +165,36 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                             '<button class="btn btn-danger" style="flex:1; border-radius:10px; font-size:0.7rem; font-weight:bold; padding:8px; margin:0;" onclick="if(typeof window.openEndShiftModal===\'function\') window.openEndShiftModal()">🔴 ZAKOŃCZ</button>' +
                         '</div>' +
                     '</div>' +
-                '</div>' +
-                (d.sh.sPS ? '<div class="panel" style="border-color:var(--warning); text-align:center; padding:20px 10px; margin-top:10px; border-radius:16px;"><div style="font-size:2rem; margin-bottom:10px; animation: pulse 2s infinite;">☕</div><h2 style="color:var(--warning); margin:0 0 10px 0; font-size:1.1rem;">ZMIANA WSTRZYMANA</h2><button class="btn" style="background:linear-gradient(135deg, var(--success), #059669); color:#000; font-weight:900; padding:12px; border-radius:12px; border:none;" onclick="if(typeof window.toggleShiftPause===\'function\') window.toggleShiftPause()">▶ WZNÓW PRACĘ</button></div>' : stoperHtml) +
+                '</div>';
                 
-                // Formularz dodawania kursu - ODCHUDZONY
-                '<div class="panel" style="border-color:rgba(59, 130, 246, 0.2); background:linear-gradient(145deg, #1e293b, #09090b); padding:15px; border-radius:20px; display:'+(d.sh.sPS?'none':'block')+'; box-shadow:0 8px 20px rgba(0,0,0,0.4); margin-bottom:15px;">' +
+                act += (d.sh.sPS ? '<div class="panel" style="border-color:var(--warning); text-align:center; padding:20px 10px; margin-top:10px; border-radius:16px;"><div style="font-size:2rem; margin-bottom:10px; animation: pulse 2s infinite;">☕</div><h2 style="color:var(--warning); margin:0 0 10px 0; font-size:1.1rem;">ZMIANA WSTRZYMANA</h2><button class="btn" style="background:linear-gradient(135deg, var(--success), #059669); color:#000; font-weight:900; padding:12px; border-radius:12px; border:none;" onclick="if(typeof window.toggleShiftPause===\'function\') window.toggleShiftPause()">▶ WZNÓW PRACĘ</button></div>' : stoperHtml);
+                
+                act += '<div class="panel" style="border-color:rgba(59, 130, 246, 0.2); background:linear-gradient(145deg, #1e293b, #09090b); padding:15px; border-radius:20px; display:'+(d.sh.sPS?'none':'block')+'; box-shadow:0 8px 20px rgba(0,0,0,0.4); margin-bottom:15px;">' +
                     '<div style="text-align:center; margin-bottom:10px;">' +
                         '<span style="font-size:0.65rem; color:var(--driver); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">Rejestracja Kursu</span>' +
                     '</div>' +
-                    
                     '<div style="margin-bottom:12px;">' +
                         '<div class="chip-box" style="margin-bottom:8px; justify-content:center;">'+ch1+'</div>' +
                         otherSrcHtml +
                         '<div class="chip-box" style="margin-bottom:0; justify-content:center; margin-top:8px;">'+ch2+'</div>' +
                     '</div>' +
-                    
                     '<div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:10px; margin-bottom:12px;">' +
                         '<div style="display:flex; justify-content:center; align-items:center; gap:6px;">' +
                             '<input type="number" id="dt-v" placeholder="0" style="color:var(--driver); border:none; background:transparent; font-size:2.5rem; font-weight:900; text-align:center; width:120px; padding:0; outline:none;">' +
                             '<span style="font-size:1.2rem; font-weight:bold; color:var(--muted); margin-top:10px;">zł</span>' +
                         '</div>' +
                     '</div>' +
-                    
                     '<div class="inp-row" style="margin-bottom:12px;">' +
                         '<div class="inp-group" style="margin:0;"><input type="number" id="dt-m" placeholder="Czas (min)" style="background:rgba(0,0,0,0.5); border-radius:10px; padding:12px; text-align:center; font-size:0.8rem;"></div>' +
                         '<div class="inp-group" style="margin:0;"><input type="number" id="dt-k" placeholder="Dystans (km)" style="background:rgba(0,0,0,0.5); border-radius:10px; padding:12px; text-align:center; font-size:0.8rem;"></div>' +
                     '</div>' +
-                    
                     '<div class="inp-group" style="margin-bottom:12px;">' +
                         '<select id="dt-cid" style="background:rgba(0,0,0,0.3); border-radius:10px; padding:10px; font-size:0.75rem; color:var(--muted); border:1px solid rgba(255,255,255,0.05);"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select>' +
                     '</div>' +
-                    
                     '<button class="btn btn-driver" style="margin-top:0; padding:14px; border-radius:12px; font-weight:900; font-size:0.9rem; letter-spacing:1px; box-shadow:0 4px 15px rgba(59, 130, 246, 0.3);" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ KURS</button>' +
-                '</div>' +
+                '</div>';
                 
-                '<div class="panel" style="display:'+(d.sh.sPS?'none':'block')+'; padding:12px; border-radius:20px; background:linear-gradient(145deg, #18181b, #09090b);">' +
+                act += '<div class="panel" style="display:'+(d.sh.sPS?'none':'block')+'; padding:12px; border-radius:20px; background:linear-gradient(145deg, #18181b, #09090b);">' +
                     '<div class="p-title" style="font-size:0.75rem; margin-bottom:10px; color:var(--muted); letter-spacing:1px;">HISTORIA ZMIANY</div>';
                     
                 let trsList = d.sh.tr || [];
@@ -281,8 +228,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 }
                 act += '</div>';
             } else {
-                // EKRAN STARTOWY
-                act = '<div class="dash-hero" style="padding-top:30px; padding-bottom:20px;">' +
+                act += '<div class="dash-hero" style="padding-top:30px; padding-bottom:20px;">' +
                     '<div style="width:70px;height:70px;background:linear-gradient(135deg,#10b981,#059669);border-radius:35px;display:flex;align-items:center;justify-content:center;margin:0 auto 15px;font-size:2.2rem;box-shadow:0 8px 20px rgba(16,185,129,0.4);">🚕</div>' +
                     '<h1 style="font-size:1.8rem; font-weight:900; letter-spacing:-1px; margin-bottom:5px;">Cześć, '+(window.db.userName || 'Kierowco')+'!</h1>' +
                     '<p style="margin-top:4px; font-size:0.8rem; color:var(--muted);">Potwierdź stan licznika przed jazdą.</p>' +
@@ -296,7 +242,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 
                 if(!window.dShowOff) {
                     act += '<div style="padding:0 15px; margin-top:15px;">' +
-                        '<button class="btn" style="background:rgba(14,165,233,0.05); color:var(--info); border:1px dashed rgba(14,165,233,0.3); font-size:0.75rem; font-weight:bold; box-shadow:none; width:100%; padding:12px; border-radius:12px;" onclick="window.dShowOff=true; window.render()">📥 WPROWADŹ UTARG Z RAPORTU KASY (WBITKA)</button>' +
+                        '<button class="btn" style="background:rgba(14,165,233,0.05); color:var(--info); border:1px dashed rgba(14,165,233,0.3); font-size:0.75rem; font-weight:bold; box-shadow:none; width:100%; padding:12px; border-radius:12px;" onclick="window.dShowOff=true; window.render()">📥 WPROWADŹ UTARG Z RAPORTU (WBITKA)</button>' +
                     '</div>';
                 } else {
                     act += '<div class="section-lbl" style="color:var(--info); border-color:var(--info); margin-top:25px; font-size:0.7rem; letter-spacing:1px;">⚡ Zaległe rozliczenie / Raport z Kasy</div>' +
@@ -326,9 +272,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 }
             }
             
-            let appContainer = document.getElementById('app');
-            // Zwiększono margines dolny z 80px na 110px, aby ukryć go przed nową wyspą nawigacji
-            if(appContainer) appContainer.innerHTML = hdr + act + '<div style="padding-bottom:110px;"></div>' + nav;
+            appContainer.innerHTML = hdr + act + '<div style="padding-bottom:120px;"></div>' + nav;
         }
 
         // ==========================================
@@ -462,16 +406,16 @@ window.rDrvPanel = function(d, t, nav, hdr) {
 
             let breakdownStatsHtml = '';
             if (d.plat === 'apps') {
-                breakdownStatsHtml = '<div style="display:flex; justify-content:space-between; gap:10px; margin-top:20px; padding:0 15px; margin-bottom:20px;">' +
-                    '<div style="flex:1; background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.2); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:var(--success); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Gotówka</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(cashEarned).toFixed(2)+'</strong></div>' +
-                    '<div style="flex:1; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:#fff; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Uber</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(uberEarned).toFixed(2)+'</strong></div>' +
-                    '<div style="flex:1; background:rgba(34,211,238,0.05); border:1px solid rgba(34,211,238,0.2); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:#22d3ee; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Bolt</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(boltEarned).toFixed(2)+'</strong></div>' +
+                breakdownStatsHtml = '<div style="display:flex; justify-content:space-between; gap:8px; margin-top:15px; padding:0 15px; margin-bottom:15px;">' +
+                    '<div style="flex:1; background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.2); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:var(--success); text-transform:uppercase; font-weight:bold;">Gotówka</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(cashEarned).toFixed(2)+'</strong></div>' +
+                    '<div style="flex:1; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:#fff; text-transform:uppercase; font-weight:bold;">Uber</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(uberEarned).toFixed(2)+'</strong></div>' +
+                    '<div style="flex:1; background:rgba(34,211,238,0.05); border:1px solid rgba(34,211,238,0.2); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:#22d3ee; text-transform:uppercase; font-weight:bold;">Bolt</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(boltEarned).toFixed(2)+'</strong></div>' +
                 '</div>';
             } else {
-                breakdownStatsHtml = '<div style="display:flex; justify-content:space-between; gap:10px; margin-top:20px; padding:0 15px; margin-bottom:20px;">' +
-                    '<div style="flex:1; background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.2); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:var(--success); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Gotówka</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(cashEarned).toFixed(2)+'</strong></div>' +
-                    '<div style="flex:1; background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.2); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:#3b82f6; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Karta</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(cardEarned).toFixed(2)+'</strong></div>' +
-                    '<div style="flex:1; background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:#a855f7; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Voucher</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(vouchEarned).toFixed(2)+'</strong></div>' +
+                breakdownStatsHtml = '<div style="display:flex; justify-content:space-between; gap:8px; margin-top:15px; padding:0 15px; margin-bottom:15px;">' +
+                    '<div style="flex:1; background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.2); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:var(--success); text-transform:uppercase; font-weight:bold;">Gotówka</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(cashEarned).toFixed(2)+'</strong></div>' +
+                    '<div style="flex:1; background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:#3b82f6; text-transform:uppercase; font-weight:bold;">Karta</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(cardEarned).toFixed(2)+'</strong></div>' +
+                    '<div style="flex:1; background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:#a855f7; text-transform:uppercase; font-weight:bold;">Voucher</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(vouchEarned).toFixed(2)+'</strong></div>' +
                 '</div>';
             }
 
@@ -619,8 +563,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 proBannerHtml +
                 pAndLHtml +
                 historyLogHtml +
-                // Zwiększony dolny margines, aby nowa pływająca nawigacja nie ucinała treści (110px)
-                '<div style="padding-bottom:110px;"></div>' + nav;
+                '<div style="padding-bottom:120px;"></div>' + nav;
             }
         }
     } catch(err) {
