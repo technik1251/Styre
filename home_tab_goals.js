@@ -164,7 +164,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     let oszczednoscDnia = (rat * instL) - doZaplatyNatychmiast; 
                     
                     if(oszczednoscDnia > 0) {
-                        savingsMsg = `Spłacając dziś całość, unikasz ${Number(oszczednoscDnia).toFixed(2)} zł opłat! 🛍️`;
+                        savingsMsg = `Spłacając dziś całość, unikasz opłat! 🛍️`;
                         savingsColor = 'var(--info)';
                     }
                     bnplAlert = `<div style="color:var(--danger); font-size:0.75rem; font-weight:bold; margin-top:5px;">Minęło 30 dni lub rozłożono. Doliczono koszty operatora. ⚠️</div>`;
@@ -175,7 +175,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             let savingsHtmlDetailed = savingsMsg ? `<div style="margin-top:5px; font-size:0.85rem; font-weight:bold; color:${savingsColor};">${savingsMsg}</div>` : '';
             
             // =====================================
-            // OBLICZANIE DAT (IDEALNY KALENDARZ PAYPO)
+            // OBLICZANIE DAT (SZTYWNE +30 DNI)
             // =====================================
             let nextDateStr = '--';
             let baseNextD = new Date();
@@ -184,10 +184,9 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             if (instL <= 0) {
                 nextDateStr = 'Spłacone 🎉';
             } else if (isBNPL) {
-                // Rata 1 to ZAWSZE data_zakupu + 30 dni. Kolejne raty to Rata 1 + N miesięcy
+                // PAYPO: Rata N to dokładnie = Data Zakupu + (30 * N) dni
                 let stD = new Date(l.startDate || new Date());
-                stD.setDate(stD.getDate() + 30); // Ustawiamy 1. ratę (+30 dni od zakupu)
-                stD.setMonth(stD.getMonth() + paidCount); // Dodajemy miesiąc dla każdej opłaconej już raty
+                stD.setDate(stD.getDate() + (30 * (paidCount + 1))); 
                 nextDateStr = stD.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                 baseNextD = stD;
             } else if (isKredyt || (isPryw && l.prywMode === 'equal')) {
@@ -240,10 +239,9 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                     let sIcon = isPaid ? '✅' : (isCurrent ? '🟢' : '⚪');
                     let lineDisp = i === totInst ? 'none' : 'block';
                     
-                    // Zmiana dat PayPo
+                    // Sztywno + 30 dni za każdą ratę
                     let instDate = new Date(l.startDate || new Date());
-                    instDate.setDate(instDate.getDate() + 30); // Zawsze 1 rata = +30 dni od zakupu
-                    instDate.setMonth(instDate.getMonth() + (i - 1)); // Kolejne to + miesiac
+                    instDate.setDate(instDate.getDate() + (30 * i));
                     let rdStr = instDate.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
                     
                     detailsHtml += `
