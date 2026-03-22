@@ -70,7 +70,6 @@ window.rHomeOps = function(h, t, nav, hdr) {
         let topCatName = Object.keys(dashCats).sort((a,b) => dashCats[b] - dashCats[a])[0];
         let insightsHtml = '';
         
-        // Pokazuj zwykłą podpowiedź Asystenta TYLKO, gdy nie ma krytycznych alertów
         if (currExp > 0 && limitAlertsHtml === '') { 
             insightsHtml = `
             <div style="background:rgba(139, 92, 246, 0.1); border:1px solid rgba(139, 92, 246, 0.3); padding:12px; border-radius:12px; margin: 15px 15px 0; text-align:left; display:flex; gap:12px; align-items:center; cursor:pointer;" onclick="window.switchTab('stats')">
@@ -141,6 +140,17 @@ window.rHomeOps = function(h, t, nav, hdr) {
             </div>`; 
         }).join('');
 
+        // EMPTY STATE DLA OSTATNICH OPERACJI
+        if (!dashRecentTrans) {
+            dashRecentTrans = `
+            <div style="background:rgba(255,255,255,0.02); border:1px dashed rgba(255,255,255,0.1); border-radius:16px; padding:30px 20px; text-align:center; margin-top:10px;">
+                <div style="font-size:2.5rem; margin-bottom:10px;">💸</div>
+                <strong style="color:#fff; font-size:1rem; display:block; margin-bottom:5px;">Tu pojawi się Twoja historia</strong>
+                <span style="color:var(--muted); font-size:0.8rem; display:block; margin-bottom:15px;">Dodaj pierwszy wydatek, aby ożywić pulpit!</span>
+                <button class="btn" style="background:rgba(20,184,166,0.15); color:var(--life); border:1px solid rgba(20,184,166,0.3); border-radius:10px; padding:10px 20px; font-size:0.8rem; font-weight:bold; box-shadow:none; width:auto;" onclick="window.switchTab('add')">+ DODAJ TRANSAKCJĘ</button>
+            </div>`;
+        }
+
         let safeBalance = globalBalance - plannedSum;
         
         let appContainer = document.getElementById('app');
@@ -162,13 +172,13 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 </div>
 
                 <div style="display:flex; justify-content:center; gap:10px; margin-top:20px;">
-                    <div style="flex:1; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px; padding:10px;">
+                    <div style="flex:1; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px; padding:10px; cursor:pointer;" onclick="window.hTransType='inc'; window.switchTab('add')">
                         <div style="color:var(--success); font-weight:bold; margin-bottom:8px; font-size:1.1rem;">+${Number(currInc || 0).toFixed(0)} zł</div>
-                        <button class="btn btn-success" style="padding:8px; font-size:0.75rem; margin-top:0; width:100%; box-shadow:none;" onclick="window.hTransType='inc'; window.switchTab('add')">💰 WPŁYW</button>
+                        <button class="btn btn-success" style="padding:8px; font-size:0.75rem; margin-top:0; width:100%; box-shadow:none; pointer-events:none;">💰 WPŁYW</button>
                     </div>
-                    <div style="flex:1; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:10px;">
+                    <div style="flex:1; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:10px; cursor:pointer;" onclick="window.hTransType='exp'; window.switchTab('add')">
                         <div style="color:var(--danger); font-weight:bold; margin-bottom:8px; font-size:1.1rem;">-${Number(currExp || 0).toFixed(0)} zł</div>
-                        <button class="btn btn-danger" style="padding:8px; font-size:0.75rem; margin-top:0; width:100%; box-shadow:none;" onclick="window.hTransType='exp'; window.switchTab('add')">💸 WYDATEK</button>
+                        <button class="btn btn-danger" style="padding:8px; font-size:0.75rem; margin-top:0; width:100%; box-shadow:none; pointer-events:none;">💸 WYDATEK</button>
                     </div>
                 </div>
             </div>
@@ -177,8 +187,9 @@ window.rHomeOps = function(h, t, nav, hdr) {
             ${miniPiggyHtml}
             <div class="section-lbl" style="color:#fff; border-color:rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; margin-top:20px;">Ostatnie operacje</div>
             <div style="padding: 0 15px 30px;">
-                ${dashRecentTrans || '<div style="text-align:center;color:var(--muted);padding:20px 0; font-size:0.8rem;">Brak operacji.</div>'}
+                ${dashRecentTrans}
             </div>
+            <div style="padding-bottom:60px;"></div>
             ` + nav;
         }
     }
@@ -230,6 +241,13 @@ window.rHomeOps = function(h, t, nav, hdr) {
         
         let memChips = `<div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:5px;">` + h.members.map(m => `<div class="chip ${window.hMem === m ? 'active' : ''}" style="padding:8px 16px; flex-shrink:0; ${window.hMem === m ? 'background:var(--life);color:#000;border-color:var(--life)' : 'color:var(--muted)'}" onclick="window.hMem='${m}'; window.render();">${m}</div>`).join('') + `</div>`; 
 
+        // Nadpisanie głównej akcji, by dodać KONFETTI przy przychodzie
+        let oldAction = window.hAction;
+        window.hAction = function() {
+            if(window.hTransType === 'inc' && window.shootConfetti) window.shootConfetti();
+            oldAction();
+        };
+
         let appContainer = document.getElementById('app');
         if(appContainer) {
             appContainer.innerHTML = hdr + `
@@ -268,7 +286,8 @@ window.rHomeOps = function(h, t, nav, hdr) {
                     ${!isTrans ? `<div class="inp-group" style="flex:1;"><label>Powtarzaj</label><select id="h-recurring" style="background:#18181b;"><option value="none">Nie</option><option value="month">Co miesiąc 🔄</option></select></div>` : ''}
                 </div>
                 <button class="btn" style="background:${col}; color:#fff; font-size:1.2rem; font-weight:900; padding:20px; box-shadow:0 10px 20px ${col}44;" onclick="window.hAction()">${isTrans?'WYKONAJ PRZELEW':'ZAPISZ TRANSAKCJĘ'}</button>
-            </div>` + nav; 
+            </div>
+            <div style="padding-bottom:60px;"></div>` + nav; 
         }
     } 
     
@@ -332,6 +351,22 @@ window.rHomeOps = function(h, t, nav, hdr) {
         let bilans = sumInc - sumExp; 
         let mapBtnHtml = `<button class="btn" style="background:rgba(14, 165, 233, 0.15); color:var(--info); border:1px dashed rgba(14, 165, 233, 0.4); border-radius:12px; font-weight:bold; padding:12px; margin-bottom:20px; display:flex; align-items:center; justify-content:center; gap:10px; width:100%;" onclick="window.sysAlert('Funkcja PRO', 'Mapa Finansów (Geotagowanie wydatków i nawigacja Google Maps) będzie wkrótce dostępna w wersji StyreOS PRO! 🗺️', 'info')"><span style="font-size:1.1rem;">📍</span> POKAŻ WYDATKI NA MAPIE (Wkrótce PRO)</button>`;
 
+        // ZABIEGI UX: Empty States dla Wykresów
+        let expEmptyHtml = sumExp === 0 ? `
+            <div style="text-align:center; padding:30px 10px;">
+                <div style="font-size:3rem; margin-bottom:10px;">📊</div>
+                <strong style="color:var(--danger); font-size:1.1rem; display:block; margin-bottom:5px;">Brak danych do analizy</strong>
+                <span style="color:var(--muted); font-size:0.85rem; display:block; margin-bottom:20px;">Zacznij notować wydatki, aby wygenerować wykresy.</span>
+                <div style="background:linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(14, 165, 233, 0.1)); border:1px dashed rgba(139, 92, 246, 0.4); padding:12px; border-radius:12px; cursor:pointer;" onclick="window.sysAlert('Auto-Kategoryzacja AI', 'W wersji PRO podepniesz swój bank i Sztuczna Inteligencja sama wygeneruje te wykresy! 🤖', 'info')">
+                    <span style="color:#c084fc; font-weight:bold; font-size:0.8rem;">🤖 Wkrótce PRO: AI samo uzupełni wykresy!</span>
+                </div>
+            </div>` : '';
+            
+        let incEmptyHtml = sumInc === 0 ? `
+            <div style="text-align:center; padding:20px 10px;">
+                <span style="color:var(--muted); font-size:0.85rem; display:block;">Brak zarejestrowanych wpływów w tym miesiącu.</span>
+            </div>` : '';
+
         let appContainer = document.getElementById('app');
         if(appContainer) {
             appContainer.innerHTML = hdr + `
@@ -348,6 +383,7 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 </div>
             </div>
             <div style="padding:0 15px;">${mapBtnHtml}</div>
+            
             <div class="panel" style="margin-bottom:20px; border-color:var(--info);">
                 <div class="p-title" style="color:var(--info); margin-bottom:10px;">Podział Wydatków</div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
@@ -360,24 +396,19 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 </div>
                 <p style="font-size:0.7rem; color:var(--muted); text-align:center; margin-top:10px;">Opłaty stałe stanowią ${(sumExp > 0 ? (sumFixed/sumExp)*100 : 0).toFixed(0)}% Twoich wydatków.</p>
             </div>
+            
             <div class="panel" style="padding: 20px; border-color:rgba(34, 197, 94, 0.4);">
                 <div class="p-title" style="color:var(--success)">Struktura Przychodów</div>
-                <div style="height:200px; position:relative; margin-bottom:20px;">
-                    <canvas id="h-chart-inc"></canvas>${sumInc === 0 ? '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:var(--muted); font-size:0.9rem;">Brak danych</div>' : ''}
-                </div>
-                <div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
-                    ${incListHtml || '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:10px;">Brak wpływów.</div>'}
-                </div>
+                ${sumInc > 0 ? `<div style="height:200px; position:relative; margin-bottom:20px;"><canvas id="h-chart-inc"></canvas></div>` : incEmptyHtml}
+                ${sumInc > 0 ? `<div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">${incListHtml}</div>` : ''}
             </div>
+            
             <div class="panel" style="padding: 20px; border-color:rgba(239, 68, 68, 0.4);">
                 <div class="p-title" style="color:var(--danger)">Struktura Kosztów Zmiennych</div>
-                <div style="height:250px; position:relative; margin-bottom:20px;">
-                    <canvas id="h-chart"></canvas>${sumExp === 0 ? '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:var(--muted); font-size:0.9rem;">Brak danych</div>' : ''}
-                </div>
-                <div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
-                    ${catListHtml || '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:10px;">Brak wydatków.</div>'}
-                </div>
-            </div>` + nav; 
+                ${sumExp > 0 ? `<div style="height:250px; position:relative; margin-bottom:20px;"><canvas id="h-chart"></canvas></div>` : expEmptyHtml}
+                ${sumExp > 0 ? `<div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">${catListHtml}</div>` : ''}
+            </div>
+            <div style="padding-bottom:60px;"></div>` + nav; 
             
             if(sumExp > 0 && window.Chart) { 
                 setTimeout(() => { 
@@ -479,13 +510,27 @@ window.rHomeOps = function(h, t, nav, hdr) {
             return `<div class="date-group" style="margin-top:20px; display:flex; justify-content:space-between; font-weight:bold; font-size:0.85rem; color:var(--muted); text-transform:uppercase; padding:0 10px;"><span>${date}</span> <span><span style="color:var(--success)">+${Number(dayInc||0).toFixed(0)}</span> / <span style="color:var(--danger)">-${Number(dayExp||0).toFixed(0)}</span></span></div><div class="panel" style="margin-top:5px; padding:5px 15px; border-radius:12px;">${itemsHtml}</div>`; 
         }).join(''); 
         
+        // EMPTY STATE DLA KALENDARZA
+        if(!calHtml) {
+            calHtml = `
+            <div style="text-align:center; padding:40px 20px;">
+                <div style="font-size:3.5rem; margin-bottom:15px;">📝</div>
+                <strong style="color:#fff; font-size:1.1rem; display:block; margin-bottom:5px;">Czysta karta</strong>
+                <span style="color:var(--muted); font-size:0.85rem; display:block; margin-bottom:20px;">Twój kalendarz czeka na pierwsze operacje.</span>
+                <div style="background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.1); padding:15px; border-radius:12px; display:inline-block; text-align:left; cursor:pointer;" onclick="window.sysAlert('Funkcja PRO', 'Inteligentne skanowanie paragonów automatycznie sczyta daty z Twoich zakupów! Wkrótce dostępne. 🚀', 'info')">
+                    <span style="color:var(--info); font-size:0.75rem; font-weight:bold; display:block; margin-bottom:5px;">🚀 Wkrótce w StyreOS PRO:</span>
+                    <span style="color:var(--muted); font-size:0.75rem;">Skaner paragonów sam odczyta datę i kwotę!</span>
+                </div>
+            </div>`;
+        }
+
         let filterButtons = `<div style="display:flex; gap:10px; padding: 10px 15px 15px; border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:10px;"><button onclick="window.hHistFilter='all'; window.render()" style="flex:1; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:${window.hHistFilter==='all'?'rgba(255,255,255,0.1)':'transparent'}; color:#fff; font-size:0.8rem;">Wszystko</button><button onclick="window.hHistFilter='inc'; window.render()" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--success); background:${window.hHistFilter==='inc'?'rgba(34,197,94,0.1)':'transparent'}; color:var(--success); font-size:0.8rem;">Wpływy</button><button onclick="window.hHistFilter='exp'; window.render()" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--danger); background:${window.hHistFilter==='exp'?'rgba(239,68,68,0.1)':'transparent'}; color:var(--danger); font-size:0.8rem;">Wydatki</button></div>`;
         let monthNavHtml = `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 20px; margin-bottom:10px;"><button style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:8px 15px; border-radius:8px; font-weight:bold;" onclick="window.hChangeMonth(-1)"><</button><strong style="text-transform:uppercase; color:var(--warning); font-size:1.1rem; letter-spacing:1px;">${mName}</strong><button style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:8px 15px; border-radius:8px; font-weight:bold;" onclick="window.hChangeMonth(1)">></button></div>`;
         let searchHtml = `<input type="text" placeholder="Szukaj transakcji (np. Biedronka, 150)..." style="background:#000; border:1px solid rgba(255,255,255,0.1); width:calc(100% - 30px); margin:0 15px 15px; padding:12px; border-radius:12px; color:#fff;" oninput="window.hSearchQuery=this.value; window.render();" value="${window.hSearchQuery || ''}">`;
         
         let appContainer = document.getElementById('app');
         if(appContainer) {
-            appContainer.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:0;"><p>HISTORIA I KALENDARZ</p></div>${switchHtml}${monthNavHtml}${searchHtml}${filterButtons}${monthlySummaryHtml}<div style="padding:0 15px 30px;">${calHtml || '<div style="text-align:center; color:var(--muted); padding:30px;">Brak operacji.</div>'}</div>` + nav; 
+            appContainer.innerHTML = hdr + `<div class="dash-hero" style="padding-bottom:0;"><p>HISTORIA I KALENDARZ</p></div>${switchHtml}${monthNavHtml}${searchHtml}${filterButtons}${monthlySummaryHtml}<div style="padding:0 15px 60px;">${calHtml}</div>` + nav; 
         }
     }
 };
