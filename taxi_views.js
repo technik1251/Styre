@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_views.js - GŁÓWNY ROUTER TAXI (Ultra Premium Float)
+// PLIK: taxi_views.js - GŁÓWNY ROUTER TAXI (Ultra Premium Micro Float)
 // ==========================================
 
 // --- NOWOCZESNE OKNO EDYCJI LICZNIKA (STYL APPLE iOS) ---
@@ -14,7 +14,7 @@ window.dEditGlobalOdo = function() {
     let html = '<div id="m-apple-odo" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:99999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); animation:fadeIn 0.2s ease;">' +
         '<div style="background:rgba(25,25,30,0.95); width:85%; max-width:320px; border-radius:24px; box-shadow:0 30px 60px rgba(0,0,0,0.8); text-align:center; overflow:hidden; border:1px solid rgba(255,255,255,0.08);">' +
             '<div style="padding:25px 20px 20px;">' +
-                '<div style="font-size:3.5rem; margin-bottom:10px; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));">🏎️</div>' +
+                '<div style="font-size:2.0rem; margin-bottom:10px; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));">🏎️</div>' + // Zmniejszona ikona w modalu
                 '<h3 style="color:#fff; margin:0 0 8px 0; font-size:1.2rem; font-weight:800; letter-spacing:0.5px;">Stan licznika</h3>' +
                 '<p style="color:rgba(255,255,255,0.5); font-size:0.8rem; margin:0 0 20px 0; line-height:1.4;">Wprowadź przebieg (ODO), aby poprawnie liczyć koszty paliwa.</p>' +
                 '<div style="background:rgba(0,0,0,0.4); border-radius:14px; padding:10px; border:1px inset rgba(255,255,255,0.05);">' +
@@ -74,21 +74,21 @@ window.rDrv = function() {
         let d = (window.db && window.db.drv) ? window.db.drv : {cfg:{}, sh:{tr:[]}, q:{}, clients:[]};
         let t = window.db.tab || 'term';
 
-        // --- STYL CZYSTO LEWITUJĄCYCH EMOTEK (ZERO RAMEK, ZERO TŁA) ---
+        // --- STYL CZYSTO LEWITUJĄCYCH EMOTEK (ZERO RAMEK, ZERO TŁA, ULTRA MINI + EFEKTY) ---
         let navStyle = '<style>' +
-            '.pure-float-nav { position:fixed; bottom:25px; left:0; width:100%; display:flex; justify-content:space-evenly; align-items:flex-end; z-index:9999; pointer-events:none; }' +
-            '.pf-item { pointer-events:auto; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:pointer; transition:all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); height:75px; width:60px; position:relative; }' +
-            '.pf-icon { font-size:2.4rem; filter:grayscale(100%) opacity(0.35) drop-shadow(0 4px 6px rgba(0,0,0,0.9)); transform:scale(0.85); transition:all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); position:absolute; bottom:15px; }' +
-            '.pf-item.act .pf-icon { filter:grayscale(0%) opacity(1) drop-shadow(0 15px 20px rgba(0,0,0,1)); transform:scale(1.35) translateY(-20px); }' +
-            '.pf-lbl { position:absolute; bottom:0; font-size:0.65rem; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:1px; text-shadow:0 2px 8px rgba(0,0,0,1); opacity:0; transform:translateY(10px); transition:all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
-            '.pf-item.act .pf-lbl { opacity:1; transform:translateY(0); }' +
+            '.pure-float-nav { position:fixed; bottom:15px; left:0; width:100%; display:flex; justify-content:space-evenly; align-items:flex-end; z-index:9999; pointer-events:none; }' +
+            '.pf-item { pointer-events:auto; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); height:50px; position:relative; }' +
+            '.pf-icon { font-size:1.0rem; filter:grayscale(100%) opacity(0.35); transform:scale(0.9); transition:all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); padding: 6px; border-radius: 50%; background: rgba(255,255,255,0.05); }' +
+            '.pf-item.act .pf-icon { filter:grayscale(0%) opacity(1); transform:scale(1.05) translateY(-3px); background: rgba(14, 165, 233, 0.1); box-shadow: 0 0 10px rgba(14, 165, 233, 0.4); }' +
+            '.pf-lbl { font-size:0.55rem; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:0.8px; text-shadow:0 1px 4px rgba(0,0,0,0.9); opacity:0; transform:translateY(8px); transition:all 0.3s ease; margin-top: 2px; }' +
+            '.pf-item.act .pf-lbl { opacity:1; transform:translateY(-2px); }' +
             '</style>';
 
-        // Lewitujące Emotki bez tła
+        // Lewitujące Emotki bez tła, ultra mini
         let nav = navStyle + '<div class="pure-float-nav">' +
             '<div class="pf-item '+(t==='term'?'act':'')+'" onclick="window.switchTab(\'term\')"><span class="pf-icon">🚕</span><span class="pf-lbl">Panel</span></div>' +
             '<div class="pf-item '+(t==='quote'?'act':'')+'" onclick="window.switchTab(\'quote\')"><span class="pf-icon">🧮</span><span class="pf-lbl">Wycena</span></div>' +
-            '<div class="pf-item '+(t==='garage'?'act':'')+'" onclick="window.switchTab(\'garage\')"><span class="pf-icon">⛽</span><span class="pf-lbl">Garaż</span></div>' +
+            '<div class="pf-item '+(t==='garage'?'act':'')+'" onclick="window.switchTab(\'garage\')"><span class="pf-icon">🔧</span><span class="pf-lbl">Garaż</span></div>' + // Garaż jako klucz dla lepszego UX
             '<div class="pf-item '+(t==='stats'?'act':'')+'" onclick="window.switchTab(\'stats\')"><span class="pf-icon">📊</span><span class="pf-lbl">Wyniki</span></div>' +
             '<div class="pf-item '+(t==='set'?'act':'')+'" onclick="window.switchTab(\'set\')"><span class="pf-icon">⚙️</span><span class="pf-lbl">Opcje</span></div>' +
         '</div>';
@@ -98,7 +98,7 @@ window.rDrv = function() {
             '<button class="logo" style="pointer-events:auto; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); backdrop-filter:blur(10px); box-shadow:0 6px 20px rgba(0,0,0,0.5); font-weight:900; color:#fff;" onclick="if(typeof window.openSwitcher===\'function\') window.openSwitcher()">S</button>' +
             '<div class="header-actions">' +
                 '<div class="badge" style="pointer-events:auto; color:var(--warning); border:1px solid rgba(245,158,11,0.3); background:rgba(0,0,0,0.6); backdrop-filter:blur(10px); cursor:pointer; padding:10px 15px; border-radius:16px; font-weight:900; box-shadow:0 6px 20px rgba(0,0,0,0.5); letter-spacing:1px;" onclick="window.dEditGlobalOdo()">' + Number(d.odo||0).toFixed(0) + ' KM <span style="font-size:0.85rem; margin-left:6px;">✏️</span></div>' +
-            '</div>' +
+            } +
         '</header>' + '<div style="height:80px;"></div>';
 
         // DELEGOWANIE WIDOKÓW
