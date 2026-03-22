@@ -33,16 +33,26 @@ window.shootConfetti = function() {
 };
 
 window.rHome = function() {
+    // 100% Bezpieczna inicjalizacja bazy
+    if(!window.db) window.db = {};
+    if(!window.db.home) window.db.home = {};
     let h = window.db.home; 
-    let t = window.db.tab; 
+    let t = window.db.tab || 'dash'; 
     
-    if(!window.hMem) window.hMem = h.members[0] || window.db.userName;
+    if(!h.members) h.members = [];
+    if(!h.accs) h.accs = [{id:'acc_1', n:'Portfel Głów.', c:'#22c55e', i:'💵', startBal:0}];
+    if(!h.trans) h.trans = [];
+    if(!h.loans) h.loans = [];
+    if(!h.piggy) h.piggy = [];
+    
+    if(!window.hMem) window.hMem = (h.members.length > 0) ? h.members[0] : (window.db.userName || 'Ja');
+    
     let needsSave = false; 
-    let today = window.getLocalYMD();
+    let today = window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0];
     
     // Auto-realizacja zaplanowanych transakcji
     h.trans.forEach(x => { 
-        if(x.isPlanned && !x.loanId && !x.recId && !x.debtId && x.rD.split('T')[0] <= today) { 
+        if(x.isPlanned && !x.loanId && !x.recId && !x.debtId && x.rD && x.rD.split('T')[0] <= today) { 
             x.isPlanned = false; needsSave = true; 
         } 
     });
@@ -51,7 +61,7 @@ window.rHome = function() {
         if(l.kapital === undefined) l.kapital = parseFloat(l.left) || 0; 
     });
     
-    if(needsSave) window.save();
+    if(needsSave && typeof window.save === 'function') window.save();
 
     // Dolny pasek nawigacji (Wersja Premium - Zoptymalizowany UX)
     let nav = `
@@ -91,13 +101,13 @@ window.rHome = function() {
     // DELEGOWANIE DO ZMODULARYZOWANYCH PLIKÓW
     // ==========================================
     if (t === 'goals') {
-        if(window.rHomeGoals) window.rHomeGoals(h, t, nav, hdr);
+        if(typeof window.rHomeGoals === 'function') window.rHomeGoals(h, t, nav, hdr);
     } 
     else if (t === 'acc' || t === 'set') {
-        if(window.rHomeAccSet) window.rHomeAccSet(h, t, nav, hdr);
+        if(typeof window.rHomeAccSet === 'function') window.rHomeAccSet(h, t, nav, hdr);
     } 
     else {
         // Wszystkie pozostałe: dash, add, stats, cal
-        if(window.rHomeOps) window.rHomeOps(h, t, nav, hdr);
+        if(typeof window.rHomeOps === 'function') window.rHomeOps(h, t, nav, hdr);
     }
 };
