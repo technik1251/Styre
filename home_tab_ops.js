@@ -2,7 +2,6 @@
 // PLIK: home_tab_ops.js - Zakładki Przegląd, Dodaj, Wykresy, Historia
 // ==========================================
 
-// --- SZYBKIE PRZEŁĄCZANIE (BEZ RESETOWANIA EKRANU I KWOTY) ---
 window.hSetCat = function(c, color) {
     window.hSelCat = c;
     document.querySelectorAll('.cat-item').forEach(el => {
@@ -31,7 +30,6 @@ window.hSetAcc = function(varName, id, color) {
 };
 
 window.rHomeOps = function(h, t, nav, hdr) {
-    // Zabezpieczenia danych
     let trs = h.trans || [];
     let accs = h.accs || [];
     let pigs = h.piggy || [];
@@ -75,7 +73,6 @@ window.rHomeOps = function(h, t, nav, hdr) {
             }
         });
 
-        // STATYSTYKI KONT NA PULPICIE (Pulse)
         let accPulseHtml = `<div style="display:flex; gap:10px; overflow-x:auto; padding:15px 15px 5px;" class="hide-scroll">` + 
         accs.map(a => {
             let bal = parseFloat(balances[a.id]) || 0;
@@ -166,7 +163,11 @@ window.rHomeOps = function(h, t, nav, hdr) {
             let v = parseFloat(x.v) || 0; 
             let isExp = x.type === 'exp'; 
             let isTrans = x.type === 'transfer'; 
-            let cd = isExp ? (window.C_EXP?.[x.cat] || {c:'#ef4444',i:'💸'}) : (isTrans ? {c:'#8b5cf6',i:'🔄'} : (window.C_INC?.[x.cat] || {c:'#22c55e',i:'💵'})); 
+            
+            let cdC = '#ef4444'; let cdI = '💸';
+            if (isTrans) { cdC = '#8b5cf6'; cdI = '🔄'; } 
+            else if (isExp && window.C_EXP && window.C_EXP[x.cat]) { cdC = window.C_EXP[x.cat].c; cdI = window.C_EXP[x.cat].i; } 
+            else if (!isExp && window.C_INC && window.C_INC[x.cat]) { cdC = window.C_INC[x.cat].c; cdI = window.C_INC[x.cat].i; }
             
             let fAccObj = accs.find(a => a.id === x.fromAcc);
             let tAccObj = accs.find(a => a.id === x.toAcc);
@@ -180,7 +181,7 @@ window.rHomeOps = function(h, t, nav, hdr) {
             <div class="log-item" onclick="window.hCalMode='history'; window.switchTab('cal')" style="border:none; border-bottom:1px solid rgba(255,255,255,0.05); border-radius:0; margin-bottom:0; background:transparent; padding:15px 5px; flex-direction:column; align-items:stretch; cursor:pointer;">
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                     <div style="display:flex; align-items:center; gap:15px; flex:1;">
-                        <div style="width:40px; height:40px; border-radius:50%; background:${cd.c}22; border:1px solid ${cd.c}55; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0;">${cd.i}</div>
+                        <div style="width:40px; height:40px; border-radius:50%; background:${cdC}22; border:1px solid ${cdC}55; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0;">${cdI}</div>
                         <div><strong style="font-size:0.9rem; color:#fff; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">${catName}</strong><small style="color:var(--muted); display:block; margin-top:4px;">${accName} • ${x.dt || ''}</small></div>
                     </div>
                     <div style="text-align:right;"><strong style="color:${color}; font-size:1rem; white-space:nowrap;">${sign}${Number(v || 0).toFixed(2)} zł</strong></div>
@@ -272,7 +273,8 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 counts[key].v = parseFloat(x.v) || 0; 
             });
             templates = Object.values(counts).sort((a,b) => b.cnt - a.cnt).slice(0,3).map(x => { 
-                return {n: (x.n||'').substring(0,12), v: x.v, c: x.c, i: catSrc[x.c] ? catSrc[x.c].i : '💸'}; 
+                let ic = catSrc[x.c] ? catSrc[x.c].i : '💸';
+                return {n: (x.n||'').substring(0,12), v: x.v, c: x.c, i: ic}; 
             });
             if(templates.length === 0) { 
                 templates = isExp ? 
@@ -281,7 +283,10 @@ window.rHomeOps = function(h, t, nav, hdr) {
             }
         }
         
-        let tplHtml = !isTrans ? `<div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:5px; margin-bottom:15px;" class="hide-scroll">${templates.map(tpl => `<div onclick="let vEl=document.getElementById('h-v'); if(vEl)vEl.value=${tpl.v}; let dEl=document.getElementById('h-d'); if(dEl)dEl.value='${tpl.n}'; window.hSetCat('${tpl.c}', '${catSrc[tpl.c]?catSrc[tpl.c].c:'#ccc'}');" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:6px 12px; display:flex; align-items:center; gap:6px; flex-shrink:0; cursor:pointer;"><span style="font-size:1rem;">${tpl.i}</span><span style="color:#fff; font-size:0.75rem;">${tpl.n}</span></div>`).join('')}</div>` : '';
+        let tplHtml = !isTrans ? `<div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:5px; margin-bottom:15px;" class="hide-scroll">${templates.map(tpl => {
+            let colCode = catSrc[tpl.c] ? catSrc[tpl.c].c : '#ccc';
+            return `<div onclick="let vEl=document.getElementById('h-v'); if(vEl)vEl.value=${tpl.v}; let dEl=document.getElementById('h-d'); if(dEl)dEl.value='${tpl.n}'; window.hSetCat('${tpl.c}', '${colCode}');" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:6px 12px; display:flex; align-items:center; gap:6px; flex-shrink:0; cursor:pointer;"><span style="font-size:1rem;">${tpl.i}</span><span style="color:#fff; font-size:0.75rem;">${tpl.n}</span></div>`;
+        }).join('')}</div>` : '';
         
         let accSlider = (selVar) => `<div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:5px;" class="hide-scroll">${accs.map(a => { 
             let isActive = window[selVar] === a.id;
@@ -374,26 +379,26 @@ window.rHomeOps = function(h, t, nav, hdr) {
         let sortedCats = Object.keys(cats).sort((a,b) => cats[b] - cats[a]); 
         let cLabels = sortedCats; 
         let cData = sortedCats.map(k => cats[k]); 
-        let cColors = sortedCats.map(k => window.C_EXP?.[k]?.c || '#8b5cf6'); 
+        let cColors = sortedCats.map(k => (window.C_EXP && window.C_EXP[k] ? window.C_EXP[k].c : '#8b5cf6')); 
         
         let catListHtml = sortedCats.map((lbl, idx) => { 
             let val = cData[idx]; 
             let pct = sumExp > 0 ? ((val / sumExp) * 100).toFixed(0) : 0; 
             let color = cColors[idx]; 
-            let icon = window.C_EXP?.[lbl]?.i || '📦'; 
+            let icon = (window.C_EXP && window.C_EXP[lbl] ? window.C_EXP[lbl].i : '📦'); 
             return `<div class="cat-list-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);"><div style="display:flex; align-items:center;"><div style="width:30px; height:30px; border-radius:50%; background:${color}22; display:flex; align-items:center; justify-content:center; margin-right:12px; font-size:1rem; border:1px solid ${color}55;">${icon}</div><span style="font-weight:bold;">${lbl}</span></div><div style="display:flex; align-items:center;"><span style="color:var(--muted);font-size:0.8rem;margin-right:10px;">${pct}%</span><span style="color:${color};font-weight:bold;">-${Number(val||0).toFixed(2)} zł</span></div></div>`; 
         }).join(''); 
         
         let sortedIncCats = Object.keys(incCats).sort((a,b) => incCats[b] - incCats[a]); 
         let incLabels = sortedIncCats; 
         let incData = sortedIncCats.map(k => incCats[k]); 
-        let incColors = sortedIncCats.map(k => window.C_INC?.[k]?.c || '#22c55e'); 
+        let incColors = sortedIncCats.map(k => (window.C_INC && window.C_INC[k] ? window.C_INC[k].c : '#22c55e')); 
         
         let incListHtml = sortedIncCats.map((lbl, idx) => { 
             let val = incData[idx]; 
             let pct = sumInc > 0 ? ((val / sumInc) * 100).toFixed(0) : 0; 
             let color = incColors[idx]; 
-            let icon = window.C_INC?.[lbl]?.i || '💰'; 
+            let icon = (window.C_INC && window.C_INC[lbl] ? window.C_INC[lbl].i : '💰'); 
             return `<div class="cat-list-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);"><div style="display:flex; align-items:center;"><div style="width:30px; height:30px; border-radius:50%; background:${color}22; display:flex; align-items:center; justify-content:center; margin-right:12px; font-size:1rem; border:1px solid ${color}55;">${icon}</div><span style="font-weight:bold;">${lbl}</span></div><div style="display:flex; align-items:center;"><span style="color:var(--muted);font-size:0.8rem;margin-right:10px;">${pct}%</span><span style="color:${color};font-weight:bold;">+${Number(val||0).toFixed(2)} zł</span></div></div>`; 
         }).join(''); 
         
@@ -530,7 +535,11 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 let v = parseFloat(x.v) || 0; 
                 let isExp = x.type === 'exp'; 
                 let isTrans = x.type === 'transfer'; 
-                let cd = isExp ? (window.C_EXP?.[x.cat] || {c:'#ef4444',i:'💸'}) : (isTrans ? {c:'#8b5cf6',i:'🔄'} : (window.C_INC?.[x.cat] || {c:'#22c55e',i:'💵'})); 
+                
+                let cdC = '#ef4444'; let cdI = '💸';
+                if (isTrans) { cdC = '#8b5cf6'; cdI = '🔄'; } 
+                else if (isExp && window.C_EXP && window.C_EXP[x.cat]) { cdC = window.C_EXP[x.cat].c; cdI = window.C_EXP[x.cat].i; } 
+                else if (!isExp && window.C_INC && window.C_INC[x.cat]) { cdC = window.C_INC[x.cat].c; cdI = window.C_INC[x.cat].i; }
                 
                 let fAccObj = accs.find(a => a.id === x.fromAcc);
                 let tAccObj = accs.find(a => a.id === x.toAcc);
@@ -548,7 +557,7 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 <div style="display:flex; flex-direction:column; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.03); opacity:${x.isPlanned?'0.7':'1'};">
                     <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                         <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                            <div style="width:35px; height:35px; border-radius:50%; background:${cd.c}22; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">${cd.i}</div>
+                            <div style="width:35px; height:35px; border-radius:50%; background:${cdC}22; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">${cdI}</div>
                             <div>
                                 <span style="color:#fff; font-size:0.95rem; font-weight:600; display:flex; align-items:center; flex-wrap:wrap;">${catName}${planLbl}</span>
                                 <small style="color:var(--muted); font-size:0.7rem; display:block; margin-top:2px;">${accName} ${x.d ? '• '+x.d : ''}</small>
