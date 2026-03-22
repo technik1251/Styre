@@ -2,6 +2,34 @@
 // PLIK: home_tab_ops.js - Zakładki Przegląd, Dodaj, Wykresy, Historia
 // ==========================================
 
+// --- SZYBKIE PRZEŁĄCZANIE (BEZ RESETOWANIA EKRANU I KWOTY) ---
+window.hSetCat = function(c, color) {
+    window.hSelCat = c;
+    document.querySelectorAll('.cat-item').forEach(el => {
+        el.style.background = 'transparent'; 
+        el.style.borderColor = 'transparent';
+    });
+    let el = document.getElementById('cat-item-' + c.replace(/[^a-zA-Z0-9]/g, ''));
+    if(el) { 
+        el.style.background = color + '22'; 
+        el.style.borderColor = color; 
+    }
+    window.hCheckLimit();
+};
+
+window.hSetAcc = function(varName, id, color) {
+    window[varName] = id;
+    document.querySelectorAll('.' + varName + '-item').forEach(el => {
+        el.style.background = 'rgba(255,255,255,0.05)'; 
+        el.style.borderColor = 'rgba(255,255,255,0.1)';
+    });
+    let el = document.getElementById(varName + '-item-' + id);
+    if(el) { 
+        el.style.background = color + '33'; 
+        el.style.borderColor = color; 
+    }
+};
+
 window.rHomeOps = function(h, t, nav, hdr) {
     let balances = window.hGetBal(); 
     let globalBalance = Object.values(balances).reduce((a,b) => a+b, 0);
@@ -56,7 +84,6 @@ window.rHomeOps = function(h, t, nav, hdr) {
             </div>`;
         }).join('') + `</div>`;
 
-        // ALERTY LIMITÓW - ASYSTENT STYREOS
         let limitAlertsHtml = '';
         if (h.budgets && Object.keys(h.budgets).length > 0) {
             Object.keys(h.budgets).forEach(k => {
@@ -69,22 +96,16 @@ window.rHomeOps = function(h, t, nav, hdr) {
                     let cTheme = isDanger ? 'var(--danger)' : 'var(--warning)';
                     let cBg = isDanger ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)';
                     let icon = isDanger ? '🚨' : '⚠️';
-                    let msg = isDanger ? 'Przekraczasz limit!' : 'Zbliżasz się do limitu.';
                     
                     limitAlertsHtml += `
                     <div style="margin: 15px 15px 0; background:${cBg}; border:1px solid ${cTheme}; padding:12px; border-radius:12px; display:flex; gap:12px; align-items:center;">
                         <div style="font-size:1.5rem;">${icon}</div>
                         <div style="flex:1;">
-                            <strong style="color:${cTheme}; font-size:0.8rem; display:block; text-transform:uppercase; margin-bottom:4px;">${msg} (${k})</strong>
-                            <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
-                                <span style="color:#fff;">Wydano: ${Number(spent).toFixed(0)} zł</span>
-                                <span style="color:var(--muted);">Limit: ${limit} zł</span>
-                            </div>
-                            <div style="width:100%; height:4px; background:rgba(0,0,0,0.5); border-radius:2px; overflow:hidden; margin-top:6px;">
+                            <strong style="color:${cTheme}; font-size:0.8rem; display:block; text-transform:uppercase; margin-bottom:4px;">Zbliżasz się do limitu (${k})</strong>
+                            <div style="width:100%; height:4px; background:rgba(0,0,0,0.5); border-radius:2px; overflow:hidden;">
                                 <div style="width:${Math.min(pct, 100)}%; background:${cTheme}; height:100%;"></div>
                             </div>
                         </div>
-                        <button style="background:transparent; border:none; color:${cTheme}; font-size:1.2rem; cursor:pointer; padding:5px;" onclick="window.sysConfirm('Usuwanie limitu', 'Chcesz wyłączyć limit dla tej kategorii?', () => { delete window.db.home.budgets['${k}']; window.save(); window.render(); })">✖</button>
                     </div>`;
                 }
             });
@@ -99,13 +120,11 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 <div style="font-size:1.8rem;">💡</div>
                 <div>
                     <strong style="color:var(--info); font-size:0.85rem; display:block;">Asystent StyreOS</strong>
-                    <span style="color:var(--muted); font-size:0.75rem;">${topCatName ? `Najwięcej w tym miesiącu wydajesz na: <strong style="color:#fff">${topCatName}</strong>. Trzymaj się limitów!` : 'Twoje finanse wyglądają stabilnie w tym miesiącu.'}</span>
+                    <span style="color:var(--muted); font-size:0.75rem;">${topCatName ? `Najwięcej w tym miesiącu wydajesz na: <strong style="color:#fff">${topCatName}</strong>.` : 'Twoje finanse wyglądają stabilnie.'}</span>
                 </div>
             </div>`; 
         }
 
-        let finalInsights = limitAlertsHtml + insightsHtml;
-        
         let miniPiggyHtml = '';
         if (window.db.home.piggy && window.db.home.piggy.length > 0) { 
             let p = window.db.home.piggy[0]; 
@@ -131,13 +150,7 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 <div class="p-title" style="color:var(--warning); margin-bottom:10px; font-size:0.85rem; text-transform:uppercase;">📅 Nadchodzące płatności</div>` + 
                 upcoming.map(x => {
                     let targetTab = `window.hCalMode='planned'; window.switchTab('cal')`;
-                    if(x.loanId) {
-                        let ln = window.db.home.loans.find(l => l.id == x.loanId);
-                        if(ln && ln.type === 'Karta') targetTab = `window.switchTab('acc')`;
-                        else targetTab = `window.switchTab('goals')`;
-                    } else if (x.debtId || x.piggyId) { 
-                        targetTab = `window.switchTab('goals')`; 
-                    }
+                    if(x.loanId) targetTab = `window.switchTab('goals')`;
                     return `<div onclick="${targetTab}" style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px; cursor:pointer;"><span style="color:#fff; font-size:0.85rem;">${x.d || x.cat} <span style="color:var(--muted); font-size:0.7rem;">(${x.dt})</span></span><strong style="color:var(--danger);">${Number(x.v || 0).toFixed(2)} zł</strong></div>`;
                 }).join('') + `</div>`;
         }
@@ -147,7 +160,7 @@ window.rHomeOps = function(h, t, nav, hdr) {
             let isExp = x.type === 'exp'; 
             let isTrans = x.type === 'transfer'; 
             let cd = isExp ? (C_EXP[x.cat] || {c:'#ef4444',i:'💸'}) : (isTrans ? {c:'#8b5cf6',i:'🔄'} : (C_INC[x.cat] || {c:'#22c55e',i:'💵'})); 
-            let accName = isTrans ? `Z ${h.accs.find(a=>a.id===x.fromAcc)?.n || 'Konta'} na ${h.accs.find(a=>a.id===x.toAcc)?.n || 'Konto'}` : (h.accs.find(a=>a.id===x.acc)?.n || 'Konto'); 
+            let accName = isTrans ? `Z ${h.accs.find(a=>a.id===x.fromAcc)?.n || 'Konta'}` : (h.accs.find(a=>a.id===x.acc)?.n || 'Konto'); 
             let catName = isTrans ? 'Przelew' : x.cat; 
             let sign = isExp ? '-' : (isTrans ? '' : '+'); 
             let color = isExp ? 'var(--danger)' : (isTrans ? '#fff' : 'var(--success)'); 
@@ -155,10 +168,10 @@ window.rHomeOps = function(h, t, nav, hdr) {
             <div class="log-item" onclick="window.hCalMode='history'; window.switchTab('cal')" style="border:none; border-bottom:1px solid rgba(255,255,255,0.05); border-radius:0; margin-bottom:0; background:transparent; padding:15px 5px; flex-direction:column; align-items:stretch; cursor:pointer;">
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                     <div style="display:flex; align-items:center; gap:15px; flex:1;">
-                        <div style="width:45px; height:45px; border-radius:50%; background:${cd.c}22; border:1px solid ${cd.c}55; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">${cd.i}</div>
-                        <div><strong style="font-size:0.95rem; color:#fff; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">${catName}</strong><small style="color:var(--muted); display:block; margin-top:4px;">${accName} • ${x.dt}</small></div>
+                        <div style="width:40px; height:40px; border-radius:50%; background:${cd.c}22; border:1px solid ${cd.c}55; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0;">${cd.i}</div>
+                        <div><strong style="font-size:0.9rem; color:#fff; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">${catName}</strong><small style="color:var(--muted); display:block; margin-top:2px;">${accName} • ${x.dt}</small></div>
                     </div>
-                    <div style="text-align:right;"><strong style="color:${color}; font-size:1.1rem; white-space:nowrap;">${sign}${Number(v || 0).toFixed(2)} zł</strong></div>
+                    <div style="text-align:right;"><strong style="color:${color}; font-size:1rem; white-space:nowrap;">${sign}${Number(v || 0).toFixed(2)} zł</strong></div>
                 </div>
             </div>`; 
         }).join('');
@@ -168,7 +181,6 @@ window.rHomeOps = function(h, t, nav, hdr) {
             <div style="background:rgba(255,255,255,0.02); border:1px dashed rgba(255,255,255,0.1); border-radius:16px; padding:30px 20px; text-align:center; margin-top:10px;">
                 <div style="font-size:2.5rem; margin-bottom:10px;">💸</div>
                 <strong style="color:#fff; font-size:1rem; display:block; margin-bottom:5px;">Tu pojawi się Twoja historia</strong>
-                <span style="color:var(--muted); font-size:0.8rem; display:block; margin-bottom:15px;">Dodaj pierwszy wydatek, aby ożywić pulpit!</span>
                 <button class="btn" style="background:rgba(20,184,166,0.15); color:var(--life); border:1px solid rgba(20,184,166,0.3); border-radius:10px; padding:10px 20px; font-size:0.8rem; font-weight:bold; box-shadow:none; width:auto;" onclick="window.switchTab('add')">+ DODAJ TRANSAKCJĘ</button>
             </div>`;
         }
@@ -179,8 +191,8 @@ window.rHomeOps = function(h, t, nav, hdr) {
         let appContainer = document.getElementById('app');
         if(appContainer) {
             appContainer.innerHTML = hdr + hideScrollStyle + `
-            <div style="background: linear-gradient(180deg, rgba(20,184,166,0.15) 0%, var(--bg) 100%); padding: 30px 20px 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); border-bottom-left-radius:30px; border-bottom-right-radius:30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                <p style="margin:0 0 5px 0; font-size:0.8rem; color:var(--muted); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Bezpieczne Saldo Netto</p>
+            <div style="background: linear-gradient(180deg, rgba(20,184,166,0.15) 0%, var(--bg) 100%); padding: 30px 20px 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); border-bottom-left-radius:30px; border-bottom-right-radius:30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                <p style="margin:0 0 5px 0; font-size:0.75rem; color:var(--muted); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Bezpieczne Saldo Netto</p>
                 <h1 style="margin:0; font-size:2.8rem; font-weight:900; color:${safeBalance >= 0 ? '#fff' : 'var(--danger)'}; letter-spacing:-1px;">${Number(safeBalance || 0).toFixed(2)} zł</h1>
                 
                 <div style="margin-top:15px; display:flex; justify-content:space-between; font-size:0.75rem; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); padding:10px 15px; border-radius:12px;">
@@ -195,19 +207,20 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 </div>
 
                 <div style="display:flex; justify-content:center; gap:10px; margin-top:20px;">
-                    <div style="flex:1; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px; padding:10px; cursor:pointer;" onclick="window.hTransType='inc'; window.switchTab('add')">
-                        <div style="color:var(--success); font-weight:bold; margin-bottom:8px; font-size:1.1rem;">+${Number(currInc || 0).toFixed(0)} zł</div>
-                        <button class="btn btn-success" style="padding:8px; font-size:0.75rem; margin-top:0; width:100%; box-shadow:none; pointer-events:none;">💰 WPŁYW</button>
+                    <div style="flex:1; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px; padding:10px; cursor:pointer;" onclick="window.hTempValue=''; window.hTransType='inc'; window.switchTab('add')">
+                        <div style="color:var(--success); font-weight:bold; margin-bottom:5px; font-size:1rem;">+${Number(currInc || 0).toFixed(0)} zł</div>
+                        <div style="color:var(--success); font-size:0.7rem; font-weight:bold; text-transform:uppercase;">💰 WPŁYW</div>
                     </div>
-                    <div style="flex:1; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:10px; cursor:pointer;" onclick="window.hTransType='exp'; window.switchTab('add')">
-                        <div style="color:var(--danger); font-weight:bold; margin-bottom:8px; font-size:1.1rem;">-${Number(currExp || 0).toFixed(0)} zł</div>
-                        <button class="btn btn-danger" style="padding:8px; font-size:0.75rem; margin-top:0; width:100%; box-shadow:none; pointer-events:none;">💸 WYDATEK</button>
+                    <div style="flex:1; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:10px; cursor:pointer;" onclick="window.hTempValue=''; window.hTransType='exp'; window.switchTab('add')">
+                        <div style="color:var(--danger); font-weight:bold; margin-bottom:5px; font-size:1rem;">-${Number(currExp || 0).toFixed(0)} zł</div>
+                        <div style="color:var(--danger); font-size:0.7rem; font-weight:bold; text-transform:uppercase;">💸 WYDATEK</div>
                     </div>
                 </div>
             </div>
             
             ${accPulseHtml}
-            ${finalInsights}
+            ${limitAlertsHtml}
+            ${insightsHtml}
             ${upcomingHtml}
             ${miniPiggyHtml}
             
@@ -235,7 +248,7 @@ window.rHomeOps = function(h, t, nav, hdr) {
         if(!window.hSelAccFrom && h.accs.length > 0) window.hSelAccFrom = h.accs[0].id;
         if(!window.hSelAccTo && h.accs.length > 1) window.hSelAccTo = h.accs[1].id;
 
-        let scanBtnHtml = `<button class="btn" style="background:rgba(139, 92, 246, 0.15); color:#a855f7; border:1px dashed rgba(139, 92, 246, 0.4); border-radius:12px; font-weight:bold; padding:15px; margin-bottom:20px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.1);" onclick="window.sysAlert('Funkcja PRO', 'Inteligentne skanowanie paragonów i faktur (AI OCR) będzie dostępne wkrótce w StyreOS PRO! 🚀', 'info')"><span style="font-size:1.3rem;">📸</span> SKANUJ PARAGON (Wkrótce PRO)</button>`;
+        let scanBtnHtml = `<div style="background:rgba(139, 92, 246, 0.1); color:#c084fc; border:1px dashed rgba(139, 92, 246, 0.3); border-radius:10px; padding:10px; margin-bottom:15px; display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.8rem; font-weight:bold; cursor:pointer;" onclick="window.sysAlert('Funkcja PRO', 'Skanowanie paragonów wkrótce! 🚀', 'info')">📸 SKANUJ PARAGON (PRO)</div>`;
 
         let templates = [];
         if(!isTrans) {
@@ -251,66 +264,72 @@ window.rHomeOps = function(h, t, nav, hdr) {
             });
             if(templates.length === 0) { 
                 templates = isExp ? 
-                [{n:'Kawa', v:15, c:'Jedzenie na mieście', i:'☕'}, {n:'Paliwo', v:150, c:'Auto i Transport', i:'⛽'}, {n:'Biedronka', v:100, c:'Zakupy Spożywcze', i:'🛒'}] : 
-                [{n:'Wypłata', v:4000, c:'Wypłata z Etatu', i:'💰'}, {n:'Kieszonkowe', v:100, c:'Inne Wpływy', i:'🎁'}]; 
+                [{n:'Kawa', v:15, c:'Jedzenie na mieście', i:'☕'}, {n:'Paliwo', v:150, c:'Auto i Transport', i:'⛽'}, {n:'Sklep', v:100, c:'Zakupy Spożywcze', i:'🛒'}] : 
+                [{n:'Wypłata', v:4000, c:'Wypłata z Etatu', i:'💰'}]; 
             }
         }
         
-        let tplHtml = !isTrans ? `<div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:10px; margin-bottom:15px;">${templates.map(tpl => `<div onclick="window.hUseTemplate(${tpl.v}, '${tpl.c}', '${tpl.n}')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:8px 15px; display:flex; align-items:center; gap:8px; flex-shrink:0; cursor:pointer; white-space:nowrap;"><span style="font-size:1.2rem;">${tpl.i}</span><span style="color:#fff; font-weight:bold; font-size:0.85rem;">${tpl.n}</span></div>`).join('')}</div>` : '';
+        let tplHtml = !isTrans ? `<div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:5px; margin-bottom:15px;" class="hide-scroll">${templates.map(tpl => `<div onclick="document.getElementById('h-v').value=${tpl.v}; document.getElementById('h-d').value='${tpl.n}'; window.hSetCat('${tpl.c}', '${catSrc[tpl.c].c}');" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:6px 12px; display:flex; align-items:center; gap:6px; flex-shrink:0; cursor:pointer;"><span style="font-size:1rem;">${tpl.i}</span><span style="color:#fff; font-size:0.75rem;">${tpl.n}</span></div>`).join('')}</div>` : '';
         
-        let accSlider = (selVar) => `<div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:5px;">${h.accs.map(a => { 
-            let bal = parseFloat(balances[a.id]) || 0; 
-            return `<div onclick="window.${selVar}='${a.id}'; window.render()" style="background:${window[selVar]===a.id?a.c+'33':'rgba(255,255,255,0.05)'}; border:1px solid ${window[selVar]===a.id?a.c:'rgba(255,255,255,0.1)'}; border-radius:12px; padding:10px; min-width:110px; flex-shrink:0; text-align:center; cursor:pointer;"><div style="font-size:1.5rem; margin-bottom:5px;">${a.i}</div><strong style="color:#fff; font-size:0.8rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.n}</strong><small style="color:var(--muted); font-size:0.7rem;">${Number(bal || 0).toFixed(0)} zł</small></div>`; 
+        let accSlider = (selVar) => `<div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:5px;" class="hide-scroll">${h.accs.map(a => { 
+            let isActive = window[selVar] === a.id;
+            let bg = isActive ? a.c+'33' : 'rgba(255,255,255,0.05)';
+            let br = isActive ? a.c : 'rgba(255,255,255,0.1)';
+            return `<div id="${selVar}-item-${a.id}" class="${selVar}-item" onclick="window.hSetAcc('${selVar}', '${a.id}', '${a.c}')" style="background:${bg}; border:1px solid ${br}; border-radius:10px; padding:8px 10px; min-width:90px; flex-shrink:0; text-align:center; cursor:pointer; transition:0.2s;"><div style="font-size:1.2rem; margin-bottom:2px;">${a.i}</div><strong style="color:#fff; font-size:0.75rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.n}</strong></div>`; 
         }).join('')}</div>`;
         
-        let gridHtml = !isTrans ? `<div class="cat-grid" style="grid-template-columns: repeat(4, 1fr); gap:8px;">` + Object.keys(catSrc).map(k => `<div class="cat-item ${window.hSelCat===k?'active':''}" onclick="window.hSelCat='${k}'; window.hCheckLimit(); window.render();" style="padding:10px 5px; ${window.hSelCat===k?`background:${catSrc[k].c}22; border-color:${catSrc[k].c};`:''}"><span class="cat-icon" style="font-size:1.5rem; margin-bottom:5px;">${catSrc[k].i}</span><span class="cat-lbl" style="font-size:0.65rem; line-height:1.1;">${k}</span></div>`).join('') + `</div>` : ''; 
+        let gridHtml = !isTrans ? `<div class="cat-grid" style="grid-template-columns: repeat(4, 1fr); gap:6px;">` + Object.keys(catSrc).map(k => {
+            let isActive = window.hSelCat === k;
+            let bg = isActive ? catSrc[k].c+'22' : 'transparent';
+            let br = isActive ? catSrc[k].c : 'transparent';
+            let catId = k.replace(/[^a-zA-Z0-9]/g, '');
+            return `<div id="cat-item-${catId}" class="cat-item" onclick="window.hSetCat('${k}', '${catSrc[k].c}')" style="padding:8px 4px; border:1px solid ${br}; background:${bg}; border-radius:8px; cursor:pointer; transition:0.2s;"><span class="cat-icon" style="font-size:1.3rem; margin-bottom:4px;">${catSrc[k].i}</span><span class="cat-lbl" style="font-size:0.6rem; line-height:1.1;">${k}</span></div>`;
+        }).join('') + `</div>` : ''; 
         
-        let memChips = `<div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:5px;">` + h.members.map(m => `<div class="chip ${window.hMem === m ? 'active' : ''}" style="padding:8px 16px; flex-shrink:0; ${window.hMem === m ? 'background:var(--life);color:#000;border-color:var(--life)' : 'color:var(--muted)'}" onclick="window.hMem='${m}'; window.render();">${m}</div>`).join('') + `</div>`; 
+        let memChips = h.members.length > 1 ? `<div style="margin-bottom:15px;"><label style="font-size:0.65rem; color:var(--muted); font-weight:bold; text-transform:uppercase; display:block; margin-bottom:6px;">Kto wykonuje?</label><div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:5px;" class="hide-scroll">` + h.members.map(m => `<div class="chip ${window.hMem === m ? 'active' : ''}" style="padding:6px 12px; font-size:0.75rem; flex-shrink:0; ${window.hMem === m ? 'background:var(--life);color:#000;border-color:var(--life)' : 'color:var(--muted)'}" onclick="window.hMem='${m}'; window.hTempValue=document.getElementById('h-v').value; window.hTempNote=document.getElementById('h-d').value; window.render();">${m}</div>`).join('') + `</div></div>` : ''; 
 
         let oldAction = window.hAction;
         window.hAction = function() {
             if(window.hTransType === 'inc' && window.shootConfetti) window.shootConfetti();
+            window.hTempValue = ''; 
+            window.hTempNote = '';
             oldAction();
         };
 
         let appContainer = document.getElementById('app');
         if(appContainer) {
-            appContainer.innerHTML = hdr + `
-            <div style="background: ${topBg}; padding: 20px 15px 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                <div class="mode-switch" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);">
-                    <div class="m-btn" style="${isExp?'background:var(--danger); color:#fff;':'color:var(--muted)'}" onclick="window.hTransType='exp';window.render()">WYDATEK</div>
-                    <div class="m-btn" style="${!isExp&&!isTrans?'background:var(--success); color:#fff;':'color:var(--muted)'}" onclick="window.hTransType='inc';window.render()">WPŁYW</div>
-                    <div class="m-btn" style="${isTrans?'background:var(--info); color:#fff;':'color:var(--muted)'}" onclick="window.hTransType='transfer';window.render()">TRANSFER</div>
+            appContainer.innerHTML = hdr + `<style>.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }</style>` + `
+            <div style="background: ${topBg}; padding: 15px 15px 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <div class="mode-switch" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); margin-bottom:10px;">
+                    <div class="m-btn" style="${isExp?'background:var(--danger); color:#fff;':'color:var(--muted)';} padding:8px;" onclick="window.hTempValue=document.getElementById('h-v').value; window.hTempNote=document.getElementById('h-d').value; window.hTransType='exp';window.render()">WYDATEK</div>
+                    <div class="m-btn" style="${!isExp&&!isTrans?'background:var(--success); color:#fff;':'color:var(--muted)';} padding:8px;" onclick="window.hTempValue=document.getElementById('h-v').value; window.hTempNote=document.getElementById('h-d').value; window.hTransType='inc';window.render()">WPŁYW</div>
+                    <div class="m-btn" style="${isTrans?'background:var(--info); color:#fff;':'color:var(--muted)';} padding:8px;" onclick="window.hTempValue=document.getElementById('h-v').value; window.hTempNote=document.getElementById('h-d').value; window.hTransType='transfer';window.render()">TRANSFER</div>
                 </div>
-                <div style="text-align:center; padding: 15px 0 5px;">
-                    <label style="color:#fff; font-size:0.8rem; font-weight:bold; text-transform:uppercase; opacity:0.8;">Wprowadź Kwotę</label>
-                    <div style="display:flex; justify-content:center; align-items:center; gap:5px; margin-top:5px;">
-                        <input type="number" id="h-v" oninput="window.hCheckLimit()" style="background:transparent; border:none; border-bottom:2px solid #fff; color:#fff; font-size:4rem!important; font-weight:900; text-align:center; width:200px; padding:5px; outline:none;" placeholder="0">
-                        <span style="font-size:2rem; font-weight:900; color:#fff;">zł</span>
+                <div style="text-align:center; padding: 0 0 5px;">
+                    <div style="display:flex; justify-content:center; align-items:center; gap:5px;">
+                        <input type="number" id="h-v" oninput="window.hCheckLimit()" value="${window.hTempValue || ''}" style="background:transparent; border:none; border-bottom:2px solid #fff; color:#fff; font-size:3rem!important; font-weight:900; text-align:center; width:160px; padding:0; outline:none;" placeholder="0">
+                        <span style="font-size:1.5rem; font-weight:900; color:#fff;">zł</span>
                     </div>
-                    <div id="h-warn-limit" style="display:none; color:var(--warning); font-size:0.75rem; font-weight:bold; margin-top:10px; background:rgba(245,158,11,0.15); padding:6px; border-radius:8px; border:1px solid rgba(245,158,11,0.3);"></div>
+                    <div id="h-warn-limit" style="display:none; color:var(--warning); font-size:0.7rem; font-weight:bold; margin-top:5px; background:rgba(245,158,11,0.15); padding:6px; border-radius:8px; border:1px solid rgba(245,158,11,0.3);"></div>
                 </div>
             </div>
             <div style="padding: 15px;">
                 ${scanBtnHtml}
                 ${tplHtml}
-                <div style="margin-bottom:15px;">
-                    <label style="font-size:0.75rem; color:var(--muted); font-weight:bold; text-transform:uppercase; display:block; margin-bottom:8px;">Kto wykonuje?</label>
-                    ${memChips}
-                </div>
+                ${memChips}
                 ${isTrans ? `
-                <div style="margin-bottom:15px;"><label style="font-size:0.75rem; color:var(--danger); font-weight:bold; text-transform:uppercase; display:block; margin-bottom:8px;">Z Konta (Wypływ)</label>${accSlider('hSelAccFrom')}</div>
-                <div style="margin-bottom:15px;"><label style="font-size:0.75rem; color:var(--success); font-weight:bold; text-transform:uppercase; display:block; margin-bottom:8px;">Na Konto (Wpływ)</label>${accSlider('hSelAccTo')}</div>
+                <div style="margin-bottom:15px;"><label style="font-size:0.65rem; color:var(--danger); font-weight:bold; text-transform:uppercase; display:block; margin-bottom:6px;">Z Konta (Wypływ)</label>${accSlider('hSelAccFrom')}</div>
+                <div style="margin-bottom:15px;"><label style="font-size:0.65rem; color:var(--success); font-weight:bold; text-transform:uppercase; display:block; margin-bottom:6px;">Na Konto (Wpływ)</label>${accSlider('hSelAccTo')}</div>
                 ` : `
-                <div style="margin-bottom:15px;"><label style="font-size:0.75rem; color:var(--life); font-weight:bold; text-transform:uppercase; display:block; margin-bottom:8px;">Wybierz Konto</label>${accSlider('hSelAcc')}</div>
-                <label style="font-size:0.75rem; color:var(--muted); font-weight:bold; text-transform:uppercase; margin-bottom:8px; display:block;">Wybierz Kategorię</label>${gridHtml}
+                <div style="margin-bottom:15px;"><label style="font-size:0.65rem; color:var(--life); font-weight:bold; text-transform:uppercase; display:block; margin-bottom:6px;">Wybierz Konto</label>${accSlider('hSelAcc')}</div>
+                <div style="margin-bottom:10px;"><label style="font-size:0.65rem; color:var(--muted); font-weight:bold; text-transform:uppercase; margin-bottom:6px; display:block;">Kategoria</label>${gridHtml}</div>
                 `}
-                <div class="inp-group" style="margin-top:15px; margin-bottom:15px;"><input type="text" id="h-d" placeholder="Notatka (Opcjonalnie)" style="background:#18181b; padding:15px;"></div>
-                <div style="display:flex; gap:10px; margin-bottom:20px;">
-                    <div class="inp-group" style="flex:1;"><label>Data</label><input type="date" id="h-date" value="${todayStr}" style="background:#18181b;"></div>
-                    ${!isTrans ? `<div class="inp-group" style="flex:1;"><label>Powtarzaj</label><select id="h-recurring" style="background:#18181b;"><option value="none">Nie</option><option value="month">Co miesiąc 🔄</option></select></div>` : ''}
+                <div class="inp-group" style="margin-bottom:15px;"><input type="text" id="h-d" value="${window.hTempNote || ''}" placeholder="Notatka (Opcjonalnie)" style="background:rgba(255,255,255,0.05); padding:12px; font-size:0.85rem;"></div>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <div class="inp-group" style="flex:1;"><label style="font-size:0.65rem;">Data</label><input type="date" id="h-date" value="${todayStr}" style="background:rgba(255,255,255,0.05); padding:10px; font-size:0.8rem;"></div>
+                    ${!isTrans ? `<div class="inp-group" style="flex:1;"><label style="font-size:0.65rem;">Powtarzaj</label><select id="h-recurring" style="background:rgba(255,255,255,0.05); padding:10px; font-size:0.8rem;"><option value="none">Nie</option><option value="month">Co miesiąc 🔄</option></select></div>` : ''}
                 </div>
-                <button class="btn" style="background:${col}; color:#fff; font-size:1.2rem; font-weight:900; padding:20px; box-shadow:0 10px 20px ${col}44;" onclick="window.hAction()">${isTrans?'WYKONAJ PRZELEW':'ZAPISZ TRANSAKCJĘ'}</button>
+                <button class="btn" style="background:${col}; color:#fff; font-size:1rem; font-weight:900; padding:15px; box-shadow:0 8px 15px ${col}44;" onclick="window.hAction()">${isTrans?'WYKONAJ PRZELEW':'ZAPISZ TRANSAKCJĘ'}</button>
             </div>
             <div style="padding-bottom:60px;"></div>` + nav; 
         }
