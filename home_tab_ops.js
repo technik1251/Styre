@@ -50,7 +50,7 @@ window.rHomeOps = function(h, t, nav, hdr) {
         let dashCats = {};
         
         let accStats = {};
-        accs.forEach(a => accStats[a.id] = { in: 0, out: 0 });
+        accs.forEach(a => { accStats[a.id] = { in: 0, out: 0 }; });
         
         trs.forEach(x => {
             if(!x.rD) return;
@@ -164,10 +164,12 @@ window.rHomeOps = function(h, t, nav, hdr) {
             let isExp = x.type === 'exp'; 
             let isTrans = x.type === 'transfer'; 
             
+            // PANCERNE PRZYPISYWANIE IKON (Bez ?. !!!)
             let cdC = '#ef4444'; let cdI = '💸';
             if (isTrans) { cdC = '#8b5cf6'; cdI = '🔄'; } 
             else if (isExp && window.C_EXP && window.C_EXP[x.cat]) { cdC = window.C_EXP[x.cat].c; cdI = window.C_EXP[x.cat].i; } 
             else if (!isExp && window.C_INC && window.C_INC[x.cat]) { cdC = window.C_INC[x.cat].c; cdI = window.C_INC[x.cat].i; }
+            else if (!isExp) { cdC = '#22c55e'; cdI = '💵'; }
             
             let fAccObj = accs.find(a => a.id === x.fromAcc);
             let tAccObj = accs.find(a => a.id === x.toAcc);
@@ -536,10 +538,12 @@ window.rHomeOps = function(h, t, nav, hdr) {
                 let isExp = x.type === 'exp'; 
                 let isTrans = x.type === 'transfer'; 
                 
+                // PANCERNE PRZYPISYWANIE IKON
                 let cdC = '#ef4444'; let cdI = '💸';
                 if (isTrans) { cdC = '#8b5cf6'; cdI = '🔄'; } 
                 else if (isExp && window.C_EXP && window.C_EXP[x.cat]) { cdC = window.C_EXP[x.cat].c; cdI = window.C_EXP[x.cat].i; } 
                 else if (!isExp && window.C_INC && window.C_INC[x.cat]) { cdC = window.C_INC[x.cat].c; cdI = window.C_INC[x.cat].i; }
+                else if (!isExp) { cdC = '#22c55e'; cdI = '💵'; }
                 
                 let fAccObj = accs.find(a => a.id === x.fromAcc);
                 let tAccObj = accs.find(a => a.id === x.toAcc);
