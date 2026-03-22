@@ -1,7 +1,56 @@
 // ==========================================
-// PLIK: taxi_tab_panel.js - Zakładki Panel (Term) i Wyniki (Stats)
+// PLIK: taxi_tab_panel.js - Zakładki Panel (Term) i Wyniki (Stats) + Edytor ODO
 // ==========================================
 
+// --- NOWOCZESNA EDYCJA LICZNIKA (MODAL PREMIUM) ---
+window.dEditGlobalOdo = function() {
+    let d = window.db.drv || {};
+    let oldOdo = Number(d.odo||0).toFixed(0);
+    
+    let html = '<div style="text-align:center; padding:10px 0;">' +
+        '<div style="font-size:3rem; margin-bottom:15px;">✏️</div>' +
+        '<h3 style="color:#fff; margin:0 0 10px 0; font-size:1.1rem; letter-spacing:0.5px;">Edytuj Stan Licznika</h3>' +
+        '<p style="font-size:0.75rem; color:var(--muted); margin-bottom:20px; padding: 0 10px;">Podaj aktualny przebieg całego pojazdu (ODO). Zmiana wpłynie na statystyki i koszty paliwa.</p>' +
+        
+        '<div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:14px; padding:15px; margin-bottom:20px;">' +
+            '<div style="display:flex; justify-content:center; align-items:center; gap:8px;">' +
+                '<input type="number" id="mod-global-odo-val" placeholder="0" value="'+oldOdo+'" style="color:#fff; border:none; background:transparent; font-size:3rem; font-weight:900; text-align:center; width:140px; padding:0; outline:none;">' +
+                '<span style="font-size:1.4rem; font-weight:bold; color:var(--muted); margin-top:14px;">KM</span>' +
+            '</div>' +
+        '</div>' +
+        
+        '<div style="display:flex; gap:10px; padding:0 10px;">' +
+            '<button class="btn" style="flex:1; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:900; padding:15px; border-radius:12px; border:none; box-shadow:0 6px 15px rgba(16,185,129,0.3);" onclick="window.dSaveGlobalOdo('+oldOdo+')">ZAPISZ ODO</button>' +
+            '<button class="btn" style="flex:1; background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1); border-radius:12px; box-shadow:none; padding:15px; font-weight:bold;" onclick="if(typeof window.closeModal===\'function\') window.closeModal()">ANULUJ</button>' +
+        '</div>' +
+    '</div>';
+    
+    if(typeof window.openModal==='function') window.openModal(html);
+};
+
+window.dSaveGlobalOdo = function(oldOdo) {
+    let valEl = document.getElementById('mod-global-odo-val');
+    if(!valEl) return;
+    let newOdo = parseFloat(valEl.value);
+    
+    if(isNaN(newOdo) || newOdo < 0) {
+        if(typeof window.sysAlert==='function') window.sysAlert("Błąd!", "Podaj poprawny przebieg (ODO)!", "error");
+        return;
+    }
+    
+    if(newOdo < oldOdo) {
+        if(typeof window.sysAlert==='function') window.sysAlert("Uwaga!", "Licznik nie może się cofać!", "warning");
+        return;
+    }
+    
+    window.db.drv.odo = newOdo;
+    if(typeof window.save === 'function') window.save();
+    if(typeof window.closeModal === 'function') window.closeModal();
+    if(typeof window.render === 'function') window.render();
+    if(typeof window.sysAlert==='function') window.sysAlert("Gotowe!", "Licznik zaktualizowany do "+newOdo+" KM.", "success");
+};
+
+// --- GŁÓWNA FUNKCJA RENDERUJĄCA PANEL I WYNIKI ---
 window.rDrvPanel = function(d, t, nav, hdr) {
     try {
         // ==========================================
@@ -247,7 +296,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 
                 if(!window.dShowOff) {
                     act += '<div style="padding:0 15px; margin-top:15px;">' +
-                        '<button class="btn" style="background:rgba(14,165,233,0.05); color:var(--info); border:1px dashed rgba(14,165,233,0.3); font-size:0.75rem; font-weight:bold; box-shadow:none; width:100%; padding:12px; border-radius:12px;" onclick="window.dShowOff=true; window.render()">📥 WPROWADŹ UTARG Z RAPORTU (WBITKA)</button>' +
+                        '<button class="btn" style="background:rgba(14,165,233,0.05); color:var(--info); border:1px dashed rgba(14,165,233,0.3); font-size:0.75rem; font-weight:bold; box-shadow:none; width:100%; padding:12px; border-radius:12px;" onclick="window.dShowOff=true; window.render()">📥 WPROWADŹ UTARG Z RAPORTU KASY (WBITKA)</button>' +
                     '</div>';
                 } else {
                     act += '<div class="section-lbl" style="color:var(--info); border-color:var(--info); margin-top:25px; font-size:0.7rem; letter-spacing:1px;">⚡ Zaległe rozliczenie / Raport z Kasy</div>' +
@@ -278,7 +327,8 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             }
             
             let appContainer = document.getElementById('app');
-            if(appContainer) appContainer.innerHTML = hdr + act + '<div style="padding-bottom:80px;"></div>' + nav;
+            // Zwiększono margines dolny z 80px na 110px, aby ukryć go przed nową wyspą nawigacji
+            if(appContainer) appContainer.innerHTML = hdr + act + '<div style="padding-bottom:110px;"></div>' + nav;
         }
 
         // ==========================================
@@ -412,16 +462,16 @@ window.rDrvPanel = function(d, t, nav, hdr) {
 
             let breakdownStatsHtml = '';
             if (d.plat === 'apps') {
-                breakdownStatsHtml = '<div style="display:flex; justify-content:space-between; gap:8px; margin-top:15px; padding:0 15px; margin-bottom:15px;">' +
-                    '<div style="flex:1; background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.2); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:var(--success); text-transform:uppercase; font-weight:bold;">Gotówka</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(cashEarned).toFixed(2)+'</strong></div>' +
-                    '<div style="flex:1; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:#fff; text-transform:uppercase; font-weight:bold;">Uber</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(uberEarned).toFixed(2)+'</strong></div>' +
-                    '<div style="flex:1; background:rgba(34,211,238,0.05); border:1px solid rgba(34,211,238,0.2); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:#22d3ee; text-transform:uppercase; font-weight:bold;">Bolt</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(boltEarned).toFixed(2)+'</strong></div>' +
+                breakdownStatsHtml = '<div style="display:flex; justify-content:space-between; gap:10px; margin-top:20px; padding:0 15px; margin-bottom:20px;">' +
+                    '<div style="flex:1; background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.2); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:var(--success); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Gotówka</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(cashEarned).toFixed(2)+'</strong></div>' +
+                    '<div style="flex:1; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:#fff; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Uber</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(uberEarned).toFixed(2)+'</strong></div>' +
+                    '<div style="flex:1; background:rgba(34,211,238,0.05); border:1px solid rgba(34,211,238,0.2); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:#22d3ee; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Bolt</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(boltEarned).toFixed(2)+'</strong></div>' +
                 '</div>';
             } else {
-                breakdownStatsHtml = '<div style="display:flex; justify-content:space-between; gap:8px; margin-top:15px; padding:0 15px; margin-bottom:15px;">' +
-                    '<div style="flex:1; background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.2); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:var(--success); text-transform:uppercase; font-weight:bold;">Gotówka</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(cashEarned).toFixed(2)+'</strong></div>' +
-                    '<div style="flex:1; background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:#3b82f6; text-transform:uppercase; font-weight:bold;">Karta</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(cardEarned).toFixed(2)+'</strong></div>' +
-                    '<div style="flex:1; background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:12px; padding:10px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:0.55rem; color:#a855f7; text-transform:uppercase; font-weight:bold;">Voucher</span><br><strong style="color:#fff; font-size:0.95rem; display:block; margin-top:2px;">'+Number(vouchEarned).toFixed(2)+'</strong></div>' +
+                breakdownStatsHtml = '<div style="display:flex; justify-content:space-between; gap:10px; margin-top:20px; padding:0 15px; margin-bottom:20px;">' +
+                    '<div style="flex:1; background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.2); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:var(--success); text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Gotówka</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(cashEarned).toFixed(2)+'</strong></div>' +
+                    '<div style="flex:1; background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.2); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:#3b82f6; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Karta</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(cardEarned).toFixed(2)+'</strong></div>' +
+                    '<div style="flex:1; background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:16px; padding:15px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.2);"><span style="font-size:0.6rem; color:#a855f7; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Voucher</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(vouchEarned).toFixed(2)+'</strong></div>' +
                 '</div>';
             }
 
@@ -569,7 +619,8 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 proBannerHtml +
                 pAndLHtml +
                 historyLogHtml +
-                '<div style="padding-bottom:80px;"></div>' + nav;
+                // Zwiększony dolny margines, aby nowa pływająca nawigacja nie ucinała treści (110px)
+                '<div style="padding-bottom:110px;"></div>' + nav;
             }
         }
     } catch(err) {
