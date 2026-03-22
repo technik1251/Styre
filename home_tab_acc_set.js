@@ -44,28 +44,32 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                     let bal = parseFloat(balances[a.id]) || 0; 
                     let pct = totalAccBal > 0 && bal > 0 ? ((bal / totalAccBal) * 100).toFixed(0) : 0;
                     return `
-                    <div class="panel" style="padding:15px; border-left:4px solid ${a.c}; margin-bottom:15px; position:relative;">
-                        <div style="position:absolute; right:10px; top:10px; display:flex; gap:10px;">
-                            <button style="background:transparent; border:none; color:var(--muted); font-size:1.1rem; cursor:pointer;" onclick="window.hOpenAccModal('${a.id}')">✏️</button>
-                            <button style="background:transparent; border:none; color:var(--muted); font-size:1.1rem; cursor:pointer;" onclick="window.hShowIconPicker('${a.id}')">🎨</button>
-                            <button style="background:transparent; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer;" onclick="window.hDelAcc('${a.id}')">🗑️</button>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
-                            <div style="display:flex; align-items:center; gap:15px;">
-                                <div style="width:45px; height:45px; border-radius:50%; background:${a.c}22; display:flex; align-items:center; justify-content:center; font-size:1.6rem; border:1px solid ${a.c}55;">${a.i}</div>
-                                <div>
-                                    <strong style="font-size:1.1rem; color:#fff;">${a.n}</strong>
-                                    <small style="color:var(--muted); display:block; margin-top:2px; font-size:0.75rem;">Udział: ${pct}%</small>
+                    <div class="panel" style="padding:15px; border-left:4px solid ${a.c}; margin-bottom:15px; position:relative; overflow:hidden;">
+                        <div style="position:absolute; right:-20px; top:-20px; width:100px; height:100px; border-radius:50%; background:${a.c}; filter:blur(40px); opacity:0.1; z-index:0; pointer-events:none;"></div>
+                        <div style="position:relative; z-index:1;">
+                            <div style="position:absolute; right:0; top:0; display:flex; gap:12px;">
+                                <button style="background:transparent; border:none; color:var(--muted); font-size:1rem; cursor:pointer; padding:0;" onclick="window.hOpenAccModal('${a.id}')">✏️</button>
+                                <button style="background:transparent; border:none; color:var(--muted); font-size:1rem; cursor:pointer; padding:0;" onclick="window.hShowIconPicker('${a.id}')">🎨</button>
+                                <button style="background:transparent; border:none; color:var(--danger); font-size:1rem; cursor:pointer; padding:0;" onclick="window.hDelAcc('${a.id}')">🗑️</button>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:10px;">
+                                <div style="display:flex; align-items:center; gap:15px;">
+                                    <div style="width:45px; height:45px; border-radius:12px; background:${a.c}22; display:flex; align-items:center; justify-content:center; font-size:1.6rem; border:1px solid ${a.c}55;">${a.i}</div>
+                                    <div>
+                                        <strong style="font-size:1.1rem; color:#fff;">${a.n}</strong>
+                                        <small style="color:var(--muted); display:block; margin-top:2px; font-size:0.75rem;">Udział: ${pct}%</small>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div style="margin-top:10px; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.8rem; color:var(--muted);">Bieżące saldo:</span>
-                            <strong style="color:${bal >= 0 ? '#fff' : 'var(--danger)'}; font-size:1.3rem;">${Number(bal || 0).toFixed(2)} zł</strong>
+                            <div style="margin-top:20px; background:rgba(255,255,255,0.02); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.05);">
+                                <span style="font-size:0.8rem; color:var(--muted); text-transform:uppercase;">Bieżące saldo:</span>
+                                <strong style="color:${bal >= 0 ? '#fff' : 'var(--danger)'}; font-size:1.4rem;">${Number(bal || 0).toFixed(2)} zł</strong>
+                            </div>
                         </div>
                     </div>`;
                 }).join('')}
-            </div>` + nav; 
+            </div>
+            <div style="padding-bottom:60px;"></div>` + nav; 
         }
     }
 
@@ -143,6 +147,7 @@ window.rHomeAccSet = function(h, t, nav, hdr) {
                     <span style="font-size:1.5rem;">☕</span> POSTAW MI KAWĘ
                 </a>
             </div>
+            <div style="padding-bottom:60px;"></div>
             ` + nav; 
         }
     } 
