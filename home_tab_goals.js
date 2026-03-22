@@ -27,7 +27,6 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             dataZakupu.setHours(12, 0, 0, 0);
             let dniOdZakupu = Math.floor((dzis.getTime() - dataZakupu.getTime()) / (1000 * 60 * 60 * 24));
             
-            // PAYPO: Darmowy okres = 31 dni
             let isConverted = l.isConverted || (parseInt(l.totalInst) > 1);
 
             if (dniOdZakupu > 31 || isConverted) {
@@ -189,7 +188,6 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             if (instL <= 0) {
                 nextDateStr = 'Spłacone 🎉';
             } else if (isBNPL) {
-                // LOGIKA PAYPO: Dokładne przesunięcia w dniach! (31, 61, 91, 120)
                 let offsets = [31, 61, 91, 120, 151, 181];
                 let offset = offsets[paidCount] || (31 * (paidCount + 1));
                 
@@ -329,6 +327,8 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             let ratyStr = (totInst > instL && totInst > 0) ? `${instL} z ${totInst}` : `${instL}`;
 
             if(!isCompact) {
+                let mainTitle = isPrywInc ? 'OCZEKUJĘ ZWROTU:' : (isBNPL ? 'WARTOŚĆ ZAKUPU / ZADŁUŻENIE' : 'KAPITAŁ DO SPŁATY');
+                
                 return `
                 <div class="panel" style="flex: 0 0 85%; min-width: 280px; max-width: 340px; scroll-snap-align: center; padding:0; border:1px solid ${isKredyt ? 'var(--danger)' : '#27272a'}; border-radius:24px; overflow:hidden; margin-bottom:0; background:#18181b;">
                     <div style="padding:20px 20px 10px; position:relative;">
@@ -370,7 +370,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
                         <div style="display:flex; gap:10px;">
                             <button style="background:rgba(14,165,233,0.2); color:var(--info); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(14,165,233,0.4);" onclick="${isBNPL ? `window.hOpenPayLoanModal('${l.id}')` : `window.hOverpayLoan('${l.id}')`}">${isBNPL ? '💸 SPŁAĆ RATĘ' : '💰 DOWOLNA K.'}</button>
                             ${isKredyt ? `<button style="background:rgba(245,158,11,0.2); color:var(--warning); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(245,158,11,0.4);" onclick="window.hCreditHoliday('${l.id}')">🏖️ ODROCZ</button>` : ''}
-                            ${!isBNPL ? `<button style="background:rgba(34,197,94,0.2); color:var(--success); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(34,197,94,0.3);" onclick="window.hPayOffCompletely('${l.id}')">🏆 ZAMKNIJ</button>` : ''}
+                            ${!isBNPL ? `<button style="background:rgba(34,197,94,0.2); color:var(--success); flex:1; padding:10px; border-radius:10px; font-size:0.75rem; border:1px solid rgba(34,197,94,0.4);" onclick="window.hPayOffCompletely('${l.id}')">🏆 ZAMKNIJ</button>` : ''}
                         </div>
                     </div>
                 </div>`;
@@ -473,7 +473,7 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             ${deadlineHtml}
             <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--muted); margin-bottom:8px;">
                 <span>Zgromadzono: <strong style="color:${pColor}; font-size:1.1rem;">${Number(saved || 0).toFixed(2)} zł</strong></span>
-                <span>Cel: ${Number(target || 0).toFixed(2)} zł</span>
+                <span>Cel: ${Number(target || 0).toFixed(0)} zł</span>
             </div>
             <div style="width:100%; height:12px; background:rgba(0,0,0,0.5); border-radius:6px; overflow:hidden; margin-bottom:12px; position:relative;">
                 <div style="width:${pct}%; background:${pColor}; height:100%; transition: width 0.5s ease-out;"></div>
@@ -493,13 +493,6 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             </div>
         </div>`;
     }).join('') || '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:10px 0;">Brak aktywnych celów. Rozpocznij oszczędzanie! 🐷</div>';
-
-    let proBanner = `
-    <div style="margin: 20px 15px; padding: 15px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(14, 165, 233, 0.15)); border: 1px dashed rgba(139, 92, 246, 0.4); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.1); transition: 0.3s;" onclick="window.sysAlert('Auto-Oszczędzanie (PRO)', 'Funkcja dostępna wkrótce! Apka StyreOS automatycznie zaokrągli Twoje płatności kartą do pełnych kwot (np. płacisz 17,50 zł, a 2,50 zł trafia na cel). Oszczędzasz, nawet o tym nie myśląc! 🚀', 'info')">
-        <div style="font-size: 2rem; margin-bottom: 5px;">🚀</div>
-        <strong style="color: #c084fc; font-size: 0.95rem; display: block; text-transform: uppercase;">Auto-Oszczędzanie na końcówkach</strong>
-        <span style="font-size: 0.75rem; color: var(--muted); margin-top: 4px; display: block;">StyreOS PRO sam zaokrągli reszty z Twoich zakupów i wrzuci je do Skarbonki. Oszczędzaj bez wysiłku!</span>
-    </div>`;
 
     let legacyDebtsHtml = '';
     if(h.debts && h.debts.filter(d => !d.isClosed).length > 0) {
@@ -549,7 +542,6 @@ window.rHomeGoals = function(h, t, nav, hdr) {
             </div>
             ${piggyHtml}
         </div>
-        ${proBanner}
         ${legacyDebtsHtml}
         <div style="padding-bottom:80px;"></div>
         ` + nav;
