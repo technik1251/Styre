@@ -103,8 +103,8 @@ window.rDrvTools = function(d, t, nav, hdr) {
                 '<div class="pro-badge-mini">PRO</div>' +
                 '<h4 style="color:#d946ef; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
                 '<ul class="pro-list-mini">' +
-                    '<li>✅ <b>AI Map Insights:</b> Podgląd korków i stref wysokiego popytu na mapie.</li>' +
-                    '<li>✅ <b>Import z Aplikacji:</b> Automatyczna wycena na bazie kursów z Uber/Bolt.</li>' +
+                    '<li>✅ <b>Inteligentny Asystent:</b> Pływająca nakładka opłacalności podczas akceptowania kursu.</li>' +
+                    '<li>✅ <b>AI Map Insights:</b> Podgląd ukrytych stref wysokiego popytu na mapie.</li>' +
                 '</ul>' +
             '</div>';
             
@@ -160,7 +160,7 @@ window.rDrvTools = function(d, t, nav, hdr) {
                         '</select>' +
                     '</div>' +
                     
-                    proTaksometr + // Wstrzyknięcie zapowiedzi PRO
+                    proTaksometr + // <--- TUTAJ JEST ZAPOWIEDŹ PRO
 
                     '<button class="btn" style="background:#d946ef; color:#fff; font-size:1.05rem; font-weight:900; padding:18px; border-radius:16px; border:none; box-shadow:0 8px 25px rgba(217,70,239,0.4); width:100%;" onclick="if(typeof window.saveQuoteToPanel===\'function\') window.saveQuoteToPanel()">ZAKSIĘGUJ DO PANELU</button>' +
                 '</div>' +
@@ -176,7 +176,7 @@ window.rDrvTools = function(d, t, nav, hdr) {
             (typeof window.hRenderGarage === 'function' ? window.hRenderGarage(d) : '');
         }
 
-        // Dodanie marginesu 140px, żeby dolny pasek nigdy nie zasłaniał elementów
+        // Dodanie marginesu 140px
         appContainer.innerHTML = hdr + act + '<div style="height:140px; width:100%; clear:both;"></div>' + nav;
 
     } catch(err) {
@@ -188,7 +188,7 @@ window.rDrvTools = function(d, t, nav, hdr) {
     }
 };
 
-// --- RENDER GARAŻU Z ZAPOWIEDZIĄ PRO W SEKCJI SERWISÓW ---
+// --- RENDER GARAŻU Z DYNAMICZNYMI PALIWAMI ---
 window.hRenderGarage = function(d) {
     let mode = window.dGarMode || 'f';
     let sourceAlert = '';
@@ -224,6 +224,16 @@ window.hRenderGarage = function(d) {
         if (t === 'ev') fuelOptionsHtml += '<option value="ev">⚡ Prąd (EV)</option>';
     }
 
+    // --- ZAPOWIEDŹ PRO DLA GARAŻU (BĘDZIE W OBU ZAKŁADKACH!) ---
+    let proGarage = '<div class="pro-teaser-panel" style="border-color: rgba(14, 165, 233, 0.2); margin-top: 0; margin-bottom: 15px;">' +
+        '<div class="pro-badge-mini" style="background:#0ea5e9;">PRO</div>' +
+        '<h4 style="color:#0ea5e9; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
+        '<ul class="pro-list-mini">' +
+            '<li>✅ <b>Skaner Paragonów:</b> Dodawaj koszty robiąc zdjęcie (AI OCR).</li>' +
+            '<li>✅ <b>Raporty PDF:</b> Generuj gotowe zestawienia dla księgowości.</li>' +
+        '</ul>' +
+    '</div>';
+
     let html = '<div style="padding:0 0px;">' +
         sourceAlert +
         '<div class="grid-2" style="margin-bottom:15px; gap:12px; padding:0 15px;">' +
@@ -247,6 +257,8 @@ window.hRenderGarage = function(d) {
         html += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:15px; border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,0.5); margin:0 15px;">' +
             '<div class="p-title" style="color:#f59e0b; font-size:0.65rem; font-weight:800; letter-spacing:1px; margin-bottom:12px; text-align:center;">⛽ NOWE TANKOWANIE</div>' +
             
+            proGarage + // <--- ZAPOWIEDŹ PRO DODANA DO TANKOWAŃ
+
             '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">' +
                 '<div class="inp-group" style="margin:0;"><label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Licznik (KM)</label><input type="number" id="df-o" value="'+(d.odo||0)+'" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:12px; font-size:1rem; font-weight:700; color:#fff; text-align:center; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"></div>' +
                 '<div class="inp-group" style="margin:0;"><label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Ilość (L / kWh)</label><input type="number" step="0.1" id="df-l" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:12px; font-size:1rem; font-weight:700; color:#fff; text-align:center; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"></div>' +
@@ -269,21 +281,10 @@ window.hRenderGarage = function(d) {
         '</div>';
     } else {
         let tdy = window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0];
-
-        // --- ZAPOWIEDŹ PRO DLA GARAŻU (SEKCJA SERWIS) ---
-        let proGarage = '<div class="pro-teaser-panel" style="border-color: rgba(14, 165, 233, 0.2); margin-top: 0; margin-bottom: 15px;">' +
-            '<div class="pro-badge-mini" style="background:#0ea5e9;">PRO</div>' +
-            '<h4 style="color:#0ea5e9; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
-            '<ul class="pro-list-mini">' +
-                '<li>✅ <b>Skaner Paragonów:</b> Dodawaj koszty robiąc zdjęcie (AI OCR).</li>' +
-                '<li>✅ <b>Raporty PDF:</b> Generuj gotowe zestawienia dla księgowości.</li>' +
-            '</ul>' +
-        '</div>';
-
         html += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:15px; border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,0.5); margin:0 15px;">' +
             '<div class="p-title" style="color:#0ea5e9; font-size:0.65rem; font-weight:800; letter-spacing:1px; margin-bottom:12px; text-align:center;">🔧 NOWY WYDATEK SERWISOWY</div>' +
             
-            proGarage + // Wstrzyknięcie zapowiedzi PRO
+            proGarage + // <--- ZAPOWIEDŹ PRO DODANA DO SERWISU
 
             '<div style="display:flex; gap:10px; margin-bottom:10px;">' +
                 '<div class="inp-group" style="flex:2; margin:0;"><label style="font-size:0.6rem; color:#0ea5e9; margin-bottom:4px; font-weight:bold;">KOSZT (ZŁ)</label><input type="number" step="0.01" id="de-v" placeholder="0.00" style="background:rgba(0,0,0,0.3); border-radius:10px; padding:10px; font-size:1.4rem; font-weight:900; color:#0ea5e9; text-align:center; border:1px solid rgba(14,165,233,0.3); outline:none; width:100%; box-sizing:border-box;"></div>' +
@@ -321,7 +322,7 @@ window.hRenderGarage = function(d) {
     }
     
     if(fList.length === 0) {
-        html += '<div style="text-align:center; padding:30px; color:rgba(255,255,255,0.4); font-size:0.8rem; font-weight:600; background:rgba(0,0,0,0.2); border-radius:16px; border:1px dashed rgba(255,255,255,0.05);">Brak wpisów in tej kategorii.</div>';
+        html += '<div style="text-align:center; padding:30px; color:rgba(255,255,255,0.4); font-size:0.8rem; font-weight:600; background:rgba(0,0,0,0.2); border-radius:16px; border:1px dashed rgba(255,255,255,0.05);">Brak wpisów w tej kategorii.</div>';
     } else {
         for(let i=0; i<fList.length; i++) {
             let e = fList[i];
