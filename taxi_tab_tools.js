@@ -99,8 +99,9 @@ window.rDrvTools = function(d, t, nav, hdr) {
             }
             
             act = '<div class="dash-hero" style="padding-bottom:15px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:20px;">' +
-                '<p style="letter-spacing:1px; color:rgba(255,255,255,0.4); font-weight:800; font-size:0.65rem; text-transform:uppercase;">ZARZĄDZANIE OPROGRAMOWANIEM</p>' +
-                '<h1 style="color:#d946ef; font-size:2.8rem; margin-bottom:5px; font-weight:900; letter-spacing:-1.5px; text-shadow:0 0 25px rgba(217, 70, 239, 0.4);">🧮 Taksometr<br>Online</h1>' +
+                '<div style="display:flex; justify-content:center; margin-bottom:15px;"><div style="background:rgba(217, 70, 239, 0.1); border:1px solid rgba(217, 70, 239, 0.3); width:55px; height:55px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:1.8rem; box-shadow: 0 8px 20px rgba(217,70,239,0.25);">📍</div></div>' +
+                '<p style="letter-spacing:1px; color:rgba(255,255,255,0.4); font-weight:800; font-size:0.65rem; text-transform:uppercase;">ASYSTENT WYCENY</p>' +
+                '<h1 style="color:#fff; font-size:2.5rem; margin-bottom:5px; font-weight:900; letter-spacing:-1px;">Taksometr <span style="color:#d946ef;">Online</span></h1>' +
             '</div>' +
             
             '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 40px rgba(0,0,0,0.6); margin:0 15px;">' +
@@ -156,8 +157,9 @@ window.rDrvTools = function(d, t, nav, hdr) {
 
         if (t === 'garage') {
             act = '<div class="dash-hero" style="padding-bottom:15px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:20px;">' +
+                '<div style="display:flex; justify-content:center; margin-bottom:15px;"><div style="background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.3); width:55px; height:55px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:1.8rem; box-shadow: 0 8px 20px rgba(245,158,11,0.25);">🔧</div></div>' +
                 '<p style="letter-spacing:1px; color:rgba(255,255,255,0.4); font-weight:800; font-size:0.65rem; text-transform:uppercase;">DZIENNIK TANKOWAŃ I SERWISÓW</p>' +
-                '<h1 style="color:#f59e0b; font-size:3rem; margin-bottom:5px; font-weight:900; letter-spacing:-1.5px; text-shadow:0 0 25px rgba(245, 158, 11, 0.4);">⛽ GARAŻ</h1>' +
+                '<h1 style="color:#fff; font-size:2.5rem; margin-bottom:5px; font-weight:900; letter-spacing:-1px;">Eksploatacja <span style="color:#f59e0b;">Garaż</span></h1>' +
             '</div>' +
             (typeof window.hRenderGarage === 'function' ? window.hRenderGarage(d) : '');
         }
@@ -174,7 +176,7 @@ window.rDrvTools = function(d, t, nav, hdr) {
     }
 };
 
-// --- RENDER GARAŻU Z DYNAMICZNYMI PALIWAMI (ULTRA KOMPAKTOWY) ---
+// --- RENDER GARAŻU Z DYNAMICZNYMI PALIWAMI (ULTRA KOMPAKTOWY Z OPISEM) ---
 window.hRenderGarage = function(d) {
     let mode = window.dGarMode || 'f';
     let sourceAlert = '';
@@ -263,7 +265,7 @@ window.hRenderGarage = function(d) {
                 '<div class="inp-group" style="flex:1.5; margin:0;"><label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Data</label><input type="date" id="de-date" value="'+tdy+'" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:14px 10px; font-size:0.8rem; color:#fff; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"></div>' +
             '</div>' +
             
-            '<div class="inp-group" style="margin-bottom:15px; margin-top:0;">' +
+            '<div class="inp-group" style="margin-bottom:10px; margin-top:0;">' +
                 '<label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Rodzaj wydatku</label>' +
                 '<select id="de-c" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:12px; font-size:0.85rem; font-weight:600; color:#fff; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%;">' +
                     '<option>💦 Myjnia</option>' +
@@ -273,6 +275,11 @@ window.hRenderGarage = function(d) {
                     '<option>📋 Przegląd / Ubezpieczenie</option>' +
                     '<option>💡 Inne koszty eksploatacyjne</option>' +
                 '</select>' +
+            '</div>' +
+            
+            '<div class="inp-group" style="margin-bottom:15px;">' +
+                '<label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Opis / Notatka (Opcjonalnie)</label>' +
+                '<input type="text" id="de-desc" placeholder="np. Wymiana klocków przód" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:12px; font-size:0.85rem; color:#fff; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;">' +
             '</div>' +
 
             '<button class="btn btn-info" style="background:#0ea5e9; color:#fff; font-weight:900; font-size:0.95rem; letter-spacing:0.5px; padding:14px; border-radius:12px; border:none; box-shadow:0 4px 15px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAE===\'function\') window.dAE()">ZAKSIĘGUJ WYDATEK</button>' +
@@ -315,6 +322,8 @@ window.hRenderGarage = function(d) {
             else if (e.d.includes('Olej')) eIcon = '🚗';
             else if (e.d.includes('Parking')) eIcon = '🅿️';
 
+            let descHtml = (e.ty === 'e' && e.desc) ? `<div style="font-size:0.75rem; color:#0ea5e9; margin-top:4px; font-style:italic;">"${e.desc}"</div>` : '';
+
             html += '<div class="log-item" style="border:none; border-left:3px solid '+eColor+'; border-radius:16px; padding:15px; margin-bottom:12px; background:'+eBgColor+';">' +
                 '<div style="display:flex; align-items:center; gap:15px; flex:1;" onclick="if(typeof window.dEditExp===\'function\') window.dEditExp('+e.id+')">' +
                     '<div style="font-size:1.5rem; width:45px; height:45px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:12px; display:flex; align-items:center; justify-content:center;">'+eIcon+'</div>' +
@@ -324,7 +333,7 @@ window.hRenderGarage = function(d) {
                             '<span>'+e.dt+'</span>' +
                             (e.ty==='f' ? '<span style="opacity:0.3">•</span><span>ODO: '+e.odo+'</span>' : '') +
                         '</div>' +
-                        (e.ty==='f' ? '<div style="font-size:0.65rem; color:'+(isFull ? '#10b981' : '#f59e0b')+'; font-weight:800; margin-top:6px; text-transform:uppercase;">'+fLabel+' | '+Number(e.l||0).toFixed(1)+' '+uStr+'</div>' : '') +
+                        (e.ty==='f' ? '<div style="font-size:0.65rem; color:'+(isFull ? '#10b981' : '#f59e0b')+'; font-weight:800; margin-top:6px; text-transform:uppercase;">'+fLabel+' | '+Number(e.l||0).toFixed(1)+' '+uStr+'</div>' : descHtml) +
                     '</div>' +
                 '</div>' +
                 '<div style="text-align:right; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-end;">' +
