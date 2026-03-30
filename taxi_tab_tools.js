@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_tools.js - Narzędzia (Wycena, Garaż, Fuelio Algorytm)
+// PLIK: taxi_tab_tools.js - Narzędzia (Taksometr Online, Garaż, Fuelio Algorytm)
 // ==========================================
 
 // --- NOWY ALGORYTM FUELIO (Z PODZIAŁEM NA PALIWA) ---
@@ -100,7 +100,7 @@ window.rDrvTools = function(d, t, nav, hdr) {
             
             act = '<div class="dash-hero" style="padding-bottom:15px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:20px;">' +
                 '<p style="letter-spacing:1px; color:rgba(255,255,255,0.4); font-weight:800; font-size:0.65rem; text-transform:uppercase;">ZARZĄDZANIE OPROGRAMOWANIEM</p>' +
-                '<h1 style="color:#d946ef; font-size:3rem; margin-bottom:5px; font-weight:900; letter-spacing:-1.5px; text-shadow:0 0 25px rgba(217, 70, 239, 0.4);">🧮 Wycena</h1>' +
+                '<h1 style="color:#d946ef; font-size:2.8rem; margin-bottom:5px; font-weight:900; letter-spacing:-1.5px; text-shadow:0 0 25px rgba(217, 70, 239, 0.4);">🧮 Taksometr<br>Online</h1>' +
             '</div>' +
             
             '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 40px rgba(0,0,0,0.6); margin:0 15px;">' +
@@ -162,7 +162,7 @@ window.rDrvTools = function(d, t, nav, hdr) {
             (typeof window.hRenderGarage === 'function' ? window.hRenderGarage(d) : '');
         }
 
-        // Dodanie marginesu 140px
+        // Dodanie marginesu 140px, żeby dolny pasek nigdy nie zasłaniał elementów
         appContainer.innerHTML = hdr + act + '<div style="height:140px; width:100%; clear:both;"></div>' + nav;
 
     } catch(err) {
@@ -174,7 +174,7 @@ window.rDrvTools = function(d, t, nav, hdr) {
     }
 };
 
-// --- RENDER GARAŻU Z DYNAMICZNYMI PALIWAMI ---
+// --- RENDER GARAŻU Z DYNAMICZNYMI PALIWAMI (ULTRA KOMPAKTOWY) ---
 window.hRenderGarage = function(d) {
     let mode = window.dGarMode || 'f';
     let sourceAlert = '';
@@ -230,68 +230,52 @@ window.hRenderGarage = function(d) {
 
     if(mode === 'f') {
         let tdy = window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0];
-        html += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 30px rgba(0,0,0,0.6); margin:0 15px;">' +
-            '<div class="p-title" style="color:#f59e0b; font-size:0.7rem; font-weight:800; letter-spacing:1px; margin-bottom:15px; text-align:center;">⛽ NOWE TANKOWANIE</div>' +
+        html += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:15px; border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,0.5); margin:0 15px;">' +
+            '<div class="p-title" style="color:#f59e0b; font-size:0.65rem; font-weight:800; letter-spacing:1px; margin-bottom:12px; text-align:center;">⛽ NOWE TANKOWANIE</div>' +
             
-            '<div class="inp-row" style="margin-bottom:12px; gap:10px;">' +
-                '<div class="inp-group" style="margin:0;"><input type="number" id="df-o" value="'+(d.odo||0)+'" placeholder="Licznik (KM)" style="background:rgba(255,255,255,0.03); border-radius:14px; padding:16px; font-size:1.1rem; font-weight:700; color:#fff; text-align:center; border:1px solid rgba(255,255,255,0.05); outline:none;"></div>' +
-                '<div class="inp-group" style="margin:0;"><input type="number" step="0.1" id="df-l" placeholder="Litry / kWh" style="background:rgba(255,255,255,0.03); border-radius:14px; padding:16px; font-size:1.1rem; font-weight:700; color:#fff; text-align:center; border:1px solid rgba(255,255,255,0.05); outline:none;"></div>' +
+            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">' +
+                '<div class="inp-group" style="margin:0;"><label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Licznik (KM)</label><input type="number" id="df-o" value="'+(d.odo||0)+'" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:12px; font-size:1rem; font-weight:700; color:#fff; text-align:center; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"></div>' +
+                '<div class="inp-group" style="margin:0;"><label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Ilość (L / kWh)</label><input type="number" step="0.1" id="df-l" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:12px; font-size:1rem; font-weight:700; color:#fff; text-align:center; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"></div>' +
             '</div>' +
             
-            // Pole na kwotę - Apple PIN style
-            '<div style="background:rgba(0,0,0,0.4); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:15px; margin-bottom:15px;">' +
-                '<div style="display:flex; justify-content:center; align-items:center; gap:8px;">' +
-                    '<input type="number" step="0.01" id="df-v" placeholder="0" style="color:#f59e0b; border:none; background:transparent; font-size:3.5rem; font-weight:900; text-align:center; width:160px; padding:0; outline:none;">' +
-                    '<span style="font-size:1.5rem; font-weight:700; color:rgba(255,255,255,0.3); margin-top:15px;">zł</span>' +
-                '</div>' +
+            '<div style="display:flex; gap:10px; margin-bottom:10px;">' +
+                '<div class="inp-group" style="flex:2; margin:0;"><label style="font-size:0.6rem; color:#f59e0b; margin-bottom:4px; font-weight:bold;">KOSZT (ZŁ)</label><input type="number" step="0.01" id="df-v" placeholder="0.00" style="background:rgba(0,0,0,0.3); border-radius:10px; padding:10px; font-size:1.4rem; font-weight:900; color:#f59e0b; text-align:center; border:1px solid rgba(245,158,11,0.3); outline:none; width:100%; box-sizing:border-box;"></div>' +
+                '<div class="inp-group" style="flex:1.5; margin:0;"><label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Data</label><input type="date" id="df-date" value="'+tdy+'" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:14px 10px; font-size:0.8rem; color:#fff; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"></div>' +
             '</div>' +
             
-            '<div class="inp-row" style="margin-bottom:15px; align-items:center; gap:10px;">' +
-                '<div class="inp-group" style="margin:0; flex:1;">' +
-                    '<select id="df-type" style="background:rgba(255,255,255,0.03); border-radius:14px; padding:14px; font-size:0.85rem; font-weight:600; color:#fff; border:1px solid rgba(245,158,11,0.2); outline:none;">' + fuelOptionsHtml + '</select>' +
-                '</div>' +
-                '<div class="inp-group" style="margin:0; width:120px;">' +
-                    '<input type="date" id="df-date" value="'+tdy+'" style="background:rgba(255,255,255,0.03); border-radius:14px; padding:14px; font-size:0.8rem; color:#fff; border:1px solid rgba(255,255,255,0.05); outline:none;">' +
-                '</div>' +
-            '</div>' +
-            
-            '<div style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); border-radius:14px; padding:16px; margin-bottom:20px; text-align:center;">' +
-                '<label style="display:flex; align-items:center; justify-content:center; gap:12px; cursor:pointer;">' +
-                    '<input type="checkbox" id="df-full" checked style="width:24px; height:24px; accent-color:#f59e0b;">' +
-                    '<span style="color:#f59e0b; font-weight:800; font-size:0.95rem; letter-spacing:1px;">ZATANKOWANO DO PEŁNA</span>' +
+            '<div style="display:flex; align-items:stretch; gap:10px; margin-bottom:15px;">' +
+                '<select id="df-type" style="flex:1; background:rgba(255,255,255,0.03); border-radius:10px; padding:10px; font-size:0.8rem; font-weight:600; color:#fff; border:1px solid rgba(255,255,255,0.05); outline:none;">' + fuelOptionsHtml + '</select>' +
+                '<label style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:rgba(245,158,11,0.1); padding:10px; border-radius:10px; border:1px solid rgba(245,158,11,0.3); cursor:pointer;">' +
+                    '<input type="checkbox" id="df-full" checked style="width:16px; height:16px; accent-color:#f59e0b; margin:0;">' +
+                    '<span style="color:#f59e0b; font-weight:800; font-size:0.7rem; white-space:nowrap;">DO PEŁNA</span>' +
                 '</label>' +
             '</div>' +
 
-            '<button class="btn" style="background:#f59e0b; color:#000; font-weight:900; font-size:1.05rem; letter-spacing:0.5px; padding:18px; border-radius:16px; border:none; box-shadow:0 8px 25px rgba(245,158,11,0.3); width:100%; outline:none;" onclick="if(typeof window.dAF===\'function\') window.dAF()">ZAPISZ TANKOWANIE</button>' +
+            '<button class="btn" style="background:#f59e0b; color:#000; font-weight:900; font-size:0.95rem; letter-spacing:0.5px; padding:14px; border-radius:12px; border:none; box-shadow:0 4px 15px rgba(245,158,11,0.3); width:100%; outline:none;" onclick="if(typeof window.dAF===\'function\') window.dAF()">ZAPISZ TANKOWANIE</button>' +
         '</div>';
     } else {
         let tdy = window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0];
-        html += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 30px rgba(0,0,0,0.6); margin:0 15px;">' +
-            '<div class="p-title" style="color:#0ea5e9; font-size:0.7rem; font-weight:800; letter-spacing:1px; margin-bottom:15px; text-align:center;">🔧 NOWY WYDATEK SERWISOWY</div>' +
+        html += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:15px; border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,0.5); margin:0 15px;">' +
+            '<div class="p-title" style="color:#0ea5e9; font-size:0.65rem; font-weight:800; letter-spacing:1px; margin-bottom:12px; text-align:center;">🔧 NOWY WYDATEK SERWISOWY</div>' +
             
-            '<div style="background:rgba(0,0,0,0.4); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:15px; margin-bottom:20px;">' +
-                '<div style="display:flex; justify-content:center; align-items:center; gap:8px;">' +
-                    '<input type="number" step="0.01" id="de-v" placeholder="0" style="color:#0ea5e9; border:none; background:transparent; font-size:3.5rem; font-weight:900; text-align:center; width:160px; padding:0; outline:none;">' +
-                    '<span style="font-size:1.5rem; font-weight:700; color:rgba(255,255,255,0.3); margin-top:15px;">zł</span>' +
-                '</div>' +
+            '<div style="display:flex; gap:10px; margin-bottom:10px;">' +
+                '<div class="inp-group" style="flex:2; margin:0;"><label style="font-size:0.6rem; color:#0ea5e9; margin-bottom:4px; font-weight:bold;">KOSZT (ZŁ)</label><input type="number" step="0.01" id="de-v" placeholder="0.00" style="background:rgba(0,0,0,0.3); border-radius:10px; padding:10px; font-size:1.4rem; font-weight:900; color:#0ea5e9; text-align:center; border:1px solid rgba(14,165,233,0.3); outline:none; width:100%; box-sizing:border-box;"></div>' +
+                '<div class="inp-group" style="flex:1.5; margin:0;"><label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Data</label><input type="date" id="de-date" value="'+tdy+'" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:14px 10px; font-size:0.8rem; color:#fff; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"></div>' +
             '</div>' +
             
-            '<div class="inp-row" style="margin-bottom:20px; gap:10px;">' +
-                '<div class="inp-group" style="margin:0; flex:1;">' +
-                    '<select id="de-c" style="background:rgba(255,255,255,0.03); border-radius:14px; padding:16px; font-size:0.85rem; font-weight:600; color:#fff; border:1px solid rgba(14,165,233,0.2); outline:none;">' +
-                        '<option>💦 Myjnia</option>' +
-                        '<option>🔧 Naprawa / Części</option>' +
-                        '<option>🚗 Płyn / Olej</option>' +
-                        '<option>🅿️ Parking</option>' +
-                        '<option>📋 Przegląd</option>' +
-                        '<option>💡 Inne wydatki</option>' +
-                    '</select>' +
-                '</div>' +
-                '<div class="inp-group" style="margin:0; width:120px;">' +
-                    '<input type="date" id="de-date" value="'+tdy+'" style="background:rgba(255,255,255,0.03); border-radius:14px; padding:16px; font-size:0.8rem; color:#fff; border:1px solid rgba(255,255,255,0.05); outline:none;">' +
-                '</div>' +
+            '<div class="inp-group" style="margin-bottom:15px; margin-top:0;">' +
+                '<label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Rodzaj wydatku</label>' +
+                '<select id="de-c" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:12px; font-size:0.85rem; font-weight:600; color:#fff; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%;">' +
+                    '<option>💦 Myjnia</option>' +
+                    '<option>🔧 Naprawa / Części</option>' +
+                    '<option>🚗 Płyn / Olej / Wycieraczki</option>' +
+                    '<option>🅿️ Parking / Autostrada</option>' +
+                    '<option>📋 Przegląd / Ubezpieczenie</option>' +
+                    '<option>💡 Inne koszty eksploatacyjne</option>' +
+                '</select>' +
             '</div>' +
-            '<button class="btn btn-info" style="background:#0ea5e9; color:#fff; font-weight:900; font-size:1.05rem; letter-spacing:0.5px; padding:18px; border-radius:16px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAE===\'function\') window.dAE()">ZAKSIĘGUJ WYDATEK</button>' +
+
+            '<button class="btn btn-info" style="background:#0ea5e9; color:#fff; font-weight:900; font-size:0.95rem; letter-spacing:0.5px; padding:14px; border-radius:12px; border:none; box-shadow:0 4px 15px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAE===\'function\') window.dAE()">ZAKSIĘGUJ WYDATEK</button>' +
         '</div>';
     }
 
