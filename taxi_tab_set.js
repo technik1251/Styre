@@ -19,6 +19,9 @@ window.toggleAccordion = function(id) {
 
 window.rDrvSet = function(d, t, nav, hdr) {
     try {
+        let appContainer = document.getElementById('app');
+        if(!appContainer) return;
+
         let goal = (d.cfg && d.cfg.goal) ? d.cfg.goal : 350;
         let city = (d.cfg && d.cfg.defCity) ? d.cfg.defCity : 'Szczecin';
         let fuelSource = (d.cfg && d.cfg.fuelSource) ? d.cfg.fuelSource : 'garage';
@@ -62,10 +65,26 @@ window.rDrvSet = function(d, t, nav, hdr) {
 
         let html = hdr + 
         '<div class="dash-hero" style="padding-bottom: 10px;">' +
-            '<p style="font-size:0.7rem; font-weight:bold; color:var(--muted); letter-spacing:1px; text-transform:uppercase;">KONFIGURACJA PROFILI</p>' +
-            '<h1 style="color:var(--info); font-size:2.8rem; letter-spacing:-1px; text-transform:uppercase; margin:0;">⚙️ OPCJE</h1>' +
+            '<div style="width:70px; height:70px; background:rgba(255, 255, 255, 0.05); border:1px solid rgba(255, 255, 255, 0.1); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2.2rem; box-shadow:0 8px 25px rgba(0,0,0,0.4);">⚙️</div>' +
+            '<h1 style="color:var(--info); font-size:2.4rem; letter-spacing:-1px; text-transform:uppercase; margin:0;">USTAWIENIA</h1>' +
+            '<p style="margin-top:5px; font-size:0.75rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">Konfiguracja Twojego Profilu</p>' +
         '</div>' +
         '<div style="padding:0 15px;">';
+
+        // --- ZAPOWIEDŹ PRO W USTAWIENIACH ---
+        let proBannerSettings = '<div class="pro-teaser-panel" style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Chmura i Profile PRO\', \'W wersji PRO Twoje dane będą bezpiecznie synchronizowane w chmurze! Dodatkowo będziesz mógł stworzyć kilka osobnych profili dla różnych samochodów lub flot. ☁️🚀\', \'info\')">' +
+            '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+            '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+            '<div style="display: flex; align-items: center; gap: 15px;">' +
+                '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">☁️✨</div>' +
+                '<div style="text-align: left;">' +
+                    '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Chmura i Multi-Profile</h4>' +
+                    '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Backup AI:</b> Dane bezpieczne na serwerze.<br>✅ <b>Wiele aut:</b> Osobne statystyki dla flot!</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        html += proBannerSettings;
 
         // 1. TARYFIKATOR
         html += '<div class="panel" style="padding:0; border-radius:16px; margin-bottom:12px; overflow:hidden; border:1px solid rgba(217, 70, 239, 0.3); background:linear-gradient(145deg, #1e0a2d, #09090b); box-shadow:0 6px 15px rgba(0,0,0,0.3);">' +
@@ -106,6 +125,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
         '</div>';
 
         // 3. PALIWO
+        let chk = (val) => fTypes.includes(val) ? 'checked' : '';
         html += '<div class="panel" style="padding:0; border-radius:16px; margin-bottom:12px; overflow:hidden; border:1px solid rgba(245,158,11,0.3); background:linear-gradient(145deg, #2a1600, #09090b); box-shadow:0 6px 15px rgba(0,0,0,0.3);">' +
             '<div onclick="window.toggleAccordion(\'acc-fuel\')" style="padding:15px 20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(245,158,11,0.05);">' +
                 '<strong style="color:var(--fuel); font-size:0.8rem; letter-spacing:1px; text-transform:uppercase;"><span style="font-size:1.2rem; margin-right:8px;">⛽</span> Koszty Paliwa</strong>' +
@@ -116,16 +136,16 @@ window.rDrvSet = function(d, t, nav, hdr) {
                     '<label style="'+lblStyle+' color:var(--fuel);">Jakimi paliwami zasilane jest auto?</label>' +
                     '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">' +
                         '<label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:40%; font-size:0.8rem;">' +
-                            '<input type="checkbox" id="cb-ftype-pb" value="pb" '+(fTypes.indexOf('pb')!==-1?'checked':'')+' onchange="if(typeof window.toggleManualFuelBoxes===\'function\') window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:16px; height:16px;"> Benzyna' +
+                            '<input type="checkbox" id="cb-ftype-pb" value="pb" '+chk('pb')+' onchange="if(typeof window.toggleManualFuelBoxes===\'function\') window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:16px; height:16px;"> Benzyna' +
                         '</label>' +
                         '<label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:40%; font-size:0.8rem;">' +
-                            '<input type="checkbox" id="cb-ftype-on" value="on" '+(fTypes.indexOf('on')!==-1?'checked':'')+' onchange="if(typeof window.toggleManualFuelBoxes===\'function\') window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:16px; height:16px;"> Diesel' +
+                            '<input type="checkbox" id="cb-ftype-on" value="on" '+chk('on')+' onchange="if(typeof window.toggleManualFuelBoxes===\'function\') window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:16px; height:16px;"> Diesel' +
                         '</label>' +
                         '<label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:40%; font-size:0.8rem;">' +
-                            '<input type="checkbox" id="cb-ftype-lpg" value="lpg" '+(fTypes.indexOf('lpg')!==-1?'checked':'')+' onchange="if(typeof window.toggleManualFuelBoxes===\'function\') window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:16px; height:16px;"> Gaz (LPG)' +
+                            '<input type="checkbox" id="cb-ftype-lpg" value="lpg" '+chk('lpg')+' onchange="if(typeof window.toggleManualFuelBoxes===\'function\') window.toggleManualFuelBoxes()" style="accent-color:var(--fuel); width:16px; height:16px;"> Gaz (LPG)' +
                         '</label>' +
                         '<label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.5); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; flex:1; min-width:40%; font-size:0.8rem;">' +
-                            '<input type="checkbox" id="cb-ftype-ev" value="ev" '+(fTypes.indexOf('ev')!==-1?'checked':'')+' onchange="if(typeof window.toggleManualFuelBoxes===\'function\') window.toggleManualFuelBoxes()" style="accent-color:var(--info); width:16px; height:16px;"> Prąd (EV)' +
+                            '<input type="checkbox" id="cb-ftype-ev" value="ev" '+chk('ev')+' onchange="if(typeof window.toggleManualFuelBoxes===\'function\') window.toggleManualFuelBoxes()" style="accent-color:var(--info); width:16px; height:16px;"> Prąd (EV)' +
                         '</label>' +
                     '</div>' +
                 '</div>' +
@@ -239,12 +259,12 @@ window.rDrvSet = function(d, t, nav, hdr) {
         '</div>';
 
         // 6. WSPARCIE (KUP KAWĘ) - Świecący, oddzielny panel
-        html += '<div class="panel" style="padding:25px 20px; border-radius:16px; margin-bottom:20px; text-align:center; border:1px solid rgba(255,221,0,0.3); background:linear-gradient(145deg, #1a1a00, #09090b); box-shadow:0 8px 25px rgba(255,221,0,0.15);">' +
-            '<div style="font-size:3rem; margin-bottom:10px; animation: pulse 2s infinite;">☕</div>' +
-            '<h3 style="color:#ffdd00; margin:0 0 10px 0; font-size:1.1rem; letter-spacing:1px; text-transform:uppercase;">Wesprzyj Projekt</h3>' +
-            '<p style="font-size:0.8rem; color:var(--muted); margin-bottom:20px; line-height:1.5;">Podoba Ci się StyreOS? Pomóż utrzymać serwery i rozwijać nowe funkcje. Każda wirtualna kawa przybliża nas do wydania wersji PRO!</p>' +
-            '<a href="https://buycoffee.to/styreos" target="_blank" style="background:linear-gradient(135deg, #ffdd00, #f59e0b); color:#000; font-weight:900; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:10px; padding:16px; border-radius:14px; box-shadow: 0 6px 20px rgba(255, 221, 0, 0.3); font-size:1rem; letter-spacing:1px;">' +
-                '<span style="font-size:1.4rem;">☕</span> POSTAW KAWĘ' +
+        html += '<div class="panel" style="padding:30px 20px; border-radius:24px; margin-bottom:20px; text-align:center; border:1px solid rgba(245,158,11,0.4); background:linear-gradient(145deg, #2a1505 0%, #090500 100%); box-shadow:0 15px 40px rgba(245,158,11,0.15); position:relative; overflow:hidden;">' +
+            '<div style="font-size:3.5rem; margin-bottom:10px; filter: drop-shadow(0 4px 15px rgba(245,158,11,0.6)); animation: pulse 2s infinite;">☕</div>' +
+            '<h3 style="color:#f59e0b; margin:0 0 10px 0; font-size:1.3rem; letter-spacing:1px; text-transform:uppercase; font-weight:900;">Postaw nam kawę!</h3>' +
+            '<p style="font-size:0.85rem; color:rgba(255,255,255,0.7); margin-bottom:25px; line-height:1.6; font-weight:600;">StyreOS to narzędzie tworzone z pasji, zupełnie za darmo. Jeśli pomaga Ci zarabiać więcej na Taxi, dorzuć się do serwerów i przyspiesz tworzenie wersji PRO!</p>' +
+            '<a href="https://buycoffee.to/styreos" target="_blank" style="background:linear-gradient(135deg, #ffdd00, #f59e0b); color:#000; font-weight:900; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:10px; padding:18px; border-radius:20px; box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4); font-size:1rem; letter-spacing:1px; text-transform:uppercase;">' +
+                '<span style="font-size:1.4rem;">☕</span> WESPRZYJ PROJEKT' +
             '</a>' +
         '</div>';
 
@@ -252,7 +272,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
 
         // Przycisk Zapisz zawsze widoczny na dole
         html += '<div style="padding:10px 15px; margin-top:10px; margin-bottom:10px;">' +
-            '<button class="btn btn-info" style="padding:18px; font-size:1.1rem; border-radius:16px; font-weight:900; letter-spacing:1px; box-shadow:0 8px 25px rgba(14,165,233,0.3);" onclick="if(typeof window.dSaveUS===\'function\') window.dSaveUS()">ZAPISZ WSZYSTKIE OPCJE</button>' +
+            '<button class="btn btn-info" style="padding:20px; font-size:1.1rem; border-radius:24px; font-weight:900; letter-spacing:1px; box-shadow:0 10px 30px rgba(14,165,233,0.3); width:100%; text-transform:uppercase;" onclick="if(typeof window.dSaveUS===\'function\') window.dSaveUS()">ZAPISZ WSZYSTKIE OPCJE</button>' +
         '</div>' +
         
         '<div style="text-align:center; padding: 20px 0; padding-bottom: 80px;">' +
