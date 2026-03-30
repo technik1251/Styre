@@ -163,12 +163,12 @@ window.rDrvPanel = function(d, t, nav, hdr) {
         
         let act = ''; 
 
-        // --- ZAPOWIEDŹ PRO DLA PANELU TAXI (Premium Style) ---
+        // --- ZAPOWIEDŹ PRO DLA PANELU TAXI (Zmieniona Ikona i Kompaktowy Styl) ---
         let panelProBanner = '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
             '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
             '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
             '<div style="display: flex; align-items: center; gap: 15px;">' +
-                '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🔮</div>' +
+                '<div style="font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(217,70,239,0.4));">🤖</div>' +
                 '<div style="text-align: left;">' +
                     '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Automatyzacja Premium</h4>' +
                     '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Auto-Import:</b> Zlecenia wpadają same.<br>✅ <b>Asystent Głosowy:</b> Notuj mówiąc!</div>' +
@@ -183,10 +183,11 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; }
             if(!window.dTPay) { window.dTPay = d.plat === 'apps' ? 'Aplikacja' : 'Gotówka'; }
             
-            let chipStyle = 'border-radius:12px; font-weight:700; padding:8px 16px; font-size:0.7rem; letter-spacing:0.5px; border:1px solid rgba(255,255,255,0.05); transition:all 0.2s;';
-            let chipActBlue = 'background:rgba(14,165,233,0.15); color:#0ea5e9; border-color:rgba(14,165,233,0.4); box-shadow:0 0 10px rgba(14,165,233,0.3);';
-            let chipActGreen = 'background:rgba(16,185,129,0.15); color:#10b981; border-color:rgba(16,185,129,0.4); box-shadow:0 0 10px rgba(16,185,129,0.3);';
-            let chipIdle = 'background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.4);';
+            // Nowe style Chipów (przewijane, apple style)
+            let chipStyle = 'flex: 0 0 auto; border-radius: 16px; font-weight: 800; padding: 10px 20px; font-size: 0.75rem; letter-spacing: 0.5px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s; cursor: pointer;';
+            let chipActBlue = 'background: rgba(14,165,233,0.15); color: #0ea5e9; border-color: rgba(14,165,233,0.4); box-shadow: 0 4px 15px rgba(14,165,233,0.2);';
+            let chipActGreen = 'background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.4); box-shadow: 0 4px 15px rgba(16,185,129,0.2);';
+            let chipIdle = 'background: rgba(255,255,255,0.02); color: rgba(255,255,255,0.5);';
             
             let ch1 = '';
             if(d.plat === 'apps') {
@@ -200,7 +201,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                       '<div class="chip '+(window.dTSrc==='Prywatny'?'active':'')+'" style="'+chipStyle+(window.dTSrc==='Prywatny'?chipActBlue:chipIdle)+'" onclick="window.dTC(\'s\',\'Prywatny\')">Prywatny</div>';
             }
             
-            let otherSrcHtml = (d.plat === 'apps' && window.dTSrc === 'Inna') ? '<div class="inp-group" style="margin-top:10px;"><input type="text" id="dt-other-src" placeholder="Nazwa aplikacji..." style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff; padding:12px; font-size:0.85rem; width:100%; box-sizing:border-box;" value="'+(window.dOtherSrc||'')+'" onchange="window.dOtherSrc=this.value"></div>' : '';
+            let otherSrcHtml = (d.plat === 'apps' && window.dTSrc === 'Inna') ? '<div class="inp-group" style="margin-top:10px;"><input type="text" id="dt-other-src" placeholder="Wpisz nazwę aplikacji..." style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:14px; color:#fff; padding:14px; font-size:0.85rem; width:100%; box-sizing:border-box;" value="'+(window.dOtherSrc||'')+'" onchange="window.dOtherSrc=this.value"></div>' : '';
             
             let ch2 = '';
             if(d.plat === 'apps') {
@@ -209,7 +210,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             } else {
                 ch2 = '<div class="chip '+(window.dTPay==='Gotówka'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Gotówka'?chipActGreen:chipIdle)+'" onclick="window.dTC(\'p\',\'Gotówka\')">Gotówka</div>' +
                       '<div class="chip '+(window.dTPay==='Karta'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Karta'?chipActBlue:chipIdle)+'" onclick="window.dTC(\'p\',\'Karta\')">Karta</div>' +
-                      '<div class="chip '+(window.dTPay==='Voucher'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Voucher'?'background:rgba(168,85,247,0.15);color:#a855f7;border-color:rgba(168,85,247,0.4);box-shadow:0 0 10px rgba(168,85,247,0.3);':chipIdle)+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
+                      '<div class="chip '+(window.dTPay==='Voucher'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Voucher'?'background:rgba(168,85,247,0.15);color:#a855f7;border-color:rgba(168,85,247,0.4);box-shadow:0 0 15px rgba(168,85,247,0.2);':chipIdle)+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
             }
 
             let clientOpts = '';
@@ -250,29 +251,11 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             let pFee = cfg.eType === 'pct' ? g * (cfg.ePct || 0) : 0;
             n = g - tax - pFee - dailyFix;
             
-            let stoperHtml = '<div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.1); padding: 8px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-size: 0.6rem; color: #3b82f6; text-transform:uppercase; font-weight:800; letter-spacing:1px;">🔒 Śledzenie GPS wkrótce</div>';
-            if(d.sh && d.sh.on) {
-                if(d.liveRideStart) {
-                    let isWaiting = d.sh.rWS !== null;
-                    stoperHtml += '<div class="panel" style="border-color:'+(isWaiting?'rgba(14,165,233,0.3)':'rgba(16,185,129,0.3)')+'; text-align:center; background:'+(isWaiting?'rgba(14,165,233,0.05)':'rgba(16,185,129,0.05)')+'; padding:12px; border-radius:16px; box-shadow:0 4px 15px rgba(0,0,0,0.2); margin-bottom:12px;">' +
-                        '<div style="font-size:1.6rem; margin-bottom:2px;">'+(isWaiting?'⏳':'🟢')+'</div>' +
-                        '<h3 style="color:'+(isWaiting?'#0ea5e9':'#10b981')+'; margin:0 0 8px 0; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">'+(isWaiting?'Oczekiwanie':'Kurs w toku!')+'</h3>' +
-                        '<div style="display:flex; gap:8px;">' +
-                            '<button class="btn" style="flex:1; padding:8px; font-size:0.75rem; border-radius:10px; font-weight:800; background:'+(isWaiting?'#10b981':'rgba(14,165,233,0.1)')+'; color:'+(isWaiting?'#000':'#0ea5e9')+'; border:none;" onclick="if(typeof window.toggleRideWait===\'function\') window.toggleRideWait()">'+(isWaiting?'▶ RUSZAMY':'⏳ POSTÓJ')+'</button>' +
-                            '<button class="btn" style="flex:2; padding:8px; border-radius:10px; font-size:0.75rem; font-weight:800; background:rgba(239,68,68,0.1); color:#ef4444; border:none;" onclick="if(typeof window.stopLiveRide===\'function\') window.stopLiveRide()">🔴 ZAKOŃCZ</button>' +
-                        '</div></div>';
-                } else {
-                    stoperHtml += '<div class="panel" style="border-color:rgba(16,185,129,0.15); background:rgba(16,185,129,0.05); text-align:center; padding:8px; border-radius:16px; margin-bottom:12px;">' +
-                        '<button class="btn" style="background:#10b981; color:#000; font-size:0.8rem; font-weight:800; letter-spacing:1px; padding:12px; border-radius:12px; border:none; box-shadow:0 4px 10px rgba(16,185,129,0.2);" onclick="if(typeof window.startLiveRide===\'function\') window.startLiveRide()">🟢 ROZPOCZNIJ KURS (STOPER)</button></div>';
-                }
-            }
-            
-            let diffHrs = 0, diffMins = 0, activeHrs = 0, etaHtml = '';
+            let diffHrs = 0, diffMins = 0, activeHrs = 0;
             let goal = cfg.goal || 350;
             let showGross = window.db.drv.panelMode === 'gross';
             let displayVal = showGross ? g : n;
             let displayLabel = showGross ? 'PRZYCHÓD BRUTTO' : 'ZYSK NETTO (SZACUNEK)';
-            let progressPct = displayVal > 0 ? Math.min((displayVal / goal) * 100, 100) : 0;
             
             if(d.sh && d.sh.shiftStart) {
                 let activeShiftMs = Date.now() - d.sh.shiftStart;
@@ -280,103 +263,101 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 diffHrs = Math.floor(activeShiftMs/3600000);
                 diffMins = Math.floor((activeShiftMs%3600000)/60000);
                 activeHrs = activeShiftMs/3600000;
-                
-                if(displayVal > 0 && activeHrs > 0 && displayVal < goal) {
-                    let rateHr = displayVal / activeHrs;
-                    let remaining = goal - displayVal;
-                    let etaHrs = remaining / rateHr;
-                    let etaH = Math.floor(etaHrs);
-                    let etaM = Math.round((etaHrs - etaH) * 60);
-                    etaHtml = 'Do celu: <strong>~'+etaH+'h '+etaM+'m</strong> ('+Number(rateHr).toFixed(0)+' zł/h)';
-                } else if(displayVal >= goal) {
-                    etaHtml = '<span style="color:#10b981; font-weight:800;">🎉 Cel osiągnięty!</span>';
-                } else {
-                    etaHtml = 'Szacowanie... Czekam na zarobek.';
-                }
-            }
-            
-            let breakdownHtml = '';
-            if(d.sh && d.sh.on) {
-                if(d.plat === 'apps') {
-                    breakdownHtml = '<div style="display:flex; justify-content:space-between; gap:6px; margin-top:10px; padding:0 5px;">' +
-                        '<div style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px; text-align:center;"><span style="font-size:0.55rem; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:700;">Gotówka</span><br><strong style="color:#10b981; font-size:1rem; display:block; margin-top:2px;">'+Number(sumCash).toFixed(2)+'</strong></div>' +
-                        '<div style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px; text-align:center;"><span style="font-size:0.55rem; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:700;">Uber</span><br><strong style="color:#fff; font-size:1rem; display:block; margin-top:2px;">'+Number(sumUber).toFixed(2)+'</strong></div>' +
-                        '<div style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px; text-align:center;"><span style="font-size:0.55rem; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:700;">Bolt</span><br><strong style="color:#fff; font-size:1rem; display:block; margin-top:2px;">'+Number(sumBolt).toFixed(2)+'</strong></div>' +
-                    '</div>';
-                } else {
-                    breakdownHtml = '<div style="display:flex; justify-content:space-between; gap:6px; margin-top:10px; padding:0 5px;">' +
-                        '<div style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px; text-align:center;"><span style="font-size:0.55rem; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:700;">Gotówka</span><br><strong style="color:#10b981; font-size:1rem; display:block; margin-top:2px;">'+Number(sumCash).toFixed(2)+'</strong></div>' +
-                        '<div style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px; text-align:center;"><span style="font-size:0.55rem; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:700;">Karta</span><br><strong style="color:#0ea5e9; font-size:1rem; display:block; margin-top:2px;">'+Number(sumCard).toFixed(2)+'</strong></div>' +
-                        '<div style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px; text-align:center;"><span style="font-size:0.55rem; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:700;">Voucher</span><br><strong style="color:#a855f7; font-size:1rem; display:block; margin-top:2px;">'+Number(sumVouch).toFixed(2)+'</strong></div>' +
-                    '</div>';
-                }
             }
 
+            // --- NOWY DESIGN HERO CARD (TRWAJĄCA ZMIANA) ---
             if (d.sh && d.sh.on) {
-                act += '<div class="dash-hero" style="padding-bottom:10px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:12px;">' +
-                    '<p style="font-size:0.55rem; font-weight:800; color:rgba(255,255,255,0.3); letter-spacing:1px; text-transform:uppercase; margin-bottom:2px;">'+displayLabel+'</p>' +
-                    '<h1 style="font-size:2.6rem; color:'+(displayVal>=0?'#10b981':'#ef4444')+'; font-weight:900; letter-spacing:-1.5px; margin:0;">'+Number(displayVal||0).toFixed(2)+' zł</h1>' +
-                    '<div style="display:flex; justify-content:center; gap:8px; margin-top:10px; margin-bottom:10px;">' +
-                        '<button class="chip '+(!showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.65rem; border-radius:16px; font-weight:700; background:'+(!showGross?'rgba(255,255,255,0.08)':'transparent')+'; border:1px solid rgba(255,255,255,0.08); color:'+(!showGross?'#fff':'rgba(255,255,255,0.4)')+';" onclick="window.db.drv.panelMode=\'net\';window.render()">Zysk Netto</button>' +
-                        '<button class="chip '+(showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.65rem; border-radius:16px; font-weight:700; background:'+(showGross?'rgba(255,255,255,0.08)':'transparent')+'; border:1px solid rgba(255,255,255,0.08); color:'+(showGross?'#fff':'rgba(255,255,255,0.4)')+';" onclick="window.db.drv.panelMode=\'gross\';window.render()">Przychód Brutto</button>' +
-                    '</div>' +
-                    '<div style="margin-top: 8px; padding: 0 10px;">' +
-                        '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:rgba(255,255,255,0.4); margin-bottom:4px; font-weight:700;"><span>Cel: '+goal+' zł</span><span style="color:'+(progressPct>=100?'#10b981':'#fff')+';">'+Number(progressPct||0).toFixed(0)+'%</span></div>' +
-                        '<div style="width:100%; background:rgba(0,0,0,0.4); height:6px; border-radius:3px; overflow:hidden; border:1px inset rgba(255,255,255,0.05);"><div style="width:'+progressPct+'%; background:'+(progressPct>=100?'#10b981':'rgba(255,255,255,0.7)')+'; height:100%; transition:width 0.6s; border-radius:3px;"></div></div>' +
-                        '<div style="font-size:0.6rem; color:rgba(255,255,255,0.3); text-align:center; margin-top:6px;">'+etaHtml+'</div>' +
-                    '</div>' +
-                    breakdownHtml +
-                    '<div style="display:flex; justify-content:center; gap:8px; margin-top:15px; padding:0 5px;">' +
-                        '<div style="flex:1; background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.05); padding:10px; border-radius:12px; display:flex; flex-direction:column; justify-content:center;">' +
-                            '<span style="font-size:0.5rem; color:rgba(255,255,255,0.3); text-transform:uppercase; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">Czas aktywności:</span>' +
-                            '<strong style="color:#0ea5e9; font-size:1rem;">'+diffHrs+'h '+diffMins+'m</strong>' +
+                act += '<div style="background: linear-gradient(145deg, #13131a, #0a0a0f); border: 1px solid rgba(255,255,255,0.05); border-radius: 24px; padding: 25px 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); margin-bottom: 20px; position: relative; overflow: hidden;">' +
+                    
+                    // Header (Status & Czas)
+                    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">' +
+                        '<div style="display:flex; align-items:center; gap: 8px;">' +
+                            '<div style="width: 10px; height: 10px; border-radius: 50%; background: '+(d.sh.sPS ? '#f59e0b' : '#10b981')+'; box-shadow: 0 0 10px '+(d.sh.sPS ? 'rgba(245,158,11,0.5)' : 'rgba(16,185,129,0.5)')+';"></div>' +
+                            '<span style="font-size: 0.7rem; font-weight: 800; color: #a1a1aa; text-transform: uppercase; letter-spacing: 1px;">'+(d.sh.sPS ? 'Pauza' : 'Zalogowany')+'</span>' +
                         '</div>' +
-                        '<div style="flex:1; display:flex; flex-direction:column; gap:6px;">' +
-                            '<button style="flex:1; border-radius:12px; font-size:0.7rem; font-weight:800; background:'+(d.sh.sPS?'#10b981':'rgba(255,255,255,0.05)')+'; color:'+(d.sh.sPS?'#000':'#fff')+'; border:1px solid '+(d.sh.sPS?'#10b981':'rgba(255,255,255,0.08)')+'; outline:none;" onclick="if(typeof window.toggleShiftPause===\'function\') window.toggleShiftPause()">'+(d.sh.sPS?'▶ WZNÓW':'☕ PRZERWA')+'</button>' +
-                            '<button style="flex:1; border-radius:12px; font-size:0.7rem; font-weight:800; background:rgba(239,68,68,0.1); color:#ef4444; border:none; outline:none;" onclick="if(typeof window.openEndShiftModal===\'function\') window.openEndShiftModal()">🔴 ZAKOŃCZ ZMIANĘ</button>' +
-                        '</div>' +
+                        '<div style="font-size: 0.85rem; font-weight: 800; color: #0ea5e9; background: rgba(14,165,233,0.1); padding: 6px 12px; border-radius: 12px; border: 1px solid rgba(14,165,233,0.2);">⏱️ '+diffHrs+'h '+diffMins+'m</div>' +
                     '</div>' +
-                '</div>';
+                    
+                    // Główny licznik (Toggle Netto/Brutto)
+                    '<div style="text-align: center; margin-bottom: 25px; cursor:pointer;" onclick="window.db.drv.panelMode = window.db.drv.panelMode === \'gross\' ? \'net\' : \'gross\'; window.render()">' +
+                        '<div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px; display:flex; justify-content:center; align-items:center; gap:6px;">' +
+                            displayLabel + ' <span style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:6px; font-size:0.55rem;">🔁</span>' +
+                        '</div>' +
+                        '<div style="font-size: 3.5rem; font-weight: 900; color: '+(displayVal>=0?'#10b981':'#ef4444')+'; letter-spacing: -2px; line-height: 1; text-shadow: 0 0 20px '+(displayVal>=0?'rgba(16,185,129,0.3)':'rgba(239,68,68,0.3)')+';">' + Number(displayVal||0).toFixed(2) + ' zł</div>' +
+                    '</div>';
                 
-                if (d.sh.sPS) {
-                    act += '<div class="panel" style="border-color:rgba(245,158,11,0.25); text-align:center; padding:20px 10px; margin-top:10px; border-radius:16px; background:rgba(245,158,11,0.05);"><div style="font-size:2rem; margin-bottom:10px; animation: pulse 2s infinite;">☕</div><h2 style="color:#f59e0b; margin:0 0 10px 0; font-size:1rem;">AKTYWNOŚĆ WSTRZYMANA</h2><button class="btn" style="background:#10b981; color:#000; font-weight:800; padding:12px; border-radius:12px; border:none; font-size:0.9rem;" onclick="if(typeof window.toggleShiftPause===\'function\') window.toggleShiftPause()">▶ WZNÓW PRACĘ</button></div>';
+                // Pigułki z rozbiciem (Kompaktowe)
+                if(d.plat === 'apps') {
+                    act += '<div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 25px;">' +
+                        '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #10b981;">💵 '+Number(sumCash).toFixed(2)+'</div>' +
+                        '<div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #fff;">Uber: '+Number(sumUber).toFixed(2)+'</div>' +
+                        '<div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #fff;">Bolt: '+Number(sumBolt).toFixed(2)+'</div>' +
+                    '</div>';
                 } else {
-                    act += stoperHtml;
+                    act += '<div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 25px;">' +
+                        '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #10b981;">💵 '+Number(sumCash).toFixed(2)+'</div>' +
+                        '<div style="background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #0ea5e9;">💳 '+Number(sumCard).toFixed(2)+'</div>' +
+                        '<div style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #a855f7;">🎫 '+Number(sumVouch).toFixed(2)+'</div>' +
+                    '</div>';
+                }
+
+                // Przyciski iOS Style
+                act += '<div style="display: flex; gap: 12px;">' +
+                    '<button style="flex: 1; background: '+(d.sh.sPS ? '#10b981' : 'rgba(255,255,255,0.05)')+'; color: '+(d.sh.sPS ? '#000' : '#fff')+'; border: 1px solid '+(d.sh.sPS ? '#10b981' : 'rgba(255,255,255,0.1)')+'; padding: 16px; border-radius: 18px; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; box-shadow: '+(d.sh.sPS ? '0 4px 15px rgba(16,185,129,0.3)' : 'none')+'; outline:none;" onclick="if(typeof window.toggleShiftPause===\'function\') window.toggleShiftPause()">' +
+                        (d.sh.sPS ? '▶ WZNÓW PRACĘ' : '☕ PRZERWA') +
+                    '</button>' +
+                    '<button style="flex: 1; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); padding: 16px; border-radius: 18px; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; outline:none;" onclick="if(typeof window.openEndShiftModal===\'function\') window.openEndShiftModal()">' +
+                        '🔴 ZAKOŃCZ' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+                
+                // STOPER GPS / LIVE RIDE
+                if(d.liveRideStart) {
+                    let isWaiting = d.sh.rWS !== null;
+                    act += '<div style="background: '+(isWaiting?'rgba(14,165,233,0.05)':'rgba(16,185,129,0.05)')+'; border: 1px solid '+(isWaiting?'rgba(14,165,233,0.3)':'rgba(16,185,129,0.3)')+'; padding: 15px; border-radius: 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">' +
+                        '<div style="font-size:1.8rem; margin-bottom:5px;">'+(isWaiting?'⏳':'🟢')+'</div>' +
+                        '<h3 style="color:'+(isWaiting?'#0ea5e9':'#10b981')+'; margin:0 0 12px 0; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px;">'+(isWaiting?'Oczekiwanie...':'Kurs w toku!')+'</h3>' +
+                        '<div style="display:flex; gap:10px;">' +
+                            '<button style="flex:1; padding:12px; font-size:0.85rem; border-radius:14px; font-weight:800; background:'+(isWaiting?'#10b981':'rgba(14,165,233,0.1)')+'; color:'+(isWaiting?'#000':'#0ea5e9')+'; border:none; outline:none;" onclick="if(typeof window.toggleRideWait===\'function\') window.toggleRideWait()">'+(isWaiting?'▶ RUSZAMY':'⏳ POSTÓJ')+'</button>' +
+                            '<button style="flex:2; padding:12px; border-radius:14px; font-size:0.85rem; font-weight:800; background:rgba(239,68,68,0.15); color:#ef4444; border:none; outline:none;" onclick="if(typeof window.stopLiveRide===\'function\') window.stopLiveRide()">🔴 ZAKOŃCZ KURS</button>' +
+                        '</div></div>';
+                } else {
+                    act += '<button style="width:100%; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-size:1rem; font-weight:900; letter-spacing:1px; padding:18px; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(16,185,129,0.3); margin-bottom:20px; outline:none;" onclick="if(typeof window.startLiveRide===\'function\') window.startLiveRide()">🟢 ROZPOCZNIJ KURS (STOPER)</button>';
                 }
                 
-                act += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 30px rgba(0,0,0,0.5); margin-bottom:20px;">' +
-                    '<div style="text-align:center; margin-bottom:15px;">' +
-                        '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">REJESTR POJEDYNCZEGO KURSU</span>' +
+                // ODNOWIONY REJESTR POJEDYNCZYCH KURSÓW (Premium Style)
+                act += '<div style="background: #111116; border: 1px solid #2a2a35; border-radius: 24px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px;">' +
+                    '<div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; text-align: center;">Dodaj pojedynczy kurs</div>' +
+                    
+                    '<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 5px;">' +
+                        ch1 +
+                    '</div>' +
+                    otherSrcHtml +
+                    '<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px;">' +
+                        ch2 +
                     '</div>' +
                     
-                    '<div style="margin-bottom:15px;">' +
-                        '<div class="chip-box" style="margin-bottom:10px; justify-content:center; gap:8px;">'+ch1+'</div>' +
-                        otherSrcHtml +
-                        '<div class="chip-box" style="margin-bottom:0; justify-content:center; gap:8px; margin-top:10px;">'+ch2+'</div>' +
-                    '</div>' +
-                    
-                    // --- ZMIENIONY, LEDOWY INPUT DLA KWOTY ---
-                    '<div style="background:#111116; border:1px solid #2a2a35; border-radius:20px; padding:20px; margin-bottom:15px; box-shadow:inset 0 4px 20px rgba(0,0,0,0.5); text-align:center;">' +
-                        '<div style="display:flex; justify-content:center; align-items:center; gap:8px;">' +
-                            '<input type="number" id="dt-v" placeholder="0.00" style="color:#10b981; border:none; background:transparent; font-size:3.5rem; font-weight:900; text-align:center; width:160px; padding:0; outline:none; text-shadow:0 0 15px rgba(16,185,129,0.3); font-family:monospace; letter-spacing:1px;">' +
-                            '<span style="font-size:1.4rem; font-weight:700; color:rgba(255,255,255,0.3); margin-top:12px;">zł</span>' +
-                        '</div>' +
+                    // LEDowy input dla kwoty
+                    '<div style="background: #000; border: 1px inset rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">' +
+                        '<input type="number" id="dt-v" placeholder="0.00" style="color: #0ea5e9; border: none; background: transparent; font-size: 3rem; font-weight: 900; text-align: center; width: 160px; outline: none; font-family: monospace; text-shadow: 0 0 15px rgba(14,165,233,0.3);">' +
+                        '<span style="font-size: 1.4rem; font-weight: 700; color: rgba(255,255,255,0.3); margin-top: 10px; margin-left: 5px;">zł</span>' +
                     '</div>' +
                     
                     '<div class="inp-row" style="margin-bottom:15px; gap:10px;">' +
-                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-m" placeholder="Czas (min)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.9rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-k" placeholder="Dystans (km)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.9rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-m" placeholder="Czas (min)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.95rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-k" placeholder="Dystans (km)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.95rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
                     '</div>' +
                     
                     '<div class="inp-group" style="margin-bottom:15px;">' +
-                        '<select id="dt-cid" style="background:rgba(0,0,0,0.3); border-radius:14px; padding:14px; font-size:0.8rem; color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select>' +
+                        '<select id="dt-cid" style="background:rgba(0,0,0,0.3); border-radius:14px; padding:16px; font-size:0.85rem; color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.08); outline:none; width:100%; box-sizing:border-box;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select>' +
                     '</div>' +
                     
-                    '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; padding:18px; border-radius:20px; font-weight:900; font-size:1.05rem; letter-spacing:1px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.35); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ KURS DO ZMIANY</button>' +
+                    '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; padding:18px; border-radius:16px; font-weight:900; font-size:1.05rem; letter-spacing:1px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.35); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ KURS DO ZMIANY</button>' +
                 '</div>';
                 
-                act += '<div class="panel" style="padding:15px; border-radius:24px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b);">' +
-                    '<div style="font-size:0.7rem; margin-bottom:15px; color:rgba(255,255,255,0.4); font-weight:800; letter-spacing:1px; text-align:center;">DZIENNIK BIEŻĄCEJ ZMIANY</div>';
+                // Dziennik Zmiany
+                act += '<div style="margin: 30px 5px 15px 5px; text-align: center;"><span style="font-size:0.7rem; color:rgba(255,255,255,0.4); font-weight:800; letter-spacing:1px; text-transform:uppercase;">DZIENNIK ZAROBKÓW</span></div>';
                     
                 let trsList = d.sh.tr || [];
                 if(trsList.length > 0) {
@@ -387,27 +368,26 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         else if(x.p==='Karta') { icon='💳'; color='#0ea5e9'; bg='rgba(14,165,233,0.05)'; }
                         else if(x.p==='Voucher') { icon='🎫'; color='#a855f7'; bg='rgba(168,85,247,0.05)'; }
                         
-                        act += '<div class="log-item" style="border:none; padding:12px; margin-bottom:8px; background:'+bg+'; border-radius:16px; border-left:3px solid '+color+';">' +
-                            '<div style="display:flex; align-items:center; gap:12px; flex:1;">' +
-                                '<div style="font-size:1.3rem; width:40px; height:40px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:12px; display:flex; align-items:center; justify-content:center;">'+icon+'</div>' +
+                        act += '<div class="log-item" style="border:none; padding:15px; margin-bottom:10px; background:'+bg+'; border-radius:16px; border-left:3px solid '+color+';">' +
+                            '<div style="display:flex; align-items:center; gap:15px; flex:1;">' +
+                                '<div style="font-size:1.5rem; width:45px; height:45px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:12px; display:flex; align-items:center; justify-content:center;">'+icon+'</div>' +
                                 '<div style="flex:1;">' +
-                                    '<strong style="font-size:1.05rem; color:#fff; display:block; margin-bottom:2px; font-weight:700;">'+Number(x.v||0).toFixed(2)+' zł</strong>' +
-                                    '<div style="display:flex; gap:6px; font-size:0.65rem; color:rgba(255,255,255,0.5); align-items:center; font-weight:600;">' +
+                                    '<strong style="font-size:1.1rem; color:#fff; display:block; margin-bottom:4px; font-weight:800;">'+Number(x.v||0).toFixed(2)+' zł</strong>' +
+                                    '<div style="display:flex; gap:6px; font-size:0.7rem; color:rgba(255,255,255,0.5); align-items:center; font-weight:600;">' +
                                         '<span>'+(x.time||'--:--')+'</span><span style="opacity:0.3">•</span><span style="color:'+color+';">'+x.p+'</span><span style="opacity:0.3">•</span><span>'+x.s+'</span>' +
                                         (x.k>0 ? '<span style="opacity:0.3">•</span><span>'+Number(x.k).toFixed(1)+' km</span>' : '') +
                                     '</div>' +
                                 '</div>' +
                             '</div>' +
-                            '<div style="display:flex; flex-direction:column; gap:6px;">' +
-                                '<button style="background:rgba(255,255,255,0.05); color:#fff; border:none; border-radius:10px; padding:6px 10px; cursor:pointer; font-size:0.7rem; outline:none;" onclick="if(typeof window.dEditT===\'function\') window.dEditT('+x.id+')">✏️</button>' +
-                                '<button style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; border-radius:10px; padding:6px 10px; cursor:pointer; font-size:0.7rem; outline:none;" onclick="if(typeof window.dDelT===\'function\') window.dDelT('+x.id+')">🗑️</button>' +
+                            '<div style="display:flex; flex-direction:column; gap:8px;">' +
+                                '<button style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px 12px; cursor:pointer; font-size:0.75rem; outline:none;" onclick="if(typeof window.dEditT===\'function\') window.dEditT('+x.id+')">✏️</button>' +
+                                '<button style="background:rgba(239,68,68,0.15); color:#ef4444; border:none; border-radius:10px; padding:8px 12px; cursor:pointer; font-size:0.75rem; outline:none;" onclick="if(typeof window.dDelT===\'function\') window.dDelT('+x.id+')">🗑️</button>' +
                             '</div>' +
                         '</div>';
                     }
                 } else {
-                    act += '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:20px 0;font-size:0.8rem; background:rgba(0,0,0,0.2); border-radius:16px; border:1px dashed rgba(255,255,255,0.05);">Brak zarejestrowanych kursów.</div>';
+                    act += '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:30px 0;font-size:0.85rem; background:rgba(0,0,0,0.2); border-radius:20px; border:1px dashed rgba(255,255,255,0.05); font-weight:600;">Brak zarejestrowanych kursów na tej zmianie.</div>';
                 }
-                act += '</div>';
             } else {
                 // --- EKRAN STARTOWY PREMIUM ---
                 act = '<div class="dash-hero" style="padding-top:30px; padding-bottom:20px;">' +
@@ -654,18 +634,32 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 transferButtonHtml = '<button class="btn" style="margin-top:15px; width:calc(100% - 30px); margin-left:auto; margin-right:auto; font-weight:700; background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.05); padding:14px; border-radius:14px; outline:none;" disabled><span style="font-size:1rem; margin-right:8px;">✅</span> GOTÓWKA ROZLICZONA<br><small style="font-weight:600; font-size:0.65rem; display:block; margin-top:2px;">W domu: '+Number(totalTransferred).toFixed(2)+' zł</small></button>';
             }
 
-            // --- ZAPOWIEDŹ PRO DLA STATYSTYK (Premium Style) ---
-            let proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀\', \'info\')">' +
-                '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
-                '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
-                '<div style="display: flex; align-items: center; gap: 15px;">' +
-                    '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🔮</div>' +
-                    '<div style="text-align: left;">' +
-                        '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Centrum Funkcji PRO</h4>' +
-                        '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Wyceny AI:</b> Nakładka na ekran.<br>✅ <b>Integracja e-Kasy:</b> Pełen automat!</div>' +
+            let proBannerHtml = '';
+            if (d.plat === 'apps') {
+                proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀\', \'info\')">' +
+                    '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+                    '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+                    '<div style="display: flex; align-items: center; gap: 15px;">' +
+                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🤖</div>' +
+                        '<div style="text-align: left;">' +
+                            '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Centrum Funkcji PRO</h4>' +
+                            '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Wyceny AI:</b> Nakładka na ekran.<br>✅ <b>Integracja e-Kasy:</b> Pełen automat!</div>' +
+                        '</div>' +
                     '</div>' +
-                '</div>' +
-            '</div>';
+                '</div>';
+            } else {
+                proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀\', \'info\')">' +
+                    '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+                    '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+                    '<div style="display: flex; align-items: center; gap: 15px;">' +
+                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">📡</div>' +
+                        '<div style="text-align: left;">' +
+                            '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Centrum Funkcji PRO</h4>' +
+                            '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Integracja e-Kasy:</b> Automatyczne zaciąganie kursów (API).</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }
 
             // =========================================================
             // BUDOWA AKORDEONÓW SZCZEGÓŁOWYCH P&L (Transparentność)
