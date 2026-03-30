@@ -98,14 +98,11 @@ window.rDrvTools = function(d, t, nav, hdr) {
                 }
             }
 
-            // --- ZAPOWIEDŹ PRO DLA TAKSOMETRU (Teraz poza ukrytym div'em mapy!) ---
-            let proTaksometr = '<div class="pro-teaser-panel" style="margin-bottom:20px;">' +
-                '<div class="pro-badge-mini">PRO</div>' +
-                '<h4 style="color:#d946ef; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
-                '<ul class="pro-list-mini">' +
-                    '<li>✅ <b>Inteligentny Asystent:</b> Pływająca nakładka opłacalności podczas akceptowania kursu.</li>' +
-                    '<li>✅ <b>AI Map Insights:</b> Podgląd ukrytych stref wysokiego popytu na mapie.</li>' +
-                '</ul>' +
+            // --- NOWY, KLIKALNY BANER PRO DLA TAKSOMETRU ---
+            let taksometrProBanner = '<div style="margin: 15px; padding: 15px; background: linear-gradient(135deg, rgba(217, 70, 239, 0.1), rgba(192, 38, 211, 0.05)); border: 1px solid rgba(217, 70, 239, 0.2); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Mapa AI i Import Tras (PRO)\', \'W wersji PRO zyskasz dostęp do mapy z ukrytymi strefami wysokiego popytu (predykcja AI) oraz możliwości automatycznego zaciągania danych o kursach prosto z Uber i Bolt! 🗺️🚀\', \'info\')">' +
+                '<div style="font-size: 1.6rem; margin-bottom: 4px;">🗺️</div>' +
+                '<strong style="color: #d946ef; font-size: 0.8rem; display: block; text-transform: uppercase; letter-spacing:1px; font-weight:800;">Mapa AI & Import Tras</strong>' +
+                '<span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); margin-top: 4px; display: block; line-height:1.4;">Zwiększ zyski i oszczędź czas - tylko w wersji PRO! Kliknij po info.</span>' +
             '</div>';
             
             act = '<div class="dash-hero" style="padding-bottom:15px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:20px;">' +
@@ -115,9 +112,6 @@ window.rDrvTools = function(d, t, nav, hdr) {
             '</div>' +
             
             '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 40px rgba(0,0,0,0.6); margin:0 15px;">' +
-                
-                proTaksometr + // WSTRZYKNIĘCIE ZAPOWIEDZI PRO BEZPOŚREDNIO W WIDOCZNYM FORMULARZU
-                
                 '<div class="inp-group" style="margin-bottom:15px;">' +
                     '<label style="color:#10b981; font-size:0.65rem; font-weight:800; letter-spacing:1px; margin-bottom:6px; display:block;">🟢 ADRES POCZĄTKOWY</label>' +
                     '<input type="text" id="dq-start" placeholder="np. Dworzec Główny" style="border:1px solid rgba(16,185,129,0.2); background:rgba(16,185,129,0.05); padding:16px; border-radius:14px; font-size:0.9rem; color:#fff; outline:none; width:100%; box-sizing:border-box;">' +
@@ -165,7 +159,8 @@ window.rDrvTools = function(d, t, nav, hdr) {
                     
                     '<button class="btn" style="background:#d946ef; color:#fff; font-size:1.05rem; font-weight:900; padding:18px; border-radius:16px; border:none; box-shadow:0 8px 25px rgba(217,70,239,0.4); width:100%;" onclick="if(typeof window.saveQuoteToPanel===\'function\') window.saveQuoteToPanel()">ZAKSIĘGUJ DO PANELU</button>' +
                 '</div>' +
-            '</div>';
+            '</div>' +
+            taksometrProBanner; // Dodanie banera na samym dole Taksometru
         }
 
         if (t === 'garage') {
@@ -189,7 +184,7 @@ window.rDrvTools = function(d, t, nav, hdr) {
     }
 };
 
-// --- RENDER GARAŻU Z ZAPOWIEDZIĄ PRO ---
+// --- RENDER GARAŻU ---
 window.hRenderGarage = function(d) {
     let mode = window.dGarMode || 'f';
     let sourceAlert = '';
@@ -225,16 +220,6 @@ window.hRenderGarage = function(d) {
         if (t === 'ev') fuelOptionsHtml += '<option value="ev">⚡ Prąd (EV)</option>';
     }
 
-    // --- ZAPOWIEDŹ PRO DLA GARAŻU (BĘDZIE W OBU ZAKŁADKACH!) ---
-    let proGarage = '<div class="pro-teaser-panel" style="border-color: rgba(14, 165, 233, 0.2); margin-bottom: 20px;">' +
-        '<div class="pro-badge-mini" style="background:#0ea5e9;">PRO</div>' +
-        '<h4 style="color:#0ea5e9; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
-        '<ul class="pro-list-mini">' +
-            '<li>✅ <b>Skaner Paragonów:</b> Dodawaj koszty robiąc zdjęcie (AI OCR).</li>' +
-            '<li>✅ <b>Raporty PDF:</b> Generuj gotowe zestawienia dla księgowości.</li>' +
-        '</ul>' +
-    '</div>';
-
     let html = '<div style="padding:0 0px;">' +
         sourceAlert +
         '<div class="grid-2" style="margin-bottom:15px; gap:12px; padding:0 15px;">' +
@@ -258,8 +243,6 @@ window.hRenderGarage = function(d) {
         html += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:15px; border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,0.5); margin:0 15px;">' +
             '<div class="p-title" style="color:#f59e0b; font-size:0.65rem; font-weight:800; letter-spacing:1px; margin-bottom:12px; text-align:center;">⛽ NOWE TANKOWANIE</div>' +
             
-            proGarage + // WSTRZYKNIĘCIE ZAPOWIEDZI PRO DO TANKOWAŃ
-
             '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">' +
                 '<div class="inp-group" style="margin:0;"><label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Licznik (KM)</label><input type="number" id="df-o" value="'+(d.odo||0)+'" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:12px; font-size:1rem; font-weight:700; color:#fff; text-align:center; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"></div>' +
                 '<div class="inp-group" style="margin:0;"><label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Ilość (L / kWh)</label><input type="number" step="0.1" id="df-l" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:12px; font-size:1rem; font-weight:700; color:#fff; text-align:center; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"></div>' +
@@ -284,8 +267,6 @@ window.hRenderGarage = function(d) {
         let tdy = window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0];
         html += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:15px; border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,0.5); margin:0 15px;">' +
             '<div class="p-title" style="color:#0ea5e9; font-size:0.65rem; font-weight:800; letter-spacing:1px; margin-bottom:12px; text-align:center;">🔧 NOWY WYDATEK SERWISOWY</div>' +
-            
-            proGarage + // WSTRZYKNIĘCIE ZAPOWIEDZI PRO DO SERWISU
 
             '<div style="display:flex; gap:10px; margin-bottom:10px;">' +
                 '<div class="inp-group" style="flex:2; margin:0;"><label style="font-size:0.6rem; color:#0ea5e9; margin-bottom:4px; font-weight:bold;">KOSZT (ZŁ)</label><input type="number" step="0.01" id="de-v" placeholder="0.00" style="background:rgba(0,0,0,0.3); border-radius:10px; padding:10px; font-size:1.4rem; font-weight:900; color:#0ea5e9; text-align:center; border:1px solid rgba(14,165,233,0.3); outline:none; width:100%; box-sizing:border-box;"></div>' +
@@ -313,7 +294,6 @@ window.hRenderGarage = function(d) {
         '</div>';
     }
 
-    // Literówka "in" poprawiona na "w"
     html += '<div style="margin:30px 15px 15px; text-align:center;"><span style="font-size:0.7rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">HISTORIA WYDATKÓW Z GARAŻU</span></div><div style="padding: 0 15px;">';
     
     let expl = d.exp || [];
@@ -372,5 +352,16 @@ window.hRenderGarage = function(d) {
         }
     }
     
+    html += '</div>'; // Koniec sekcji z paddingiem dla historii
+
+    // --- NOWY, KLIKALNY BANER PRO DLA GARAŻU NA SAMYM DOLE ---
+    let garageProBanner = '<div style="margin: 15px; padding: 15px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(2, 132, 199, 0.05)); border: 1px solid rgba(14, 165, 233, 0.2); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Skaner Paragonów i PDF (PRO)\', \'Koniec z ręcznym przepisywaniem! W wersji PRO zrobisz zdjęcie paragonu za paliwo lub myjnię, a AI samo uzupełni kwoty. Dodatkowo wygenerujesz eleganckie raporty PDF dla księgowego. 📸📄\', \'info\')">' +
+        '<div style="font-size: 1.6rem; margin-bottom: 4px;">📸</div>' +
+        '<strong style="color: #0ea5e9; font-size: 0.8rem; display: block; text-transform: uppercase; letter-spacing:1px; font-weight:800;">Skaner OCR & Raporty PDF</strong>' +
+        '<span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); margin-top: 4px; display: block; line-height:1.4;">Błyskawiczne rozliczanie kosztów - tylko w wersji PRO! Kliknij po info.</span>' +
+    '</div>';
+
+    html += garageProBanner;
+
     return html;
 };
