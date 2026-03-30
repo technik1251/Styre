@@ -85,9 +85,10 @@ window.rDrv = function() {
             '</style>';
 
         // Lewitujące Emotki bez tła, ultra mini
+        // ZMIANA: Taksometr (📍) zamiast Wycena (🧮)
         let nav = navStyle + '<div class="pure-float-nav">' +
             '<div class="pf-item '+(t==='term'?'act':'')+'" onclick="window.switchTab(\'term\')"><span class="pf-icon">🚕</span><span class="pf-lbl">Panel</span></div>' +
-            '<div class="pf-item '+(t==='quote'?'act':'')+'" onclick="window.switchTab(\'quote\')"><span class="pf-icon">🧮</span><span class="pf-lbl">Wycena</span></div>' +
+            '<div class="pf-item '+(t==='quote'?'act':'')+'" onclick="window.switchTab(\'quote\')"><span class="pf-icon">📍</span><span class="pf-lbl">Taksometr</span></div>' +
             '<div class="pf-item '+(t==='garage'?'act':'')+'" onclick="window.switchTab(\'garage\')"><span class="pf-icon">🔧</span><span class="pf-lbl">Garaż</span></div>' +
             '<div class="pf-item '+(t==='stats'?'act':'')+'" onclick="window.switchTab(\'stats\')"><span class="pf-icon">📊</span><span class="pf-lbl">Wyniki</span></div>' +
             '<div class="pf-item '+(t==='set'?'act':'')+'" onclick="window.switchTab(\'set\')"><span class="pf-icon">⚙️</span><span class="pf-lbl">Opcje</span></div>' +
