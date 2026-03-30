@@ -91,6 +91,13 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                       '<div class="chip '+(window.dTPay==='Karta'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Karta'?chipActBlue:chipIdle)+'" onclick="window.dTC(\'p\',\'Karta\')">Karta</div>' +
                       '<div class="chip '+(window.dTPay==='Voucher'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Voucher'?'background:rgba(168,85,247,0.15);color:#a855f7;border-color:rgba(168,85,247,0.4);box-shadow:0 0 10px rgba(168,85,247,0.3);':chipIdle)+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
             }
+
+            let clientOpts = '';
+            if(d.clients && d.clients.length > 0) {
+                for(let i=0; i<d.clients.length; i++) {
+                    clientOpts += '<option value="'+d.clients[i].id+'">'+d.clients[i].n+'</option>';
+                }
+            }
             
             let now = new Date();
             let dim = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
@@ -100,6 +107,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             let dailyFix = getDaily(cfg.bC, cfg.bPeriod, dim) + getDaily(cfg.iC, cfg.iPeriod, dim) + getDaily(cfg.cC, cfg.cType, dim) + getDaily(cfg.uC, cfg.uType, dim) + (cfg.eType === 'flat' ? getDaily(cfg.eC, cfg.ePeriod, dim) : 0);
             
             let g=0, sumCash=0, sumCard=0, sumVouch=0, sumApp=0, sumUber=0, sumBolt=0;
+            let n = 0; // Netto (dla podglądu, docelowo pełne przeliczenie w Historii)
             
             if(d.sh && d.sh.on && d.sh.tr) {
                 for(let i=0; i<d.sh.tr.length; i++) {
@@ -117,6 +125,11 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     }
                 }
             }
+
+            // Skrócone obliczenia netto dla bieżącej zmiany (szacunkowe)
+            let tax = g * (cfg.tax || 0);
+            let pFee = cfg.eType === 'pct' ? g * (cfg.ePct || 0) : 0;
+            n = g - tax - pFee - dailyFix;
             
             let stoperHtml = '<div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.1); padding: 8px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-size: 0.6rem; color: #3b82f6; text-transform:uppercase; font-weight:800; letter-spacing:1px;">🔒 Śledzenie GPS wkrótce</div>';
             if(d.sh && d.sh.on) {
@@ -135,7 +148,12 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 }
             }
             
-            let diffHrs = 0, diffMins = 0, activeHrs = 0;
+            let diffHrs = 0, diffMins = 0, activeHrs = 0, etaHtml = '';
+            let goal = cfg.goal || 350;
+            let showGross = window.db.drv.panelMode === 'gross';
+            let displayVal = showGross ? g : n;
+            let displayLabel = showGross ? 'PRZYCHÓD BRUTTO' : 'ZYSK NETTO (SZACUNEK)';
+            let progressPct = displayVal > 0 ? Math.min((displayVal / goal) * 100, 100) : 0;
             
             if(d.sh && d.sh.shiftStart) {
                 let activeShiftMs = Date.now() - d.sh.shiftStart;
@@ -143,6 +161,19 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 diffHrs = Math.floor(activeShiftMs/3600000);
                 diffMins = Math.floor((activeShiftMs%3600000)/60000);
                 activeHrs = activeShiftMs/3600000;
+                
+                if(displayVal > 0 && activeHrs > 0 && displayVal < goal) {
+                    let rateHr = displayVal / activeHrs;
+                    let remaining = goal - displayVal;
+                    let etaHrs = remaining / rateHr;
+                    let etaH = Math.floor(etaHrs);
+                    let etaM = Math.round((etaHrs - etaH) * 60);
+                    etaHtml = 'Do celu: <strong>~'+etaH+'h '+etaM+'m</strong> ('+Number(rateHr).toFixed(0)+' zł/h)';
+                } else if(displayVal >= goal) {
+                    etaHtml = '<span style="color:#10b981; font-weight:800;">🎉 Cel osiągnięty!</span>';
+                } else {
+                    etaHtml = 'Szacowanie... Czekam na zarobek.';
+                }
             }
             
             let breakdownHtml = '';
@@ -164,8 +195,17 @@ window.rDrvPanel = function(d, t, nav, hdr) {
 
             if (d.sh && d.sh.on) {
                 act += '<div class="dash-hero" style="padding-bottom:10px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:12px;">' +
-                    '<p style="font-size:0.55rem; font-weight:800; color:rgba(255,255,255,0.3); letter-spacing:1px; text-transform:uppercase; margin-bottom:2px;">ZAREJESTROWANY UTARG</p>' +
-                    '<h1 style="font-size:2.6rem; color:#10b981; font-weight:900; letter-spacing:-1.5px; margin:0;">'+Number(g).toFixed(2)+' zł</h1>' +
+                    '<p style="font-size:0.55rem; font-weight:800; color:rgba(255,255,255,0.3); letter-spacing:1px; text-transform:uppercase; margin-bottom:2px;">'+displayLabel+'</p>' +
+                    '<h1 style="font-size:2.6rem; color:'+(displayVal>=0?'#10b981':'#ef4444')+'; font-weight:900; letter-spacing:-1.5px; margin:0;">'+Number(displayVal||0).toFixed(2)+' zł</h1>' +
+                    '<div style="display:flex; justify-content:center; gap:8px; margin-top:10px; margin-bottom:10px;">' +
+                        '<button class="chip '+(!showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.65rem; border-radius:16px; font-weight:700; background:'+(!showGross?'rgba(255,255,255,0.08)':'transparent')+'; border:1px solid rgba(255,255,255,0.08); color:'+(!showGross?'#fff':'rgba(255,255,255,0.4)')+';" onclick="window.db.drv.panelMode=\'net\';window.render()">Zysk Netto</button>' +
+                        '<button class="chip '+(showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.65rem; border-radius:16px; font-weight:700; background:'+(showGross?'rgba(255,255,255,0.08)':'transparent')+'; border:1px solid rgba(255,255,255,0.08); color:'+(showGross?'#fff':'rgba(255,255,255,0.4)')+';" onclick="window.db.drv.panelMode=\'gross\';window.render()">Przychód Brutto</button>' +
+                    '</div>' +
+                    '<div style="margin-top: 8px; padding: 0 10px;">' +
+                        '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:rgba(255,255,255,0.4); margin-bottom:4px; font-weight:700;"><span>Cel: '+goal+' zł</span><span style="color:'+(progressPct>=100?'#10b981':'#fff')+';">'+Number(progressPct||0).toFixed(0)+'%</span></div>' +
+                        '<div style="width:100%; background:rgba(0,0,0,0.4); height:6px; border-radius:3px; overflow:hidden; border:1px inset rgba(255,255,255,0.05);"><div style="width:'+progressPct+'%; background:'+(progressPct>=100?'#10b981':'rgba(255,255,255,0.7)')+'; height:100%; transition:width 0.6s; border-radius:3px;"></div></div>' +
+                        '<div style="font-size:0.6rem; color:rgba(255,255,255,0.3); text-align:center; margin-top:6px;">'+etaHtml+'</div>' +
+                    '</div>' +
                     breakdownHtml +
                     '<div style="display:flex; justify-content:center; gap:8px; margin-top:15px; padding:0 5px;">' +
                         '<div style="flex:1; background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.05); padding:10px; border-radius:12px; display:flex; flex-direction:column; justify-content:center;">' +
@@ -185,10 +225,10 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     act += stoperHtml;
                 }
                 
-                // ZMIANA: Usunięto czas i dystans. Teraz to służy tylko do rejestrowania "Szybkiego Utargu" (kasa do ręki)
+                // POWRÓT DO PEŁNEGO REJESTRU (Dystans, Czas, VIP) dla "aptekarzy" i jeżdżących z ekranem
                 act += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 30px rgba(0,0,0,0.5); margin-bottom:20px;">' +
                     '<div style="text-align:center; margin-bottom:15px;">' +
-                        '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">REJESTR SZYBKIEGO UTARGU</span>' +
+                        '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">REJESTR POJEDYNCZYCH KURSÓW</span>' +
                     '</div>' +
                     
                     '<div style="margin-bottom:15px;">' +
@@ -204,7 +244,16 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '</div>' +
                     '</div>' +
                     
-                    '<button class="btn" style="background:#0ea5e9; color:#fff; padding:18px; border-radius:16px; font-weight:800; font-size:1rem; letter-spacing:0.5px; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ ZAROBEK DO ZMIANY</button>' +
+                    '<div class="inp-row" style="margin-bottom:15px; gap:10px;">' +
+                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-m" placeholder="Czas (min)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.9rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-k" placeholder="Dystans (km)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.9rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                    '</div>' +
+                    
+                    '<div class="inp-group" style="margin-bottom:15px;">' +
+                        '<select id="dt-cid" style="background:rgba(0,0,0,0.3); border-radius:14px; padding:14px; font-size:0.8rem; color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select>' +
+                    '</div>' +
+                    
+                    '<button class="btn" style="background:#0ea5e9; color:#fff; padding:18px; border-radius:16px; font-weight:800; font-size:1rem; letter-spacing:0.5px; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ KURS</button>' +
                 '</div>';
                 
                 act += '<div class="panel" style="padding:15px; border-radius:24px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b);">' +
@@ -226,10 +275,12 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                                     '<strong style="font-size:1.05rem; color:#fff; display:block; margin-bottom:2px; font-weight:700;">'+Number(x.v||0).toFixed(2)+' zł</strong>' +
                                     '<div style="display:flex; gap:6px; font-size:0.65rem; color:rgba(255,255,255,0.5); align-items:center; font-weight:600;">' +
                                         '<span>'+(x.time||'--:--')+'</span><span style="opacity:0.3">•</span><span style="color:'+color+';">'+x.p+'</span><span style="opacity:0.3">•</span><span>'+x.s+'</span>' +
+                                        (x.k>0 ? '<span style="opacity:0.3">•</span><span>'+Number(x.k).toFixed(1)+' km</span>' : '') +
                                     '</div>' +
                                 '</div>' +
                             '</div>' +
                             '<div style="display:flex; flex-direction:column; gap:6px;">' +
+                                '<button style="background:rgba(255,255,255,0.05); color:#fff; border:none; border-radius:10px; padding:6px 10px; cursor:pointer; font-size:0.7rem; outline:none;" onclick="if(typeof window.dEditT===\'function\') window.dEditT('+x.id+')">✏️</button>' +
                                 '<button style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; border-radius:10px; padding:6px 10px; cursor:pointer; font-size:0.7rem; outline:none;" onclick="if(typeof window.dDelT===\'function\') window.dDelT('+x.id+')">🗑️</button>' +
                             '</div>' +
                         '</div>';
@@ -257,7 +308,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '<button class="btn" style="background:rgba(14,165,233,0.08); color:#0ea5e9; border:1px dashed rgba(14,165,233,0.3); font-size:0.8rem; font-weight:700; box-shadow:none; width:100%; padding:15px; border-radius:16px; outline:none;" onclick="window.dShowOff=true; window.render()">📥 ZAKSIĘGUJ ZALEGŁĄ ZMIANĘ</button>' +
                     '</div>';
                 } else {
-                    // NOWY, ZAAWANSOWANY SYSTEM KSIĘGOWANIA HISTORII
+                    // WBITKA ZBIORCZA DLA "LENIWYCH" (Z ODO)
                     act += '<div class="section-lbl" style="color:#0ea5e9; border-color:#0ea5e9; margin-top:30px; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase;">⚡ ZALEGŁA ZMIANA / RAPORT Z KASY</div>' +
                     '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #0f172a, #09090b); border-radius:24px; padding:20px 15px; margin:0 15px; animation:fadeIn 0.3s; box-shadow:0 10px 30px rgba(0,0,0,0.5);">' +
                         
@@ -464,7 +515,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             // BUDOWA AKORDEONÓW SZCZEGÓŁOWYCH P&L (Transparentność)
             // =========================================================
 
-            // 1. Utarg Brutto Detale
             let bruttoDetHtml = '<div id="brutto-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
             if(d.plat === 'apps') {
                 if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
@@ -479,7 +529,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             }
             bruttoDetHtml += '</div>';
 
-            // 2. Wydatki Zmienne (Garaż) Detale
             let exDetHtml = '<div id="ex-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
             let exList = fe.filter(function(e) { return e.ty === 'e'; });
             if (exList.length > 0) {
@@ -491,7 +540,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             }
             exDetHtml += '</div>';
 
-            // 3. Paliwo z tras Detale (Z ROZBICIEM NA PUSTE I PŁATNE)
             let costPk = pkSum * (cfg.fuelPx || 0);
             let costEmpty = emptyKSum * (cfg.fuelPx || 0);
 
@@ -502,16 +550,11 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             fuelDetHtml += '<div style="text-align:right; font-size:0.6rem; margin-top:6px; opacity:0.8; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">Średni koszt: '+Number(cfg.fuelPx || 0).toFixed(2)+' zł/km</div>';
             fuelDetHtml += '</div>';
 
-            // 4. Podatki i Prowizje
             let taxDetHtml = '<div id="tax-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Przychód Brutto ('+Number(g).toFixed(2)+' zł) * Podatek ('+Number((cfg.tax||0)*100).toFixed(1)+'%)</span><span>-'+Number(tx).toFixed(2)+' zł</span></div></div>';
-            
             let pfDetHtml = '<div id="pf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Przychód Brutto ('+Number(g).toFixed(2)+' zł) * Prowizja ('+Number((cfg.ePct||0)*100).toFixed(1)+'%)</span><span>-'+Number(pf).toFixed(2)+' zł</span></div></div>';
-            
             let cfDetHtml = '<div id="cf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Kartą ('+Number(cardEarned).toFixed(2)+' zł) * Prowizja Terminala ('+Number((cfg.cardF||0)*100).toFixed(1)+'%)</span><span>-'+Number(cf).toFixed(2)+' zł</span></div></div>';
-            
             let vfDetHtml = '<div id="vf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Voucher ('+Number(vouchEarned).toFixed(2)+' zł) * Prowizja ('+Number((cfg.voucherF||0)*100).toFixed(1)+'%)</span><span>-'+Number(vf).toFixed(2)+' zł</span></div></div>';
 
-            // 5. Odpisy Stałe
             let bC_tot = getDaily(cfg.bC, cfg.bPeriod, daysInCurrentMonth) * daysToCharge;
             let iC_tot = getDaily(cfg.iC, cfg.iPeriod, daysInCurrentMonth) * daysToCharge;
             let cC_tot = getDaily(cfg.cC, cfg.cType, daysInCurrentMonth) * daysToCharge;
