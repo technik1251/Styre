@@ -163,19 +163,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
         
         let act = ''; 
 
-        // --- ZAPOWIEDŹ PRO DLA PANELU TAXI (Zmieniona Ikona i Kompaktowy Styl) ---
-        let panelProBanner = '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
-            '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
-            '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
-            '<div style="display: flex; align-items: center; gap: 15px;">' +
-                '<div style="font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(217,70,239,0.4));">🤖</div>' +
-                '<div style="text-align: left;">' +
-                    '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Automatyzacja Premium</h4>' +
-                    '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Auto-Import:</b> Zlecenia wpadają same.<br>✅ <b>Asystent Głosowy:</b> Notuj mówiąc!</div>' +
-                '</div>' +
-            '</div>' +
-        '</div>';
-
         // ==========================================
         // ZAKŁADKA: PANEL (TERM) - TRWAJĄCA ZMIANA
         // ==========================================
@@ -242,7 +229,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     else {
                         sumApp += val;
                         if(x.s === 'Uber') sumUber += val;
-                        else if(x.s === 'Bolt') sumBolt += val;
+                        else if(x.s === 'Bolt) sumBolt += val;
                     }
                 }
             }
@@ -408,7 +395,21 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     act += '<div style="padding:0 15px; margin-top:15px;">' +
                         '<button class="btn" style="background:#1a1a22; color:#888; border:1px solid #2a2a35; font-size:0.8rem; font-weight:700; box-shadow:none; width:100%; padding:16px; border-radius:20px; outline:none;" onclick="window.dShowOff=true; window.render()">📥 ZAKSIĘGUJ ZALEGŁĄ ZMIANĘ</button>' +
                     '</div>';
+                    
+                    // --- ZAPOWIEDŹ PRO DLA PANELU TAXI (Zmieniona Ikona Taxi Premium) ---
+                    let panelProBanner = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
+                        '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+                        '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+                        '<div style="display: flex; align-items: center; gap: 15px;">' +
+                            '<div style="font-size: 2.5rem; text-shadow: 0 0 10px rgba(217,70,239,0.4);">🚕✨</div>' + // Zastąpiono 🤖
+                            '<div style="text-align: left;">' +
+                                '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Usługi Taxi</h4>' + // Zmieniono nagłówek
+                                '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Automatyczne Zlecenia:</b> Kursy wpadają same.<br>✅ <b>Premium Rozliczenia:</b> Wszystko w jednym miejscu!</div>' + // Zmieniono tekst
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
                     act += panelProBanner;
+
                 } else {
                     let offlineInputsHtml = '';
                     if(d.plat === 'apps') {
@@ -459,7 +460,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '</div>' +
                         
                         '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; padding:18px; font-size:1.05rem; letter-spacing:1px; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.35); width:100%; outline:none;" onclick="if(typeof window.dAddOfflineWeekly===\'function\') window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button>' +
-                        '<button class="btn" style="background:transparent; color:rgba(255,255,255,0.4); margin-top:10px; border:1px solid rgba(255,255,255,0.1); border-radius:20px; box-shadow:none; padding:16px; font-weight:700; font-size:0.9rem; width:100%; outline:none;" onclick="window.dShowOff=false; window.render()">ANULUJ</button>' +
+                        '<button class="btn" style="background:transparent; color:rgba(255,255,255,0.4); margin-top:10px; border:1px solid rgba(255,255,255,0.1); border-radius:20px; box-shadow:none; padding:166px; font-weight:700; font-size:0.9rem; width:100%; outline:none;" onclick="window.dShowOff=false; window.render()">ANULUJ</button>' +
                     '</div>';
                 }
             }
@@ -634,16 +635,17 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 transferButtonHtml = '<button class="btn" style="margin-top:15px; width:calc(100% - 30px); margin-left:auto; margin-right:auto; font-weight:700; background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.05); padding:14px; border-radius:14px; outline:none;" disabled><span style="font-size:1rem; margin-right:8px;">✅</span> GOTÓWKA ROZLICZONA<br><small style="font-weight:600; font-size:0.65rem; display:block; margin-top:2px;">W domu: '+Number(totalTransferred).toFixed(2)+' zł</small></button>';
             }
 
+            // --- ZAPOWIEDŹ PRO DLA WYNIKÓW (Zmieniona Ikona Pucharów Premium) ---
             let proBannerHtml = '';
             if (d.plat === 'apps') {
                 proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀\', \'info\')">' +
                     '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
                     '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
                     '<div style="display: flex; align-items: center; gap: 15px;">' +
-                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🤖</div>' +
+                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🏆✨</div>' + // Zastąpiono 🤖
                         '<div style="text-align: left;">' +
-                            '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Centrum Funkcji PRO</h4>' +
-                            '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Wyceny AI:</b> Nakładka na ekran.<br>✅ <b>Integracja e-Kasy:</b> Pełen automat!</div>' +
+                            '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Wyniki</h4>' + // Zmieniono nagłówek
+                            '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Rozliczenia AI:</b> Wszystko w jednym miejscu.<br>✅ <b>Pełna Historia:</b> Analizuj swoje zyski!</div>' + // Zmieniono tekst
                         '</div>' +
                     '</div>' +
                 '</div>';
@@ -652,10 +654,10 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
                     '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
                     '<div style="display: flex; align-items: center; gap: 15px;">' +
-                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">📡</div>' +
+                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🏆✨</div>' + // Zastąpiono 📡
                         '<div style="text-align: left;">' +
-                            '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Centrum Funkcji PRO</h4>' +
-                            '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Integracja e-Kasy:</b> Automatyczne zaciąganie kursów (API).</div>' +
+                            '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Wyniki</h4>' + // Zmieniono nagłówek
+                            '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Integracja e-Kasy:</b> Automatyczne zaciąganie kursów (API).</div>' + // Zmieniono tekst
                         '</div>' +
                     '</div>' +
                 '</div>';
@@ -776,16 +778,16 @@ window.rDrvPanel = function(d, t, nav, hdr) {
 
             appContainer.innerHTML = hdr + 
             '<div class="mode-switch" style="margin:12px 15px; border-radius:16px; padding:6px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05);">' +
-                '<div class="m-btn '+(fM==='today'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'today\'; window.render()">Dziś</div>' +
-                '<div class="m-btn '+(fM==='week'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'week\'; window.render()">Tydzień</div>' +
-                '<div class="m-btn '+(fM==='month'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'month\'; window.render()">Miesiąc</div>' +
-                '<div class="m-btn '+(fM==='all'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'all\'; window.render()">Całość</div>' +
-                '<div class="m-btn '+(fM==='custom'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'custom\'; window.render()">Własny</div>' +
+                '<div class="m-btn '+(fM===\'today\'?\'active\':\'\')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'today\'; window.render()">Dziś</div>' +
+                '<div class="m-btn '+(fM===\'week\'?\'active\':\'\')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'week\'; window.render()">Tydzień</div>' +
+                '<div class="m-btn '+(fM===\'month\'?\'active\':\'\')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'month\'; window.render()">Miesiąc</div>' +
+                '<div class="m-btn '+(fM===\'all\'?\'active\':\'\')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'all\'; window.render()">Całość</div>' +
+                '<div class="m-btn '+(fM===\'custom\'?\'active\':\'\')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'custom\'; window.render()">Własny</div>' +
             '</div>' +
             customDatesHtml +
             '<div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px; padding:0 15px;">' +
-                '<button class="chip '+(window.db.drv.showFixed?'active':'')+'" style="font-size:0.7rem; padding:8px 16px; border-radius:20px; font-weight:800; background:'+(window.db.drv.showFixed?'rgba(255,255,255,0.1)':'transparent')+'; border:1px solid rgba(255,255,255,0.1); color:'+(window.db.drv.showFixed?'#fff':'var(--muted)')+';" onclick="window.db.drv.showFixed=true; window.render()">Koszty pełne</button>' +
-                '<button class="chip '+(!window.db.drv.showFixed?'active':'')+'" style="font-size:0.7rem; padding:8px 16px; border-radius:20px; font-weight:800; background:'+(!window.db.drv.showFixed?'rgba(255,255,255,0.1)':'transparent')+'; border:1px solid rgba(255,255,255,0.1); color:'+(!window.db.drv.showFixed?'#fff':'var(--muted)')+';" onclick="window.db.drv.showFixed=false; window.render()">Tylko Operacyjny</button>' +
+                '<button class="chip '+(window.db.drv.showFixed?\'active\':\'\')+'" style="font-size:0.7rem; padding:8px 16px; border-radius:20px; font-weight:800; background:'+(window.db.drv.showFixed?\'rgba(255,255,255,0.1)\':\'transparent\')+'; border:1px solid rgba(255,255,255,0.1); color:'+(window.db.drv.showFixed?\'#fff\':\'var(--muted)\')+';" onclick="window.db.drv.showFixed=true; window.render()">Koszty pełne</button>' +
+                '<button class="chip '+(!window.db.drv.showFixed?\'active\':\'\')+'" style="font-size:0.7rem; padding:8px 16px; border-radius:20px; font-weight:800; background:'+(!window.db.drv.showFixed?\'rgba(255,255,255,0.1)\':\'transparent\')+'; border:1px solid rgba(255,255,255,0.1); color:'+(!window.db.drv.showFixed?\'#fff\':\'var(--muted)\')+';" onclick="window.db.drv.showFixed=false; window.render()">Tylko Operacyjny</button>' +
             '</div>' +
             '<div class="dash-hero" style="padding-top:0; padding-bottom:20px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:20px;">' +
                 '<p style="font-size:0.65rem; font-weight:800; color:rgba(255,255,255,0.4); letter-spacing:1px; text-transform:uppercase;">'+(window.db.drv.showFixed ? 'TWOJE PRAWDZIWE NETTO' : 'ZYSK Z KURSÓW (BEZ KOSZTÓW STAŁYCH)')+'</p>' +
