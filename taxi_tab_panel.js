@@ -237,7 +237,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '<div class="chip-box" style="margin-bottom:0; justify-content:center; gap:8px; margin-top:10px;">'+ch2+'</div>' +
                     '</div>' +
                     
-                    // Pole na kwotę - Wygląd jak PIN pad
+                    // Pole na kwotę
                     '<div style="background:rgba(0,0,0,0.4); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:15px; margin-bottom:15px;">' +
                         '<div style="display:flex; justify-content:center; align-items:center; gap:8px;">' +
                             '<input type="number" id="dt-v" placeholder="0" style="color:#fff; border:none; background:transparent; font-size:3.2rem; font-weight:700; text-align:center; width:160px; padding:0; outline:none;">' +
@@ -291,7 +291,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 }
                 act += '</div>';
             } else {
-                // EKRAN STARTOWY (Rozpocznij Pracę)
+                // EKRAN STARTOWY
                 act = '<div class="dash-hero" style="padding-top:40px; padding-bottom:30px;">' +
                     '<div style="width:80px;height:80px;background:#10b981;border-radius:40px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:2.5rem;box-shadow:0 8px 25px rgba(16,185,129,0.3);">🚕</div>' +
                     '<h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.5px; margin-bottom:5px; color:#fff;">Cześć, '+(window.db.userName || 'Kierowco')+'!</h1>' +
@@ -340,7 +340,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
         }
 
         // ==========================================
-        // ZAKŁADKA: STATYSTYKI (STATS)
+        // ZAKŁADKA: STATYSTYKI (STATS) - P&L
         // ==========================================
         if(t === 'stats') {
             let fM = window.db.filter || 'all';
@@ -521,42 +521,91 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 '</div>';
             }
 
-            // OBLICZANIE DETALI ODPISÓW STAŁYCH (Do akordeonu)
+            // =========================================================
+            // BUDOWA AKORDEONÓW SZCZEGÓŁOWYCH P&L (Transparentność)
+            // =========================================================
+
+            // 1. Utarg Brutto Detale
+            let bruttoDetHtml = '<div id="brutto-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
+            if(d.plat === 'apps') {
+                if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
+                if(uberEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z Ubera:</span><span>+'+Number(uberEarned).toFixed(2)+' zł</span></div>';
+                if(boltEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z Bolta:</span><span>+'+Number(boltEarned).toFixed(2)+' zł</span></div>';
+                let otherApps = appEarned - uberEarned - boltEarned;
+                if(otherApps > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z Innych Apek:</span><span>+'+Number(otherApps).toFixed(2)+' zł</span></div>';
+            } else {
+                if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
+                if(cardEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z Karty:</span><span>+'+Number(cardEarned).toFixed(2)+' zł</span></div>';
+                if(vouchEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z Voucherów:</span><span>+'+Number(vouchEarned).toFixed(2)+' zł</span></div>';
+            }
+            bruttoDetHtml += '</div>';
+
+            // 2. Wydatki Zmienne (Garaż) Detale
+            let exDetHtml = '<div id="ex-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
+            let exList = fe.filter(function(e) { return e.ty === 'e'; });
+            if (exList.length > 0) {
+                for(let i=0; i<exList.length; i++) {
+                    exDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>'+exList[i].d+' ('+exList[i].dt+'):</span><span>-'+Number(exList[i].v).toFixed(2)+' zł</span></div>';
+                }
+            } else {
+                exDetHtml += '<div style="text-align:center;">Brak zrejestrowanych wydatków serwisowych w tym okresie.</div>';
+            }
+            exDetHtml += '</div>';
+
+            // 3. Paliwo z tras Detale
+            let fuelDetHtml = '<div id="fuel-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
+            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Zarejestrowany dystans z pasażerem:</span><span>'+Number(k).toFixed(1)+' km</span></div>';
+            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Śr. koszt 1 km (Wyliczony z tankowań):</span><span>'+Number(cfg.fuelPx || 0).toFixed(2)+' zł/km</span></div>';
+            fuelDetHtml += '<div style="text-align:right; font-size:0.6rem; margin-top:4px; opacity:0.8;">Kalkulacja: '+Number(k).toFixed(1)+' km * '+Number(cfg.fuelPx || 0).toFixed(2)+' zł = '+Number(fc).toFixed(2)+' zł</div>';
+            fuelDetHtml += '</div>';
+
+            // 4. Podatki i Prowizje
+            let taxDetHtml = '<div id="tax-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Brutto ('+Number(g).toFixed(2)+' zł) * Podatek ('+Number((cfg.tax||0)*100).toFixed(1)+'%)</span><span>-'+Number(tx).toFixed(2)+' zł</span></div></div>';
+            
+            let pfDetHtml = '<div id="pf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Brutto ('+Number(g).toFixed(2)+' zł) * Prowizja ('+Number((cfg.ePct||0)*100).toFixed(1)+'%)</span><span>-'+Number(pf).toFixed(2)+' zł</span></div></div>';
+            
+            let cfDetHtml = '<div id="cf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Kartą ('+Number(cardEarned).toFixed(2)+' zł) * Prowizja Terminala ('+Number((cfg.cardF||0)*100).toFixed(1)+'%)</span><span>-'+Number(cf).toFixed(2)+' zł</span></div></div>';
+            
+            let vfDetHtml = '<div id="vf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Voucher ('+Number(vouchEarned).toFixed(2)+' zł) * Prowizja ('+Number((cfg.voucherF||0)*100).toFixed(1)+'%)</span><span>-'+Number(vf).toFixed(2)+' zł</span></div></div>';
+
+            // 5. Odpisy Stałe
             let bC_tot = getDaily(cfg.bC, cfg.bPeriod, daysInCurrentMonth) * daysToCharge;
             let iC_tot = getDaily(cfg.iC, cfg.iPeriod, daysInCurrentMonth) * daysToCharge;
             let cC_tot = getDaily(cfg.cC, cfg.cType, daysInCurrentMonth) * daysToCharge;
             let uC_tot = getDaily(cfg.uC, cfg.uType, daysInCurrentMonth) * daysToCharge;
             let eC_tot = (cfg.eType === 'flat' ? getDaily(cfg.eC, cfg.ePeriod, daysInCurrentMonth) : 0) * daysToCharge;
 
-            let fixedDetailsHtml = '<div id="fixed-costs-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%;">';
-            if(bC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-bottom:6px;"><span>Baza / Korporacja:</span><span>-'+Number(bC_tot).toFixed(2)+' zł</span></div>';
-            if(iC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-bottom:6px;"><span>ZUS / Ubezpieczenie:</span><span>-'+Number(iC_tot).toFixed(2)+' zł</span></div>';
-            if(cC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-bottom:6px;"><span>Auto (Rata/Wynajem):</span><span>-'+Number(cC_tot).toFixed(2)+' zł</span></div>';
-            if(uC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-bottom:6px;"><span>Księgowość / Inne:</span><span>-'+Number(uC_tot).toFixed(2)+' zł</span></div>';
-            if(eC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-bottom:6px;"><span>Partner (Stała opłata):</span><span>-'+Number(eC_tot).toFixed(2)+' zł</span></div>';
+            let fixedDetailsHtml = '<div id="fixed-costs-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
+            if(bC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Baza / Korporacja:</span><span>-'+Number(bC_tot).toFixed(2)+' zł</span></div>';
+            if(iC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>ZUS / Ubezpieczenie:</span><span>-'+Number(iC_tot).toFixed(2)+' zł</span></div>';
+            if(cC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Auto (Rata/Wynajem):</span><span>-'+Number(cC_tot).toFixed(2)+' zł</span></div>';
+            if(uC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Księgowość / Inne:</span><span>-'+Number(uC_tot).toFixed(2)+' zł</span></div>';
+            if(eC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Partner (Stała opłata):</span><span>-'+Number(eC_tot).toFixed(2)+' zł</span></div>';
             fixedDetailsHtml += '</div>';
+
+            let makeRow = function(label, valueStr, valColor, detId, detHtml) {
+                return '<div class="fin-row" style="flex-direction:column; align-items:stretch; font-size:0.75rem; margin-bottom:8px; cursor:pointer; background:rgba(255,255,255,0.02); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.03);" onclick="let el=document.getElementById(\''+detId+'\'); let icon=document.getElementById(\''+detId+'-icon\'); if(el.style.display===\'none\'){el.style.display=\'block\'; icon.innerHTML=\'🔼\';}else{el.style.display=\'none\'; icon.innerHTML=\'🔽\';}">' +
+                    '<div style="display:flex; justify-content:space-between; width:100%;">' +
+                        '<span class="fin-label" style="color:rgba(255,255,255,0.8);">' + label + ' <span id="'+detId+'-icon" style="font-size:0.6rem; margin-left:4px; opacity:0.6;">🔽</span></span>' +
+                        '<span class="fin-val" style="color:'+valColor+'; padding-top:2px;">' + valueStr + '</span>' +
+                    '</div>' +
+                    detHtml +
+                '</div>';
+            };
 
             let pAndLHtml = '<div class="panel" style="padding:20px 15px; margin:0 15px 15px; border-radius:20px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 8px 25px rgba(0,0,0,0.4);">' +
                 '<div style="text-align:center; margin-bottom:15px;">' +
                     '<span style="font-size:0.7rem; color:rgba(255,255,255,0.3); font-weight:800; text-transform:uppercase; letter-spacing:1px;">Wodospad Finansowy (P&L)</span>' +
                 '</div>' +
-                '<div class="fin-row" style="font-size:0.75rem; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><span class="fin-label" style="color:#fff;">Utarg Brutto z aplikacji</span><strong class="fin-val" style="color:#10b981">'+Number(g).toFixed(2)+' zł</strong></div>' +
-                '<div class="fin-row" style="font-size:0.75rem; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><span class="fin-label" style="color:rgba(255,255,255,0.6);">Wydatki Zmienne (Garaż)</span><span class="fin-val" style="color:#ef4444">-'+Number(ex).toFixed(2)+' zł</span></div>' +
-                '<div class="fin-row" style="font-size:0.75rem; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><span class="fin-label" style="color:rgba(255,255,255,0.6);">Paliwo z tras</span><span class="fin-val" style="color:#f59e0b">-'+Number(fc).toFixed(2)+' zł</span></div>' +
-                (cf > 0 ? '<div class="fin-row" style="font-size:0.75rem; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><span class="fin-label" style="color:rgba(255,255,255,0.6);">Prowizja Terminala</span><span class="fin-val" style="color:#ef4444">-'+Number(cf).toFixed(2)+' zł</span></div>' : '') +
-                (vf > 0 ? '<div class="fin-row" style="font-size:0.75rem; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><span class="fin-label" style="color:rgba(255,255,255,0.6);">Prowizja Voucherów</span><span class="fin-val" style="color:#ef4444">-'+Number(vf).toFixed(2)+' zł</span></div>' : '') +
-                (pf > 0 ? '<div class="fin-row" style="font-size:0.75rem; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><span class="fin-label" style="color:rgba(255,255,255,0.6);">Prowizja Aplikacji</span><span class="fin-val" style="color:#ef4444">-'+Number(pf).toFixed(2)+' zł</span></div>' : '') +
-                '<div class="fin-row" style="font-size:0.75rem; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><span class="fin-label" style="color:rgba(255,255,255,0.6);">Podatek / VAT</span><span class="fin-val" style="color:#ef4444">-'+Number(tx).toFixed(2)+' zł</span></div>' +
-                '<div class="fin-row" style="flex-direction:column; align-items:stretch; font-size:0.75rem; margin-bottom:12px; cursor:pointer; background:rgba(255,255,255,0.02); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.03);" onclick="let el=document.getElementById(\'fixed-costs-det\'); let icon=document.getElementById(\'fixed-costs-icon\'); if(el.style.display===\'none\'){el.style.display=\'block\'; icon.innerHTML=\'🔼\';}else{el.style.display=\'none\'; icon.innerHTML=\'🔽\';}">' +
-                    '<div style="display:flex; justify-content:space-between; width:100%;">' +
-                        '<div style="display:flex; flex-direction:column; max-width:70%;">' +
-                            '<span class="fin-label" style="color:rgba(255,255,255,0.8);">Odpisy Stałe '+(!window.db.drv.showFixed ? '(Wyłączone)' : '(Za '+daysToCharge+' dni)')+' <span id="fixed-costs-icon" style="font-size:0.6rem; margin-left:4px; opacity:0.6;">🔽</span></span>' +
-                        '</div>' +
-                        '<span class="fin-val" style="color:#ef4444; padding-top:2px;">-'+Number(totalDynamicFix).toFixed(2)+' zł</span>' +
-                    '</div>' +
-                    (window.db.drv.showFixed ? fixedDetailsHtml : '') + 
-                '</div>' +
-                '<div class="fin-row" style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; border:1px inset rgba(255,255,255,0.05);">' +
+                makeRow('Utarg Brutto z aplikacji', Number(g).toFixed(2)+' zł', '#10b981', 'brutto-det', bruttoDetHtml) +
+                makeRow('Wydatki Zmienne (Garaż)', '-'+Number(ex).toFixed(2)+' zł', '#ef4444', 'ex-det', exDetHtml) +
+                makeRow('Paliwo z tras', '-'+Number(fc).toFixed(2)+' zł', '#f59e0b', 'fuel-det', fuelDetHtml) +
+                (cf > 0 ? makeRow('Prowizja Terminala', '-'+Number(cf).toFixed(2)+' zł', '#ef4444', 'cf-det', cfDetHtml) : '') +
+                (vf > 0 ? makeRow('Prowizja Voucherów', '-'+Number(vf).toFixed(2)+' zł', '#ef4444', 'vf-det', vfDetHtml) : '') +
+                (pf > 0 ? makeRow('Prowizja Aplikacji', '-'+Number(pf).toFixed(2)+' zł', '#ef4444', 'pf-det', pfDetHtml) : '') +
+                makeRow('Podatek / VAT', '-'+Number(tx).toFixed(2)+' zł', '#ef4444', 'tax-det', taxDetHtml) +
+                makeRow('Odpisy Stałe '+(!window.db.drv.showFixed ? '(Wyłączone)' : '(Za '+daysToCharge+' dni)'), '-'+Number(totalDynamicFix).toFixed(2)+' zł', '#ef4444', 'fixed-costs-det', (window.db.drv.showFixed ? fixedDetailsHtml : '')) +
+                '<div class="fin-row" style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; border:1px inset rgba(255,255,255,0.05); margin-top:12px;">' +
                     '<span class="fin-label" style="color:#fff; font-size:0.85rem; font-weight:900; letter-spacing:1px;">WYNIK KOŃCOWY</span>' +
                     '<span class="fin-val" style="font-size:1.4rem; font-weight:900; letter-spacing:-0.5px; color:'+(n >= 0 ? '#10b981' : '#ef4444')+'">'+Number(n).toFixed(2)+' zł</span>' +
                 '</div>' +
