@@ -81,7 +81,7 @@ window.calcFuelioStats = function() {
     return { list: results, ck: globalCk, td: totalDistAll, totalCost: totalCostAll };
 };
 
-// --- GŁÓWNY RENDER ZAKŁADEK NARZĘDZIOWYCH (Z ZAPOWIEDZIAMI PRO) ---
+// --- GŁÓWNY RENDER ZAKŁADEK NARZĘDZIOWYCH ---
 window.rDrvTools = function(d, t, nav, hdr) {
     try {
         let appContainer = document.getElementById('app');
@@ -98,8 +98,8 @@ window.rDrvTools = function(d, t, nav, hdr) {
                 }
             }
 
-            // --- ZAPOWIEDŹ PRO DLA TAKSOMETRU ---
-            let proTaksometr = '<div class="pro-teaser-panel">' +
+            // --- ZAPOWIEDŹ PRO DLA TAKSOMETRU (Teraz poza ukrytym div'em mapy!) ---
+            let proTaksometr = '<div class="pro-teaser-panel" style="margin-bottom:20px;">' +
                 '<div class="pro-badge-mini">PRO</div>' +
                 '<h4 style="color:#d946ef; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
                 '<ul class="pro-list-mini">' +
@@ -115,6 +115,9 @@ window.rDrvTools = function(d, t, nav, hdr) {
             '</div>' +
             
             '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 40px rgba(0,0,0,0.6); margin:0 15px;">' +
+                
+                proTaksometr + // WSTRZYKNIĘCIE ZAPOWIEDZI PRO BEZPOŚREDNIO W WIDOCZNYM FORMULARZU
+                
                 '<div class="inp-group" style="margin-bottom:15px;">' +
                     '<label style="color:#10b981; font-size:0.65rem; font-weight:800; letter-spacing:1px; margin-bottom:6px; display:block;">🟢 ADRES POCZĄTKOWY</label>' +
                     '<input type="text" id="dq-start" placeholder="np. Dworzec Główny" style="border:1px solid rgba(16,185,129,0.2); background:rgba(16,185,129,0.05); padding:16px; border-radius:14px; font-size:0.9rem; color:#fff; outline:none; width:100%; box-sizing:border-box;">' +
@@ -160,8 +163,6 @@ window.rDrvTools = function(d, t, nav, hdr) {
                         '</select>' +
                     '</div>' +
                     
-                    proTaksometr + // <--- TUTAJ JEST ZAPOWIEDŹ PRO
-
                     '<button class="btn" style="background:#d946ef; color:#fff; font-size:1.05rem; font-weight:900; padding:18px; border-radius:16px; border:none; box-shadow:0 8px 25px rgba(217,70,239,0.4); width:100%;" onclick="if(typeof window.saveQuoteToPanel===\'function\') window.saveQuoteToPanel()">ZAKSIĘGUJ DO PANELU</button>' +
                 '</div>' +
             '</div>';
@@ -188,7 +189,7 @@ window.rDrvTools = function(d, t, nav, hdr) {
     }
 };
 
-// --- RENDER GARAŻU Z DYNAMICZNYMI PALIWAMI ---
+// --- RENDER GARAŻU Z ZAPOWIEDZIĄ PRO ---
 window.hRenderGarage = function(d) {
     let mode = window.dGarMode || 'f';
     let sourceAlert = '';
@@ -225,7 +226,7 @@ window.hRenderGarage = function(d) {
     }
 
     // --- ZAPOWIEDŹ PRO DLA GARAŻU (BĘDZIE W OBU ZAKŁADKACH!) ---
-    let proGarage = '<div class="pro-teaser-panel" style="border-color: rgba(14, 165, 233, 0.2); margin-top: 0; margin-bottom: 15px;">' +
+    let proGarage = '<div class="pro-teaser-panel" style="border-color: rgba(14, 165, 233, 0.2); margin-bottom: 20px;">' +
         '<div class="pro-badge-mini" style="background:#0ea5e9;">PRO</div>' +
         '<h4 style="color:#0ea5e9; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
         '<ul class="pro-list-mini">' +
@@ -257,7 +258,7 @@ window.hRenderGarage = function(d) {
         html += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:15px; border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,0.5); margin:0 15px;">' +
             '<div class="p-title" style="color:#f59e0b; font-size:0.65rem; font-weight:800; letter-spacing:1px; margin-bottom:12px; text-align:center;">⛽ NOWE TANKOWANIE</div>' +
             
-            proGarage + // <--- ZAPOWIEDŹ PRO DODANA DO TANKOWAŃ
+            proGarage + // WSTRZYKNIĘCIE ZAPOWIEDZI PRO DO TANKOWAŃ
 
             '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">' +
                 '<div class="inp-group" style="margin:0;"><label style="font-size:0.6rem; color:var(--muted); margin-bottom:4px; font-weight:bold;">Licznik (KM)</label><input type="number" id="df-o" value="'+(d.odo||0)+'" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:12px; font-size:1rem; font-weight:700; color:#fff; text-align:center; border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"></div>' +
@@ -284,7 +285,7 @@ window.hRenderGarage = function(d) {
         html += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:15px; border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,0.5); margin:0 15px;">' +
             '<div class="p-title" style="color:#0ea5e9; font-size:0.65rem; font-weight:800; letter-spacing:1px; margin-bottom:12px; text-align:center;">🔧 NOWY WYDATEK SERWISOWY</div>' +
             
-            proGarage + // <--- ZAPOWIEDŹ PRO DODANA DO SERWISU
+            proGarage + // WSTRZYKNIĘCIE ZAPOWIEDZI PRO DO SERWISU
 
             '<div style="display:flex; gap:10px; margin-bottom:10px;">' +
                 '<div class="inp-group" style="flex:2; margin:0;"><label style="font-size:0.6rem; color:#0ea5e9; margin-bottom:4px; font-weight:bold;">KOSZT (ZŁ)</label><input type="number" step="0.01" id="de-v" placeholder="0.00" style="background:rgba(0,0,0,0.3); border-radius:10px; padding:10px; font-size:1.4rem; font-weight:900; color:#0ea5e9; text-align:center; border:1px solid rgba(14,165,233,0.3); outline:none; width:100%; box-sizing:border-box;"></div>' +
@@ -312,6 +313,7 @@ window.hRenderGarage = function(d) {
         '</div>';
     }
 
+    // Literówka "in" poprawiona na "w"
     html += '<div style="margin:30px 15px 15px; text-align:center;"><span style="font-size:0.7rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">HISTORIA WYDATKÓW Z GARAŻU</span></div><div style="padding: 0 15px;">';
     
     let expl = d.exp || [];
