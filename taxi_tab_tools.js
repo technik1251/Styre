@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_tools.js - Narzędzia (Taksometr Online, Garaż, Fuelio Algorytm)
+// PLIK: taxi_tab_tools.js - Narzędzia (Taksometr, Garaż, Fuelio Algorytm)
 // ==========================================
 
 // --- NOWY ALGORYTM FUELIO (Z PODZIAŁEM NA PALIWA) ---
@@ -81,7 +81,7 @@ window.calcFuelioStats = function() {
     return { list: results, ck: globalCk, td: totalDistAll, totalCost: totalCostAll };
 };
 
-// --- RENDER ZAKŁADEK NARZĘDZIOWYCH ---
+// --- GŁÓWNY RENDER ZAKŁADEK NARZĘDZIOWYCH (DOPRACOWANE WIZUALNIE) ---
 window.rDrvTools = function(d, t, nav, hdr) {
     try {
         let appContainer = document.getElementById('app');
@@ -101,7 +101,8 @@ window.rDrvTools = function(d, t, nav, hdr) {
             act = '<div class="dash-hero" style="padding-bottom:15px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:20px;">' +
                 '<div style="display:flex; justify-content:center; margin-bottom:15px;"><div style="background:rgba(217, 70, 239, 0.1); border:1px solid rgba(217, 70, 239, 0.3); width:55px; height:55px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:1.8rem; box-shadow: 0 8px 20px rgba(217,70,239,0.25);">📍</div></div>' +
                 '<p style="letter-spacing:1px; color:rgba(255,255,255,0.4); font-weight:800; font-size:0.65rem; text-transform:uppercase;">ASYSTENT WYCENY</p>' +
-                '<h1 style="color:#fff; font-size:2.5rem; margin-bottom:5px; font-weight:900; letter-spacing:-1px;">Taksometr <span style="color:#d946ef;">Online</span></h1>' +
+                // ZMIANA: Usunięto 'Online', różowy kolor na główny napis
+                '<h1 style="color:#d946ef; font-size:2.5rem; margin-bottom:5px; font-weight:900; letter-spacing:-1px;">Taksometr</h1>' +
             '</div>' +
             
             '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 40px rgba(0,0,0,0.6); margin:0 15px;">' +
@@ -159,7 +160,8 @@ window.rDrvTools = function(d, t, nav, hdr) {
             act = '<div class="dash-hero" style="padding-bottom:15px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:20px;">' +
                 '<div style="display:flex; justify-content:center; margin-bottom:15px;"><div style="background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.3); width:55px; height:55px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:1.8rem; box-shadow: 0 8px 20px rgba(245,158,11,0.25);">🔧</div></div>' +
                 '<p style="letter-spacing:1px; color:rgba(255,255,255,0.4); font-weight:800; font-size:0.65rem; text-transform:uppercase;">DZIENNIK TANKOWAŃ I SERWISÓW</p>' +
-                '<h1 style="color:#fff; font-size:2.5rem; margin-bottom:5px; font-weight:900; letter-spacing:-1px;">Eksploatacja <span style="color:#f59e0b;">Garaż</span></h1>' +
+                // ZMIANA: Usunięto 'Eksploatacja', zostawiono sam pomarańczowy 'Garaż'
+                '<h1 style="color:#f59e0b; font-size:3rem; margin-bottom:5px; font-weight:900; letter-spacing:-1px;">Garaż</h1>' +
             '</div>' +
             (typeof window.hRenderGarage === 'function' ? window.hRenderGarage(d) : '');
         }
@@ -196,7 +198,7 @@ window.hRenderGarage = function(d) {
                 '<span style="font-size:0.6rem; color:rgba(255,255,255,0.6); font-weight:800; text-transform:uppercase; letter-spacing:1px;">'+x.name+' <span style="opacity:0.5;">('+x.dist.toFixed(0)+' KM)</span></span><br>' +
                 '<strong style="color:#f59e0b; font-size:1.6rem; font-weight:900; display:block; margin-top:5px; text-shadow:0 0 10px rgba(245,158,11,0.3);">'+x.l100.toFixed(2)+' <span style="font-size:0.65rem;">'+u100+'</span></strong>' +
                 '<strong style="color:#ef4444; font-size:0.8rem; background:rgba(239,68,68,0.1); padding:4px 8px; border-radius:8px; display:inline-block; margin-top:8px;">'+x.ck.toFixed(2)+' zł/km</strong>' +
-            '</div>';
+            }';
         }
     } else {
         statsCards = '<div class="box" style="grid-column: span 2; text-align:center; padding:25px; color:rgba(255,255,255,0.4); font-size:0.8rem; font-weight:600; border:1px dashed rgba(255,255,255,0.05); border-radius:16px; background:rgba(0,0,0,0.2);">Brak pełnych cykli tankowań do obliczeń.<br>Zatankuj do pełna 2 razy.</div>';
