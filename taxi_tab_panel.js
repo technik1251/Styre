@@ -225,7 +225,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     act += stoperHtml;
                 }
                 
-                // Formularz dodawania kursu - NOWY, SMUKŁY DESIGN (Apple Style)
+                // Formularz dodawania kursu
                 act += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 30px rgba(0,0,0,0.5); margin-bottom:20px;">' +
                     '<div style="text-align:center; margin-bottom:15px;">' +
                         '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">Rejestracja Kursu</span>' +
@@ -521,6 +521,21 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 '</div>';
             }
 
+            // OBLICZANIE DETALI ODPISÓW STAŁYCH (Do akordeonu)
+            let bC_tot = getDaily(cfg.bC, cfg.bPeriod, daysInCurrentMonth) * daysToCharge;
+            let iC_tot = getDaily(cfg.iC, cfg.iPeriod, daysInCurrentMonth) * daysToCharge;
+            let cC_tot = getDaily(cfg.cC, cfg.cType, daysInCurrentMonth) * daysToCharge;
+            let uC_tot = getDaily(cfg.uC, cfg.uType, daysInCurrentMonth) * daysToCharge;
+            let eC_tot = (cfg.eType === 'flat' ? getDaily(cfg.eC, cfg.ePeriod, daysInCurrentMonth) : 0) * daysToCharge;
+
+            let fixedDetailsHtml = '<div id="fixed-costs-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%;">';
+            if(bC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-bottom:6px;"><span>Baza / Korporacja:</span><span>-'+Number(bC_tot).toFixed(2)+' zł</span></div>';
+            if(iC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-bottom:6px;"><span>ZUS / Ubezpieczenie:</span><span>-'+Number(iC_tot).toFixed(2)+' zł</span></div>';
+            if(cC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-bottom:6px;"><span>Auto (Rata/Wynajem):</span><span>-'+Number(cC_tot).toFixed(2)+' zł</span></div>';
+            if(uC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-bottom:6px;"><span>Księgowość / Inne:</span><span>-'+Number(uC_tot).toFixed(2)+' zł</span></div>';
+            if(eC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-bottom:6px;"><span>Partner (Stała opłata):</span><span>-'+Number(eC_tot).toFixed(2)+' zł</span></div>';
+            fixedDetailsHtml += '</div>';
+
             let pAndLHtml = '<div class="panel" style="padding:20px 15px; margin:0 15px 15px; border-radius:20px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 8px 25px rgba(0,0,0,0.4);">' +
                 '<div style="text-align:center; margin-bottom:15px;">' +
                     '<span style="font-size:0.7rem; color:rgba(255,255,255,0.3); font-weight:800; text-transform:uppercase; letter-spacing:1px;">Wodospad Finansowy (P&L)</span>' +
@@ -532,9 +547,14 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 (vf > 0 ? '<div class="fin-row" style="font-size:0.75rem; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><span class="fin-label" style="color:rgba(255,255,255,0.6);">Prowizja Voucherów</span><span class="fin-val" style="color:#ef4444">-'+Number(vf).toFixed(2)+' zł</span></div>' : '') +
                 (pf > 0 ? '<div class="fin-row" style="font-size:0.75rem; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><span class="fin-label" style="color:rgba(255,255,255,0.6);">Prowizja Aplikacji</span><span class="fin-val" style="color:#ef4444">-'+Number(pf).toFixed(2)+' zł</span></div>' : '') +
                 '<div class="fin-row" style="font-size:0.75rem; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><span class="fin-label" style="color:rgba(255,255,255,0.6);">Podatek / VAT</span><span class="fin-val" style="color:#ef4444">-'+Number(tx).toFixed(2)+' zł</span></div>' +
-                '<div class="fin-row" style="align-items:flex-start; font-size:0.75rem; margin-bottom:12px;">' +
-                    '<div style="display:flex; flex-direction:column; max-width:70%;"><span class="fin-label" style="color:rgba(255,255,255,0.8);">Odpisy Stałe '+(!window.db.drv.showFixed ? '(Wyłączone)' : '(Za '+daysToCharge+' dni)')+'</span></div>' +
-                    '<span class="fin-val" style="color:#ef4444; padding-top:2px;">-'+Number(totalDynamicFix).toFixed(2)+' zł</span>' +
+                '<div class="fin-row" style="flex-direction:column; align-items:stretch; font-size:0.75rem; margin-bottom:12px; cursor:pointer; background:rgba(255,255,255,0.02); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.03);" onclick="let el=document.getElementById(\'fixed-costs-det\'); let icon=document.getElementById(\'fixed-costs-icon\'); if(el.style.display===\'none\'){el.style.display=\'block\'; icon.innerHTML=\'🔼\';}else{el.style.display=\'none\'; icon.innerHTML=\'🔽\';}">' +
+                    '<div style="display:flex; justify-content:space-between; width:100%;">' +
+                        '<div style="display:flex; flex-direction:column; max-width:70%;">' +
+                            '<span class="fin-label" style="color:rgba(255,255,255,0.8);">Odpisy Stałe '+(!window.db.drv.showFixed ? '(Wyłączone)' : '(Za '+daysToCharge+' dni)')+' <span id="fixed-costs-icon" style="font-size:0.6rem; margin-left:4px; opacity:0.6;">🔽</span></span>' +
+                        '</div>' +
+                        '<span class="fin-val" style="color:#ef4444; padding-top:2px;">-'+Number(totalDynamicFix).toFixed(2)+' zł</span>' +
+                    '</div>' +
+                    (window.db.drv.showFixed ? fixedDetailsHtml : '') + 
                 '</div>' +
                 '<div class="fin-row" style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; border:1px inset rgba(255,255,255,0.05);">' +
                     '<span class="fin-label" style="color:#fff; font-size:0.85rem; font-weight:900; letter-spacing:1px;">WYNIK KOŃCOWY</span>' +
