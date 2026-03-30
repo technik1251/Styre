@@ -152,7 +152,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             let goal = cfg.goal || 350;
             let showGross = window.db.drv.panelMode === 'gross';
             let displayVal = showGross ? g : n;
-            let displayLabel = showGross ? 'UTARG BRUTTO' : 'NETTO (ZUS/AUTO/OC)';
+            let displayLabel = showGross ? 'PRZYCHÓD BRUTTO' : 'ZYSK NETTO (OPERACYJNY)';
             let progressPct = displayVal > 0 ? Math.min((displayVal / goal) * 100, 100) : 0;
             
             if(d.sh && d.sh.shiftStart) {
@@ -198,8 +198,8 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     '<p style="font-size:0.55rem; font-weight:800; color:rgba(255,255,255,0.3); letter-spacing:1px; text-transform:uppercase; margin-bottom:2px;">'+displayLabel+'</p>' +
                     '<h1 style="font-size:2.6rem; color:'+(displayVal>=0?'#10b981':'#ef4444')+'; font-weight:900; letter-spacing:-1.5px; margin:0;">'+Number(displayVal||0).toFixed(2)+' zł</h1>' +
                     '<div style="display:flex; justify-content:center; gap:8px; margin-top:10px; margin-bottom:10px;">' +
-                        '<button class="chip '+(!showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.65rem; border-radius:16px; font-weight:700; background:'+(!showGross?'rgba(255,255,255,0.08)':'transparent')+'; border:1px solid rgba(255,255,255,0.08); color:'+(!showGross?'#fff':'rgba(255,255,255,0.4)')+';" onclick="window.db.drv.panelMode=\'net\';window.render()">Netto (Operacyjne)</button>' +
-                        '<button class="chip '+(showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.65rem; border-radius:16px; font-weight:700; background:'+(showGross?'rgba(255,255,255,0.08)':'transparent')+'; border:1px solid rgba(255,255,255,0.08); color:'+(showGross?'#fff':'rgba(255,255,255,0.4)')+';" onclick="window.db.drv.panelMode=\'gross\';window.render()">Brutto (Utarg)</button>' +
+                        '<button class="chip '+(!showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.65rem; border-radius:16px; font-weight:700; background:'+(!showGross?'rgba(255,255,255,0.08)':'transparent')+'; border:1px solid rgba(255,255,255,0.08); color:'+(!showGross?'#fff':'rgba(255,255,255,0.4)')+';" onclick="window.db.drv.panelMode=\'net\';window.render()">Zysk Netto</button>' +
+                        '<button class="chip '+(showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.65rem; border-radius:16px; font-weight:700; background:'+(showGross?'rgba(255,255,255,0.08)':'transparent')+'; border:1px solid rgba(255,255,255,0.08); color:'+(showGross?'#fff':'rgba(255,255,255,0.4)')+';" onclick="window.db.drv.panelMode=\'gross\';window.render()">Przychód Brutto</button>' +
                     '</div>' +
                     '<div style="margin-top: 8px; padding: 0 10px;">' +
                         '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:rgba(255,255,255,0.4); margin-bottom:4px; font-weight:700;"><span>Cel: '+goal+' zł</span><span style="color:'+(progressPct>=100?'#10b981':'#fff')+';">'+Number(progressPct||0).toFixed(0)+'%</span></div>' +
@@ -209,7 +209,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     breakdownHtml +
                     '<div style="display:flex; justify-content:center; gap:8px; margin-top:15px; padding:0 5px;">' +
                         '<div style="flex:1; background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.05); padding:10px; border-radius:12px; display:flex; flex-direction:column; justify-content:center;">' +
-                            '<span style="font-size:0.5rem; color:rgba(255,255,255,0.3); text-transform:uppercase; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">Czas pracy:</span>' +
+                            '<span style="font-size:0.5rem; color:rgba(255,255,255,0.3); text-transform:uppercase; font-weight:800; letter-spacing:0.5px; margin-bottom:2px;">Czas aktywności:</span>' +
                             '<strong style="color:#0ea5e9; font-size:1rem;">'+diffHrs+'h '+diffMins+'m</strong>' +
                         '</div>' +
                         '<div style="flex:1; display:flex; flex-direction:column; gap:6px;">' +
@@ -220,15 +220,15 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 '</div>';
                 
                 if (d.sh.sPS) {
-                    act += '<div class="panel" style="border-color:rgba(245,158,11,0.25); text-align:center; padding:20px 10px; margin-top:10px; border-radius:16px; background:rgba(245,158,11,0.05);"><div style="font-size:2rem; margin-bottom:10px; animation: pulse 2s infinite;">☕</div><h2 style="color:#f59e0b; margin:0 0 10px 0; font-size:1rem;">ZMIANA WSTRZYMANA</h2><button class="btn" style="background:#10b981; color:#000; font-weight:800; padding:12px; border-radius:12px; border:none; font-size:0.9rem;" onclick="if(typeof window.toggleShiftPause===\'function\') window.toggleShiftPause()">▶ WZNÓW PRACĘ</button></div>';
+                    act += '<div class="panel" style="border-color:rgba(245,158,11,0.25); text-align:center; padding:20px 10px; margin-top:10px; border-radius:16px; background:rgba(245,158,11,0.05);"><div style="font-size:2rem; margin-bottom:10px; animation: pulse 2s infinite;">☕</div><h2 style="color:#f59e0b; margin:0 0 10px 0; font-size:1rem;">AKTYWNOŚĆ WSTRZYMANA</h2><button class="btn" style="background:#10b981; color:#000; font-weight:800; padding:12px; border-radius:12px; border:none; font-size:0.9rem;" onclick="if(typeof window.toggleShiftPause===\'function\') window.toggleShiftPause()">▶ WZNÓW PRACĘ</button></div>';
                 } else {
                     act += stoperHtml;
                 }
                 
-                // Formularz dodawania kursu
+                // Formularz dodawania kursu (Rejestr Przejazdów)
                 act += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 30px rgba(0,0,0,0.5); margin-bottom:20px;">' +
                     '<div style="text-align:center; margin-bottom:15px;">' +
-                        '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">Rejestracja Kursu</span>' +
+                        '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">REJESTR PRZEJAZDÓW</span>' +
                     '</div>' +
                     
                     '<div style="margin-bottom:15px;">' +
@@ -258,7 +258,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 '</div>';
                 
                 act += '<div class="panel" style="padding:15px; border-radius:24px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b);">' +
-                    '<div style="font-size:0.7rem; margin-bottom:15px; color:rgba(255,255,255,0.4); font-weight:800; letter-spacing:1px; text-align:center;">HISTORIA ZMIANY</div>';
+                    '<div style="font-size:0.7rem; margin-bottom:15px; color:rgba(255,255,255,0.4); font-weight:800; letter-spacing:1px; text-align:center;">DZIENNIK AKTYWNOŚCI</div>';
                     
                 let trsList = d.sh.tr || [];
                 if(trsList.length > 0) {
@@ -287,7 +287,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '</div>';
                     }
                 } else {
-                    act += '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:20px 0;font-size:0.8rem; background:rgba(0,0,0,0.2); border-radius:16px; border:1px dashed rgba(255,255,255,0.05);">Brak dodanych kursów.</div>';
+                    act += '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:20px 0;font-size:0.8rem; background:rgba(0,0,0,0.2); border-radius:16px; border:1px dashed rgba(255,255,255,0.05);">Brak zarejestrowanych kursów.</div>';
                 }
                 act += '</div>';
             } else {
@@ -320,7 +320,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                             '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:4px; display:block;">Data Do</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.05); border:none; border-radius:12px; padding:12px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
                         '</div>' +
                         '<div class="inp-group" style="margin-bottom:15px; background:rgba(0,0,0,0.4); border-radius:16px; padding:15px; border:1px inset rgba(255,255,255,0.05);">' +
-                            '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">UTARG BRUTTO (ŁĄCZNIE)</label>' +
+                            '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">PRZYCHÓD OPERACYJNY BRUTTO</label>' +
                             '<input type="number" id="dw-v" placeholder="0.00" style="width:100%; color:#0ea5e9; border:none; background:transparent; font-size:2.2rem; font-weight:800; text-align:center; outline:none; padding:0; box-sizing:border-box;">' +
                         '</div>' +
                         '<div class="inp-row" style="margin-bottom:15px; gap:10px;">' +
@@ -528,15 +528,15 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             // 1. Utarg Brutto Detale
             let bruttoDetHtml = '<div id="brutto-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
             if(d.plat === 'apps') {
-                if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
-                if(uberEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z Ubera:</span><span>+'+Number(uberEarned).toFixed(2)+' zł</span></div>';
-                if(boltEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z Bolta:</span><span>+'+Number(boltEarned).toFixed(2)+' zł</span></div>';
+                if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
+                if(uberEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z Uber:</span><span>+'+Number(uberEarned).toFixed(2)+' zł</span></div>';
+                if(boltEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z Bolt:</span><span>+'+Number(boltEarned).toFixed(2)+' zł</span></div>';
                 let otherApps = appEarned - uberEarned - boltEarned;
-                if(otherApps > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z Innych Apek:</span><span>+'+Number(otherApps).toFixed(2)+' zł</span></div>';
+                if(otherApps > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód Inne (Aplikacje):</span><span>+'+Number(otherApps).toFixed(2)+' zł</span></div>';
             } else {
-                if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
-                if(cardEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z Karty:</span><span>+'+Number(cardEarned).toFixed(2)+' zł</span></div>';
-                if(vouchEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Z Voucherów:</span><span>+'+Number(vouchEarned).toFixed(2)+' zł</span></div>';
+                if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
+                if(cardEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z Karty/Terminal:</span><span>+'+Number(cardEarned).toFixed(2)+' zł</span></div>';
+                if(vouchEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z Voucherów:</span><span>+'+Number(vouchEarned).toFixed(2)+' zł</span></div>';
             }
             bruttoDetHtml += '</div>';
 
@@ -548,21 +548,25 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     exDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>'+exList[i].d+' ('+exList[i].dt+'):</span><span>-'+Number(exList[i].v).toFixed(2)+' zł</span></div>';
                 }
             } else {
-                exDetHtml += '<div style="text-align:center;">Brak zrejestrowanych wydatków serwisowych w tym okresie.</div>';
+                exDetHtml += '<div style="text-align:center;">Brak zrejestrowanych kosztów eksploatacyjnych.</div>';
             }
             exDetHtml += '</div>';
 
-            // 3. Paliwo z tras Detale
+            // 3. Paliwo z tras Detale (Z ROZBICIEM NA PUSTE I PŁATNE)
+            let costPk = pkSum * (cfg.fuelPx || 0);
+            let costEmpty = emptyKSum * (cfg.fuelPx || 0);
+
             let fuelDetHtml = '<div id="fuel-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
-            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Zarejestrowany dystans z pasażerem:</span><span>'+Number(k).toFixed(1)+' km</span></div>';
-            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Śr. koszt 1 km (Wyliczony z tankowań):</span><span>'+Number(cfg.fuelPx || 0).toFixed(2)+' zł/km</span></div>';
-            fuelDetHtml += '<div style="text-align:right; font-size:0.6rem; margin-top:4px; opacity:0.8;">Kalkulacja: '+Number(k).toFixed(1)+' km * '+Number(cfg.fuelPx || 0).toFixed(2)+' zł = '+Number(fc).toFixed(2)+' zł</div>';
+            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#fff;">Dystans całkowity ('+Number(k).toFixed(1)+' km):</span><span style="color:#fff;">-'+Number(fc).toFixed(2)+' zł</span></div>';
+            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>W tym płatny (z klientem) - '+Number(pkSum).toFixed(1)+' km:</span><span>-'+Number(costPk).toFixed(2)+' zł</span></div>';
+            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>W tym pusty (dojazdy) - '+Number(emptyKSum).toFixed(1)+' km:</span><span style="color:var(--danger);">-'+Number(costEmpty).toFixed(2)+' zł</span></div>';
+            fuelDetHtml += '<div style="text-align:right; font-size:0.6rem; margin-top:6px; opacity:0.8; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">Średni koszt: '+Number(cfg.fuelPx || 0).toFixed(2)+' zł/km</div>';
             fuelDetHtml += '</div>';
 
             // 4. Podatki i Prowizje
-            let taxDetHtml = '<div id="tax-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Brutto ('+Number(g).toFixed(2)+' zł) * Podatek ('+Number((cfg.tax||0)*100).toFixed(1)+'%)</span><span>-'+Number(tx).toFixed(2)+' zł</span></div></div>';
+            let taxDetHtml = '<div id="tax-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Przychód Brutto ('+Number(g).toFixed(2)+' zł) * Podatek ('+Number((cfg.tax||0)*100).toFixed(1)+'%)</span><span>-'+Number(tx).toFixed(2)+' zł</span></div></div>';
             
-            let pfDetHtml = '<div id="pf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Brutto ('+Number(g).toFixed(2)+' zł) * Prowizja ('+Number((cfg.ePct||0)*100).toFixed(1)+'%)</span><span>-'+Number(pf).toFixed(2)+' zł</span></div></div>';
+            let pfDetHtml = '<div id="pf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Przychód Brutto ('+Number(g).toFixed(2)+' zł) * Prowizja ('+Number((cfg.ePct||0)*100).toFixed(1)+'%)</span><span>-'+Number(pf).toFixed(2)+' zł</span></div></div>';
             
             let cfDetHtml = '<div id="cf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Kartą ('+Number(cardEarned).toFixed(2)+' zł) * Prowizja Terminala ('+Number((cfg.cardF||0)*100).toFixed(1)+'%)</span><span>-'+Number(cf).toFixed(2)+' zł</span></div></div>';
             
@@ -576,11 +580,11 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             let eC_tot = (cfg.eType === 'flat' ? getDaily(cfg.eC, cfg.ePeriod, daysInCurrentMonth) : 0) * daysToCharge;
 
             let fixedDetailsHtml = '<div id="fixed-costs-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
-            if(bC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Baza / Korporacja:</span><span>-'+Number(bC_tot).toFixed(2)+' zł</span></div>';
-            if(iC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>ZUS / Ubezpieczenie:</span><span>-'+Number(iC_tot).toFixed(2)+' zł</span></div>';
-            if(cC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Auto (Rata/Wynajem):</span><span>-'+Number(cC_tot).toFixed(2)+' zł</span></div>';
-            if(uC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Księgowość / Inne:</span><span>-'+Number(uC_tot).toFixed(2)+' zł</span></div>';
-            if(eC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Partner (Stała opłata):</span><span>-'+Number(eC_tot).toFixed(2)+' zł</span></div>';
+            if(bC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Abonament za bazę / Korporację:</span><span>-'+Number(bC_tot).toFixed(2)+' zł</span></div>';
+            if(iC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>ZUS / Ubezpieczenie Pojazdu:</span><span>-'+Number(iC_tot).toFixed(2)+' zł</span></div>';
+            if(cC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Amortyzacja Auta (Rata/Wynajem):</span><span>-'+Number(cC_tot).toFixed(2)+' zł</span></div>';
+            if(uC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Księgowość / Inne usługi:</span><span>-'+Number(uC_tot).toFixed(2)+' zł</span></div>';
+            if(eC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Abonament (Stała opłata partnerska):</span><span>-'+Number(eC_tot).toFixed(2)+' zł</span></div>';
             fixedDetailsHtml += '</div>';
 
             let makeRow = function(label, valueStr, valColor, detId, detHtml) {
@@ -595,25 +599,25 @@ window.rDrvPanel = function(d, t, nav, hdr) {
 
             let pAndLHtml = '<div class="panel" style="padding:20px 15px; margin:0 15px 15px; border-radius:20px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 8px 25px rgba(0,0,0,0.4);">' +
                 '<div style="text-align:center; margin-bottom:15px;">' +
-                    '<span style="font-size:0.7rem; color:rgba(255,255,255,0.3); font-weight:800; text-transform:uppercase; letter-spacing:1px;">Wodospad Finansowy (P&L)</span>' +
+                    '<span style="font-size:0.7rem; color:rgba(255,255,255,0.3); font-weight:800; text-transform:uppercase; letter-spacing:1px;">ZESTAWIENIE FINANSOWE (P&L)</span>' +
                 '</div>' +
-                makeRow('Utarg Brutto z aplikacji', Number(g).toFixed(2)+' zł', '#10b981', 'brutto-det', bruttoDetHtml) +
-                makeRow('Wydatki Zmienne (Garaż)', '-'+Number(ex).toFixed(2)+' zł', '#ef4444', 'ex-det', exDetHtml) +
-                makeRow('Paliwo z tras', '-'+Number(fc).toFixed(2)+' zł', '#f59e0b', 'fuel-det', fuelDetHtml) +
-                (cf > 0 ? makeRow('Prowizja Terminala', '-'+Number(cf).toFixed(2)+' zł', '#ef4444', 'cf-det', cfDetHtml) : '') +
+                makeRow('Przychody Operacyjne Brutto', Number(g).toFixed(2)+' zł', '#10b981', 'brutto-det', bruttoDetHtml) +
+                makeRow('Koszty Eksploatacyjne (Serwis)', '-'+Number(ex).toFixed(2)+' zł', '#ef4444', 'ex-det', exDetHtml) +
+                makeRow('Koszty Paliwa (Całkowite)', '-'+Number(fc).toFixed(2)+' zł', '#f59e0b', 'fuel-det', fuelDetHtml) +
+                (cf > 0 ? makeRow('Prowizja Terminala (Karty)', '-'+Number(cf).toFixed(2)+' zł', '#ef4444', 'cf-det', cfDetHtml) : '') +
                 (vf > 0 ? makeRow('Prowizja Voucherów', '-'+Number(vf).toFixed(2)+' zł', '#ef4444', 'vf-det', vfDetHtml) : '') +
                 (pf > 0 ? makeRow('Prowizja Aplikacji', '-'+Number(pf).toFixed(2)+' zł', '#ef4444', 'pf-det', pfDetHtml) : '') +
-                makeRow('Podatek / VAT', '-'+Number(tx).toFixed(2)+' zł', '#ef4444', 'tax-det', taxDetHtml) +
-                makeRow('Odpisy Stałe '+(!window.db.drv.showFixed ? '(Wyłączone)' : '(Za '+daysToCharge+' dni)'), '-'+Number(totalDynamicFix).toFixed(2)+' zł', '#ef4444', 'fixed-costs-det', (window.db.drv.showFixed ? fixedDetailsHtml : '')) +
+                makeRow('Zobowiązania Podatkowe (VAT/PIT)', '-'+Number(tx).toFixed(2)+' zł', '#ef4444', 'tax-det', taxDetHtml) +
+                makeRow('Koszty Stałe / Amortyzacja '+(!window.db.drv.showFixed ? '(Wyłączone)' : '(Za '+daysToCharge+' dni)'), '-'+Number(totalDynamicFix).toFixed(2)+' zł', '#ef4444', 'fixed-costs-det', (window.db.drv.showFixed ? fixedDetailsHtml : '')) +
                 '<div class="fin-row" style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; border:1px inset rgba(255,255,255,0.05); margin-top:12px;">' +
-                    '<span class="fin-label" style="color:#fff; font-size:0.85rem; font-weight:900; letter-spacing:1px;">WYNIK KOŃCOWY</span>' +
+                    '<span class="fin-label" style="color:#fff; font-size:0.85rem; font-weight:900; letter-spacing:1px;">ZYSK NETTO (OPERACYJNY)</span>' +
                     '<span class="fin-val" style="font-size:1.4rem; font-weight:900; letter-spacing:-0.5px; color:'+(n >= 0 ? '#10b981' : '#ef4444')+'">'+Number(n).toFixed(2)+' zł</span>' +
                 '</div>' +
             '</div>';
 
             let historyLogHtml = '<div class="panel" style="margin:0 15px 15px; padding:15px; border-radius:20px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 8px 25px rgba(0,0,0,0.4);">' +
                 '<div style="text-align:center; margin-bottom:15px;">' +
-                    '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">Dziennik Zmian</span>' +
+                    '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">HISTORIA ROZLICZEŃ</span>' +
                 '</div>';
             
             if(fs.length > 0) {
@@ -652,7 +656,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 '<button class="chip '+(!window.db.drv.showFixed?'active':'')+'" style="font-size:0.65rem; padding:6px 12px; border-radius:16px; font-weight:800; background:'+(!window.db.drv.showFixed?'rgba(255,255,255,0.1)':'transparent')+'; border:1px solid rgba(255,255,255,0.1); color:'+(!window.db.drv.showFixed?'#fff':'var(--muted)')+';" onclick="window.db.drv.showFixed=false; window.render()">Tylko Operacyjny</button>' +
             '</div>' +
             '<div class="dash-hero" style="padding-top:0; padding-bottom:15px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:15px;">' +
-                '<p style="font-size:0.6rem; font-weight:800; color:rgba(255,255,255,0.4); letter-spacing:1px; text-transform:uppercase;">'+(window.db.drv.showFixed ? 'TWOJE PRAWDZIWE NETTO' : 'ZYSK Z KURSÓW (BEZ ZUS/AUTA)')+'</p>' +
+                '<p style="font-size:0.6rem; font-weight:800; color:rgba(255,255,255,0.4); letter-spacing:1px; text-transform:uppercase;">'+(window.db.drv.showFixed ? 'TWOJE PRAWDZIWE NETTO' : 'ZYSK Z KURSÓW (BEZ KOSZTÓW STAŁYCH)')+'</p>' +
                 '<h1 style="color:'+(n>=0?'#10b981':'#ef4444')+'; font-size:3rem; font-weight:900; letter-spacing:-1.5px; margin:0;">'+Number(n).toFixed(2)+' zł</h1>' +
                 transferButtonHtml +
             '</div>' +
@@ -661,31 +665,31 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             '<div style="padding:0 15px; display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">' +
                 '<div style="display:flex; gap:10px;">' +
                     '<div class="box" style="flex:1; padding:12px; border-radius:16px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05);">' +
-                        '<span style="color:#0ea5e9; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Zysk / 1 km</span>' +
+                        '<span style="color:#0ea5e9; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">ZYSK JEDNOSTKOWY (1 KM)</span>' +
                         '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(rKm).toFixed(2)+' zł</strong>' +
                     '</div>' +
                     '<div class="box" style="flex:1; padding:12px; border-radius:16px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05);">' +
-                        '<span style="color:#d946ef; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Zysk / 1 h</span>' +
+                        '<span style="color:#d946ef; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">ZYSK GODZINOWY (1 H)</span>' +
                         '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(rHr).toFixed(2)+' zł</strong>' +
                     '</div>' +
                 '</div>' +
                 '<div style="display:flex; gap:10px;">' +
                     '<div class="box" style="flex:1; padding:12px; border-radius:16px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05);">' +
-                        '<span style="color:#10b981; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Dni w pracy</span>' +
+                        '<span style="color:#10b981; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">AKTYWNE DNI</span>' +
                         '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+daysToCharge+' dni</strong>' +
                     '</div>' +
                     '<div class="box" style="flex:1; padding:12px; border-radius:16px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05);">' +
-                        '<span style="color:#f59e0b; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Czas za kółkiem</span>' +
+                        '<span style="color:#f59e0b; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">CZAS ZALOGOWANIA</span>' +
                         '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(th).toFixed(1)+' h</strong>' +
                     '</div>' +
                 '</div>' +
                 '<div style="display:flex; gap:10px;">' +
                     '<div class="box" style="flex:1; border:1px solid rgba(16,185,129,0.1); background:rgba(16,185,129,0.05); padding:12px; border-radius:16px;">' +
-                        '<span style="color:#10b981; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">KM z Klientem</span>' +
+                        '<span style="color:#10b981; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">DYSTANS PŁATNY</span>' +
                         '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(pkSum).toFixed(1)+' km</strong>' +
                     '</div>' +
                     '<div class="box" style="flex:1; border:1px solid rgba(239,68,68,0.1); background:rgba(239,68,68,0.05); padding:12px; border-radius:16px;">' +
-                        '<span style="color:#ef4444; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Puste (Dojazdy)</span>' +
+                        '<span style="color:#ef4444; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">PUSTE PRZEBIEGI</span>' +
                         '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(emptyKSum).toFixed(1)+' km</strong>' +
                     '</div>' +
                 '</div>' +
