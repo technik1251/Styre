@@ -75,41 +75,102 @@ window.openEndShiftModal = function() {
     
     let startOdo = (window.db && window.db.drv && window.db.drv.sh && window.db.drv.sh.o) ? window.db.drv.sh.o : 0;
     
-    let html = '<div id="m-end-shift" class="modal-overlay" style="z-index: 30000; animation: fadeIn 0.2s;">' +
-        '<div class="panel" style="width:100%; max-width:380px; border-color:var(--danger); background: linear-gradient(145deg, #1e1010, #09090b);">' +
-            '<div style="text-align:center; margin-bottom:15px;">' +
-                '<div style="font-size:2.5rem; margin-bottom:5px;">🏁</div>' +
-                '<h3 style="color:var(--danger); margin:0; font-size:1.2rem; text-transform:uppercase;">Zakończenie Pracy</h3>' +
-            '</div>' +
-            '<div style="display:flex; justify-content:space-between; margin-bottom:15px; background:rgba(0,0,0,0.5); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">' +
-                '<div style="text-align:center; flex:1;">' +
-                    '<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">Czas z timera</span><br>' +
-                    '<strong style="color:var(--info); font-size:1.1rem;">'+diffHrs+'h '+diffMins+'m</strong>' +
+    let d = window.db.drv;
+    let plat = d.plat;
+    let g=0;
+    if(d.sh && d.sh.tr) {
+        for(let i=0; i<d.sh.tr.length; i++) g += (parseFloat(d.sh.tr[i].v) || 0);
+    }
+
+    let offlineInputsHtml = '';
+    if(plat === 'apps') {
+        offlineInputsHtml = 
+            '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">' +
+                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;">POTWIERDŹ UTARG Z APLIKACJI (ZŁ)</label>' +
+                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">' +
+                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-m-uber" placeholder="Uber" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
+                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-m-bolt" placeholder="Bolt" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
+                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-m-freenow" placeholder="FreeNow" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
+                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-m-inna" placeholder="Inna Apka" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
                 '</div>' +
-                '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);">' +
-                    '<span style="font-size:0.65rem; color:var(--muted); text-transform:uppercase;">ODO Start</span><br>' +
-                    '<strong style="color:#fff; font-size:1.1rem; cursor:pointer;" onclick="document.getElementById(\'m-end-shift\').remove(); window.dEditStartOdo();">'+startOdo+' <span style="font-size:0.8rem; color:var(--info);">✏️</span></strong>' +
+                '<div style="font-size:0.65rem; color:rgba(255,255,255,0.4); text-align:center; margin-top:12px; font-weight:600;">(Gotówkę aplikacja zsumuje z dziennika)</div>' +
+            '</div>';
+    } else {
+        offlineInputsHtml = 
+            '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">' +
+                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;">POTWIERDŹ UTARG (ZŁ)</label>' +
+                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">' +
+                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-m-karta" placeholder="Karta/Terminal" style="background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.3); color:#0ea5e9; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>' +
+                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-m-voucher" placeholder="Vouchery" style="background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.3); color:#a855f7; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>' +
+                '</div>' +
+                '<div style="font-size:0.65rem; color:rgba(255,255,255,0.4); text-align:center; margin-top:12px; font-weight:600;">(Gotówkę aplikacja zsumuje z dziennika)</div>' +
+            '</div>';
+    }
+
+    let html = '<div id="m-end-shift" class="modal-overlay" style="z-index: 30000; animation: fadeIn 0.3s ease; position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px);">' +
+        '<div class="panel" style="width:90%; max-width:400px; max-height:90vh; overflow-y:auto; border-radius:28px; background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 25px 60px rgba(0,0,0,0.8); display:flex; flex-direction:column; padding:0;">' +
+            
+            // Nagłówek modala
+            '<div style="padding:25px 20px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:center; position:relative;">' +
+                '<button style="position:absolute; right:20px; top:25px; background:rgba(255,255,255,0.05); border:none; width:35px; height:35px; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer;" onclick="document.getElementById(\'m-end-shift\').remove()">✕</button>' +
+                '<div style="font-size:2.5rem; margin-bottom:10px; text-shadow:0 0 15px rgba(239,68,68,0.4);">🏁</div>' +
+                '<h3 style="color:#ef4444; margin:0 0 5px 0; font-size:1.3rem; font-weight:900; letter-spacing:-0.5px;">Zakończ Zmianę</h3>' +
+                '<p style="color:rgba(255,255,255,0.5); font-size:0.8rem; margin:0; font-weight:600;">Rozlicz się, aby poznać puste kilometry.</p>' +
+            '</div>' +
+            
+            // Główna zawartość
+            '<div style="padding:20px;">' +
+                
+                // Statystyki z timera
+                '<div style="display:flex; justify-content:space-between; margin-bottom:15px; background:rgba(0,0,0,0.5); padding:10px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);">' +
+                    '<div style="text-align:center; flex:1;">' +
+                        '<span style="font-size:0.65rem; color:var(--muted); font-weight:800; text-transform:uppercase;">Czas zmiany</span><br>' +
+                        '<strong style="color:#0ea5e9; font-size:1.1rem; letter-spacing:1px;">'+diffHrs+'h '+diffMins+'m</strong>' +
+                    '</div>' +
+                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);">' +
+                        '<span style="font-size:0.65rem; color:var(--muted); font-weight:800; text-transform:uppercase;">Wbity utarg</span><br>' +
+                        '<strong style="color:#10b981; font-size:1.1rem; letter-spacing:1px;">'+Number(g).toFixed(2)+' zł</strong>' +
+                    '</div>' +
+                '</div>' +
+
+                // Data zmiany i czas pracy w jednym rzędzie
+                '<div class="inp-row" style="margin-bottom:15px; gap:12px;">' +
+                    '<div class="inp-group" style="margin:0;">' +
+                        '<label style="font-size:0.65rem; color:var(--muted); font-weight:700; margin-bottom:4px; display:block;">Data zmiany</label>' +
+                        '<input type="date" id="de-d1" value="'+shiftDateStr+'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:0.85rem; font-weight:700; outline:none; width:100%; box-sizing:border-box;">' +
+                    '</div>' +
+                    '<div class="inp-group" style="margin:0;">' +
+                        '<label style="font-size:0.65rem; color:var(--muted); font-weight:700; margin-bottom:4px; display:block;">Czas pracy (h)</label>' +
+                        '<input type="number" step="0.1" id="de-h" value="'+autoHw+'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:0.85rem; font-weight:700; outline:none; width:100%; box-sizing:border-box;">' +
+                    '</div>' +
+                '</div>' +
+
+                // LEDowy licznik
+                '<div style="background:#111116; border-radius:24px; padding:20px; text-align:center; border:1px solid #2a2a35; box-shadow:inset 0 4px 20px rgba(0,0,0,0.5); margin-bottom:20px;">' +
+                    '<div style="font-size:0.65rem; color:#ef4444; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">STAN LICZNIKA POJAZDU (KONIEC)</div>' +
+                    '<input type="number" id="de-o" placeholder="np. '+(startOdo + 100)+'" style="width:100%; background:transparent; border:none; color:#ef4444; font-size:3rem; font-weight:900; text-align:center; outline:none; padding:0; text-shadow:0 0 15px rgba(239,68,68,0.4); letter-spacing:2px; font-family:monospace;">' +
+                    '<div style="font-size:0.65rem; color:rgba(255,255,255,0.4); text-align:center; margin-top:10px; font-weight:600; cursor:pointer;" onclick="document.getElementById(\'m-end-shift\').remove(); window.dEditStartOdo();">Licznik Startowy: '+startOdo+' KM <span style="font-size:0.8rem; color:#0ea5e9;">✏️</span></div>' +
+                '</div>' +
+
+                offlineInputsHtml +
+                
+                '<div class="inp-group" style="margin-bottom:10px;">' +
+                    '<label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:6px; display:block; text-transform:uppercase; letter-spacing:0.5px;">Dystans Płatny (KM z Aplikacji)</label>' +
+                    '<input type="number" id="dw-m-pk" placeholder="Z pasażerem (KM z apek)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:16px; padding:16px; text-align:center; font-size:1rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;">' +
+                '</div>' +
+
+            '</div>' +
+            
+            // Footer modala
+            '<div style="padding:0 20px 25px 20px;">' +
+                '<button class="btn" style="background:linear-gradient(135deg, #ef4444, #b91c1c); color:#fff; font-weight:900; padding:20px; font-size:1.1rem; letter-spacing:1px; border-radius:24px; border:none; box-shadow:0 10px 30px rgba(239,68,68,0.3); width:100%; outline:none;" onclick="window.dEndS()">ROZLICZ I ZAKOŃCZ ZMIANĘ</button>' +
+                '<button class="btn" style="background:transparent; color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.1); border-radius:24px; box-shadow:none; padding:15px; margin-top:10px; font-weight:700; font-size:0.9rem; width:100%; outline:none;" onclick="document.getElementById(\'m-end-shift\').remove()">ANULUJ ZAMYKANIE</button>' +
+                
+                '<div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.1);">' +
+                    '<span style="color:#ef4444; font-size:0.7rem; text-decoration:underline; font-weight:700; cursor:pointer; opacity:0.8;" onclick="window.dCancelShift()">Omyłkowo rozpoczęta zmiana? Anuluj bez zapisu.</span>' +
                 '</div>' +
             '</div>' +
-            '<div class="inp-group" style="margin-bottom:12px;">' +
-                '<label style="color:var(--muted);">Data zmiany (Dla statystyk)</label>' +
-                '<input type="date" id="de-d1" value="'+shiftDateStr+'">' +
-            '</div>' +
-            '<div class="inp-row" style="margin-bottom:15px;">' +
-                '<div class="inp-group">' +
-                    '<label style="color:var(--muted);">Czas pracy (h)</label>' +
-                    '<input type="number" step="0.1" id="de-h" value="'+autoHw+'">' +
-                '</div>' +
-                '<div class="inp-group">' +
-                    '<label style="color:var(--danger);">Końcowy Przebieg</label>' +
-                    '<input type="number" id="de-o" style="border-color:var(--danger); background:rgba(239,68,68,0.05); color:var(--danger); font-weight:bold;" placeholder="np. '+(startOdo + 100)+'">' +
-                '</div>' +
-            '</div>' +
-            '<button class="btn btn-danger" style="padding:18px;" onclick="window.dEndS()">ZAKOŃCZ I ZAPISZ</button>' +
-            '<button class="btn" style="background:transparent; color:var(--muted); box-shadow:none; border:1px solid rgba(255,255,255,0.1); margin-top:8px;" onclick="document.getElementById(\'m-end-shift\').remove()">ANULUJ ZAMYKANIE</button>' +
-            '<div style="text-align:center; margin-top:20px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.1);">' +
-                '<span style="color:var(--danger); font-size:0.75rem; text-decoration:underline; cursor:pointer; opacity:0.8;" onclick="window.dCancelShift()">Omyłkowo rozpoczęta zmiana? Anuluj ją bez zapisu.</span>' +
-            '</div>' +
+            
         '</div>' +
     '</div>';
     
@@ -153,12 +214,17 @@ window.dEndS = function() {
     if(k <= 0) { 
         let el = document.getElementById('de-o'); 
         if(el) { el.style.borderBottom='2px solid var(--danger)'; el.classList.add('shake-anim'); setTimeout(function(){el.classList.remove('shake-anim')},300); } 
-        if(window.sysAlert) return window.sysAlert("Błąd", "Stan końcowy musi być wyższy niż startowy ("+startOdo+" km)! Możesz edytować ODO Start używając ołówka powyżej."); 
+        if(window.sysAlert) return window.sysAlert("Błąd", "Stan końcowy musi być wyższy niż startowy ("+startOdo+" km)! Możesz edytować ODO Start używając ołówka poniżej licznika."); 
         return; 
     }
     
     let hW = window.safeVal('de-h', 0);
-    let g=0, pk=0, cf=0, vf=0;
+    let pk = window.safeVal('dw-m-pk', 0);
+    
+    let d = window.db.drv;
+    let plat = d.plat;
+    let g=0, cf=0, vf=0;
+    
     let cardFee = (window.db.drv && window.db.drv.cfg && window.db.drv.cfg.cardF) ? window.db.drv.cfg.cardF : 0;
     let vouchFee = (window.db.drv && window.db.drv.cfg && window.db.drv.cfg.voucherF) ? window.db.drv.cfg.voucherF : 0;
     let fuelPx = (window.db.drv && window.db.drv.cfg && window.db.drv.cfg.fuelPx) ? window.db.drv.cfg.fuelPx : 0;
@@ -167,15 +233,41 @@ window.dEndS = function() {
     let ePct = (window.db.drv && window.db.drv.cfg && window.db.drv.cfg.ePct) ? window.db.drv.cfg.ePct : 0;
     
     let trList = (window.db.drv && window.db.drv.sh && window.db.drv.sh.tr) ? window.db.drv.sh.tr : [];
+    let newTrList = [];
     
+    // Z dziennika zmian
     for(let i=0; i<trList.length; i++) {
         let x = trList[i];
         let xv = parseFloat(x.v) || 0;
-        let xk = parseFloat(x.k) || 0;
+        newTrList.push(x);
         g += xv; 
-        pk += xk;
         if(x.p === 'Karta') cf += xv * cardFee;
         if(x.p === 'Voucher') vf += xv * vouchFee;
+    }
+    
+    // Z formularza zamykania (apki/terminal)
+    if (plat === 'apps') {
+        let vUber = parseFloat(document.getElementById('dw-m-uber').value) || 0;
+        let vBolt = parseFloat(document.getElementById('dw-m-bolt').value) || 0;
+        let vFree = parseFloat(document.getElementById('dw-m-freenow').value) || 0;
+        let vInna = parseFloat(document.getElementById('dw-m-inna').value) || 0;
+        
+        if (vUber > 0) newTrList.push({id: Date.now()+1, p: 'Aplikacja', s: 'Uber', v: vUber, k: 0, time: '--:--'});
+        if (vBolt > 0) newTrList.push({id: Date.now()+2, p: 'Aplikacja', s: 'Bolt', v: vBolt, k: 0, time: '--:--'});
+        if (vFree > 0) newTrList.push({id: Date.now()+3, p: 'Aplikacja', s: 'FreeNow', v: vFree, k: 0, time: '--:--'});
+        if (vInna > 0) newTrList.push({id: Date.now()+4, p: 'Aplikacja', s: 'Inna', v: vInna, k: 0, time: '--:--'});
+        
+        g += (vUber + vBolt + vFree + vInna);
+    } else {
+        let vKarta = parseFloat(document.getElementById('dw-m-karta').value) || 0;
+        let vVouch = parseFloat(document.getElementById('dw-m-voucher').value) || 0;
+        
+        if (vKarta > 0) newTrList.push({id: Date.now()+2, p: 'Karta', s: 'Terminal', v: vKarta, k: 0, time: '--:--'});
+        if (vVouch > 0) newTrList.push({id: Date.now()+3, p: 'Voucher', s: 'Korporacja', v: vVouch, k: 0, time: '--:--'});
+        
+        g += (vKarta + vVouch);
+        cf += vKarta * cardFee;
+        vf += vVouch * vouchFee;
     }
     
     let emptyK = Math.max(0, k - pk);
@@ -188,13 +280,10 @@ window.dEndS = function() {
     
     if(!window.db.drv.h) window.db.drv.h = [];
     
-    let copiedTrList = [];
-    for(let i=0; i<trList.length; i++) copiedTrList.push(trList[i]);
-    
     window.db.drv.h.unshift({
         id: Date.now(), rD: saveDate.toISOString(), dt: dtStr, hW: hW, 
         g: g, n: n_operacyjny, k: k, pk: pk, emptyK: emptyK, 
-        fc: fc, tx: tax, pF: pFee, cF: cf, vF: vf, tr: copiedTrList
+        fc: fc, tx: tax, pF: pFee, cF: cf, vF: vf, tr: newTrList
     });
     window.db.drv.h.sort(function(a,b){ return new Date(b.rD) - new Date(a.rD) });
     
@@ -216,28 +305,37 @@ window.dEndS = function() {
     window.db.tab = 'stats'; 
     window.render();
     
-    let mHtml = '<div id="m-summary" class="modal-overlay" style="z-index: 30000;">' +
-        '<div class="panel" style="width:100%; max-width:380px; border-color:var(--success); text-align:center; padding:20px; background: linear-gradient(145deg, #18181b, #09090b); max-height: 90vh; overflow-y: auto;">' +
-            '<div style="font-size:3rem; margin-bottom:5px;">🏁</div>' +
-            '<h2 style="color:var(--success); margin:0 0 5px 0; font-size:1.5rem;">ZMIANA ZAKOŃCZONA</h2>' +
-            '<p style="color:var(--muted); font-size:0.8rem; margin-bottom:15px;">Data: <strong style="color:#fff">'+dtStr+'</strong></p>' +
-            '<div style="background:#000; padding:15px; border-radius:12px; margin-bottom:15px; text-align:left; border:1px solid rgba(255,255,255,0.05);">' +
-                '<div style="color:var(--info); font-size:0.7rem; text-transform:uppercase; font-weight:bold; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:4px;">📊 Wyniki Finansowe</div>' +
-                '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:var(--muted); font-size:0.85rem;">Utarg Brutto:</span><strong style="color:var(--success);">'+Number(g||0).toFixed(2)+' zł</strong></div>' +
-                '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:var(--muted); font-size:0.85rem;">Prowizje / Podatki:</span><strong style="color:var(--danger);">-'+Number((tax+pFee+cf+vf)||0).toFixed(2)+' zł</strong></div>' +
-                '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:var(--muted); font-size:0.85rem;">Koszty Paliwa:</span><strong style="color:var(--fuel);">-'+Number(fc||0).toFixed(2)+' zł</strong></div>' +
-                '<div style="display:flex; justify-content:space-between; margin-top:8px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;"><span style="color:#fff; font-weight:bold; font-size:0.9rem;">Zysk Operacyjny:</span><strong style="color:'+(n_operacyjny>=0?'var(--success)':'var(--danger)')+'; font-size:1.1rem;">'+Number(n_operacyjny||0).toFixed(2)+' zł</strong></div>' +
+    // --- PODSUMOWANIE ZMIANY PREMIUM ---
+    let mHtml = '<div id="m-summary" class="modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index: 30000; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); animation:fadeIn 0.3s ease;">' +
+        '<div class="panel" style="width:90%; max-width:380px; border-radius:28px; border:1px solid rgba(16,185,129,0.3); text-align:center; padding:30px 20px; background: linear-gradient(145deg, #18181b, #09090b); box-shadow:0 25px 60px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto;">' +
+            '<div style="font-size:4rem; margin-bottom:10px; filter:drop-shadow(0 0 15px rgba(16,185,129,0.4));">🏁</div>' +
+            '<h2 style="color:#10b981; margin:0 0 5px 0; font-size:1.6rem; font-weight:900; letter-spacing:-0.5px;">ZMIANA ZAKOŃCZONA</h2>' +
+            '<p style="color:rgba(255,255,255,0.4); font-size:0.85rem; font-weight:600; margin-bottom:20px; text-transform:uppercase; letter-spacing:1px;">RAPORT Z DNIA: <strong style="color:#fff">'+dtStr+'</strong></p>' +
+            
+            '<div style="background:#111116; padding:20px; border-radius:20px; margin-bottom:15px; text-align:left; border:1px solid #2a2a35; box-shadow:inset 0 2px 10px rgba(0,0,0,0.2);">' +
+                '<div style="color:#0ea5e9; font-size:0.7rem; text-transform:uppercase; font-weight:800; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px;"><span>📊</span> Wyniki Finansowe</div>' +
+                '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:rgba(255,255,255,0.6); font-size:0.85rem; font-weight:600;">Utarg Brutto:</span><strong style="color:#10b981; font-size:1rem;">'+Number(g||0).toFixed(2)+' zł</strong></div>' +
+                '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:rgba(255,255,255,0.6); font-size:0.85rem; font-weight:600;">Prowizje / Podatki:</span><strong style="color:#ef4444; font-size:1rem;">-'+Number((tax+pFee+cf+vf)||0).toFixed(2)+' zł</strong></div>' +
+                '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:rgba(255,255,255,0.6); font-size:0.85rem; font-weight:600;">Koszty Paliwa:</span><strong style="color:#f59e0b; font-size:1rem;">-'+Number(fc||0).toFixed(2)+' zł</strong></div>' +
+                '<div style="display:flex; justify-content:space-between; margin-top:12px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:12px; align-items:center;"><span style="color:#fff; font-weight:800; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.5px;">Zysk Operacyjny:</span><strong style="color:'+(n_operacyjny>=0?'#10b981':'#ef4444')+'; font-size:1.4rem; font-weight:900; letter-spacing:-1px;">'+Number(n_operacyjny||0).toFixed(2)+' zł</strong></div>' +
             '</div>' +
-            '<div style="background:#000; padding:15px; border-radius:12px; margin-bottom:15px; text-align:left; border:1px solid rgba(255,255,255,0.05);">' +
-                '<div style="color:var(--driver); font-size:0.7rem; text-transform:uppercase; font-weight:bold; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:4px;">🚗 Statystyki Trasy</div>' +
-                '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:var(--muted); font-size:0.85rem;">Całkowity dystans:</span><strong style="color:#fff;">'+Number(k||0).toFixed(1)+' km</strong></div>' +
-                '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:var(--muted); font-size:0.85rem;">Z pasażerem:</span><strong style="color:var(--success);">'+Number(pk||0).toFixed(1)+' km</strong></div>' +
-                '<div style="display:flex; justify-content:space-between;"><span style="color:var(--muted); font-size:0.85rem;">Puste (Dojazdy):</span><strong style="color:var(--warning);">'+Number(emptyK||0).toFixed(1)+' km</strong></div>' +
+            
+            '<div style="background:#111116; padding:20px; border-radius:20px; margin-bottom:25px; text-align:left; border:1px solid #2a2a35; box-shadow:inset 0 2px 10px rgba(0,0,0,0.2);">' +
+                '<div style="color:#f59e0b; font-size:0.7rem; text-transform:uppercase; font-weight:800; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px;"><span>🚗</span> Statystyki Trasy</div>' +
+                '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:rgba(255,255,255,0.6); font-size:0.85rem; font-weight:600;">Całkowity dystans:</span><strong style="color:#fff; font-size:1rem;">'+Number(k||0).toFixed(1)+' km</strong></div>' +
+                '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:rgba(255,255,255,0.6); font-size:0.85rem; font-weight:600;">Z pasażerem (Płatny):</span><strong style="color:#10b981; font-size:1rem;">'+Number(pk||0).toFixed(1)+' km</strong></div>' +
+                '<div style="display:flex; justify-content:space-between;"><span style="color:rgba(255,255,255,0.6); font-size:0.85rem; font-weight:600;">Puste (Dojazdy):</span><strong style="color:#ef4444; font-size:1rem;">'+Number(emptyK||0).toFixed(1)+' km</strong></div>' +
             '</div>' +
-            '<button class="btn" style="background:var(--success); color:#000; padding:15px;" onclick="document.getElementById(\'m-summary\').remove();">ZOBACZ PEŁNE P&L</button>' +
+            
+            '<button class="btn" style="background:linear-gradient(135deg, #10b981, #059669); color:#000; padding:18px; font-weight:900; font-size:1.05rem; letter-spacing:1px; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(16,185,129,0.3); width:100%; outline:none;" onclick="document.getElementById(\'m-summary\').remove();">ZOBACZ PEŁNE P&L</button>' +
         '</div>' +
     '</div>';
     document.body.insertAdjacentHTML('beforeend', mHtml);
+    
+    // EFEKT WOW: Odpalenie Konfetti na koniec zmiany!
+    if(typeof window.shootConfetti === 'function') {
+        setTimeout(function(){ window.shootConfetti(); }, 300);
+    }
 };
 
 // --- TRANSAKCJE TAXI (DODAWANIE / EDYCJA KURSU) ---
@@ -277,19 +375,29 @@ window.dEditT = function(id) {
         '<option value="Aplikacja" '+(tr.p==='Aplikacja'?'selected':'')+'>Aplikacja</option><option value="Gotówka" '+(tr.p==='Gotówka'?'selected':'')+'>Gotówka</option>' : 
         '<option value="Gotówka" '+(tr.p==='Gotówka'?'selected':'')+'>Gotówka</option><option value="Karta" '+(tr.p==='Karta'?'selected':'')+'>Karta</option><option value="Voucher" '+(tr.p==='Voucher'?'selected':'')+'>Voucher</option>';
     
-    let html = '<div id="m-edit-t" class="modal-overlay" style="z-index: 30000; animation: fadeIn 0.2s;">' +
-        '<div class="panel" style="width:100%; max-width:380px; background: #09090b; border-color:var(--driver);">' +
-            '<h3 style="margin-top:0; color:var(--driver);">✏️ Edytuj Kurs</h3>' +
-            '<div class="inp-row" style="margin-bottom:10px;">' +
-                '<div class="inp-group"><label>Kwota (zł)</label><input type="number" step="0.01" id="et-v" value="'+Number(tr.v||0).toFixed(2)+'"></div>' +
-                '<div class="inp-group"><label>Dystans (KM)</label><input type="number" step="0.1" id="et-k" value="'+Number(tr.k||0).toFixed(1)+'"></div>' +
+    let inpStyle = 'background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:1rem; font-weight:700; outline:none; width:100%; box-sizing:border-box;';
+    
+    let html = '<div id="m-edit-t" class="modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:30000; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); animation:fadeIn 0.2s ease;">' +
+        '<div class="panel" style="width:90%; max-width:350px; background: linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.08); border-radius:28px; box-shadow:0 20px 50px rgba(0,0,0,0.8); padding:0;">' +
+            
+            '<div style="padding:25px 20px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:center; position:relative;">' +
+                '<button style="position:absolute; right:20px; top:25px; background:rgba(255,255,255,0.05); border:none; width:35px; height:35px; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer;" onclick="document.getElementById(\'m-edit-t\').remove()">✕</button>' +
+                '<h3 style="margin:0; color:#0ea5e9; font-size:1.2rem; font-weight:900; letter-spacing:-0.5px; text-transform:uppercase;">✏️ Edytuj Kurs</h3>' +
             '</div>' +
-            '<div class="inp-row" style="margin-bottom:15px;">' +
-                '<div class="inp-group"><label>Źródło</label><select id="et-s" style="background:#000;">'+srcOpts+'</select></div>' +
-                '<div class="inp-group"><label>Płatność</label><select id="et-p" style="background:#000;">'+payOpts+'</select></div>' +
+            
+            '<div style="padding:20px;">' +
+                '<div class="inp-row" style="margin-bottom:15px; gap:12px;">' +
+                    '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:var(--muted); font-weight:700; margin-bottom:6px; display:block;">Kwota (zł)</label><input type="number" step="0.01" id="et-v" value="'+Number(tr.v||0).toFixed(2)+'" style="'+inpStyle+' color:#10b981;"></div>' +
+                    '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:var(--muted); font-weight:700; margin-bottom:6px; display:block;">Dystans (KM)</label><input type="number" step="0.1" id="et-k" value="'+Number(tr.k||0).toFixed(1)+'" style="'+inpStyle+'"></div>' +
+                '</div>' +
+                '<div class="inp-row" style="margin-bottom:20px; gap:12px;">' +
+                    '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:var(--muted); font-weight:700; margin-bottom:6px; display:block;">Źródło</label><select id="et-s" style="'+inpStyle+' padding:15px;">'+srcOpts+'</select></div>' +
+                    '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:var(--muted); font-weight:700; margin-bottom:6px; display:block;">Płatność</label><select id="et-p" style="'+inpStyle+' padding:15px;">'+payOpts+'</select></div>' +
+                '</div>' +
+                '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; padding:18px; font-size:1rem; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.3); width:100%; letter-spacing:1px; outline:none;" onclick="window.dSaveEditT('+id+')">ZAPISZ ZMIANY</button>' +
+                '<button class="btn" style="background:transparent; color:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:20px; box-shadow:none; padding:15px; margin-top:10px; font-weight:700; font-size:0.85rem; width:100%; outline:none;" onclick="document.getElementById(\'m-edit-t\').remove()">ANULUJ</button>' +
             '</div>' +
-            '<button class="btn btn-driver" style="padding:15px;" onclick="window.dSaveEditT('+id+')">ZAPISZ ZMIANY</button>' +
-            '<button class="btn" style="background:transparent; color:var(--muted); box-shadow:none; margin-top:5px;" onclick="document.getElementById(\'m-edit-t\').remove()">ANULUJ</button>' +
+            
         '</div>' +
     '</div>';
     document.body.insertAdjacentHTML('beforeend', html);
@@ -326,74 +434,9 @@ window.dDelT = function(id) {
 };
 
 // --- WBITKI OFFLINE (RAPORTY) ---
-window.dAddOfflineWeekly = function() {
-    let v = window.safeVal('dw-v'), k = window.safeVal('dw-k'), c = window.safeVal('dw-c', 0), hW = window.safeVal('dw-h', 0);
-    let dF_str = document.getElementById('dw-d-from').value;
-    let dT_str = document.getElementById('dw-d-to').value;
-    
-    if(!v || v <= 0) { 
-        if(window.sysAlert) return window.sysAlert("Błąd", "Wpisz kwotę brutto!"); 
-        return; 
-    }
-    
-    let dF = new Date(dF_str); dF.setHours(12,0,0); 
-    let dT = new Date(dT_str); dT.setHours(12,0,0);
-    
-    if(dT < dF) { 
-        if(window.sysAlert) return window.sysAlert("Błąd", "Data 'Do' nie może być przed 'Od'!"); 
-        return; 
-    }
-    
-    let tD = Math.round((dT - dF) / (1000*60*60*24)) + 1;
-    let otherSrcEl = document.getElementById('dt-other-src');
-    let finalSrc = window.dTSrc === 'Inna' ? (otherSrcEl ? otherSrcEl.value || 'Inna Apka' : 'Inna Apka') : window.dTSrc;
-    
-    let vD = v / tD, kD = k / tD, cD = c / tD, hwD = hW / tD;
-    
-    let fuelPx = (window.db.drv && window.db.drv.cfg && window.db.drv.cfg.fuelPx) ? window.db.drv.cfg.fuelPx : 0;
-    let taxRate = (window.db.drv && window.db.drv.cfg && window.db.drv.cfg.tax) ? window.db.drv.cfg.tax : 0;
-    let isPct = (window.db.drv && window.db.drv.cfg && window.db.drv.cfg.eType === 'pct');
-    let ePct = (window.db.drv && window.db.drv.cfg && window.db.drv.cfg.ePct) ? window.db.drv.cfg.ePct : 0;
-    
-    let fcD = kD * fuelPx;
-    let taxD = vD * taxRate;
-    let pFeeD = isPct ? vD * ePct : 0;
-    let n_opD = vD - fcD - taxD - pFeeD;
-    
-    if(!window.db.drv.h) window.db.drv.h = [];
-    
-    for(let i=0; i<tD; i++) {
-        let tObj = new Date(dT); 
-        tObj.setDate(tObj.getDate() - i); 
-        let dDisp = tObj.toLocaleDateString('pl-PL');
-        let tr = [];
-        
-        if(cD > 0) {
-            tr.push({id: Date.now() + i*10, v: cD, k: 0, m: 0, s: finalSrc + ' (Gotówka)', p: 'Gotówka', c: null});
-            tr.push({id: Date.now() + i*10 + 1, v: vD - cD, k: kD, m: 0, s: finalSrc + ' (Apka)', p: 'Aplikacja', c: null});
-        } else {
-            tr.push({id: Date.now() + i*10, v: vD, k: kD, m: 0, s: finalSrc + (tD > 1 ? ' (Zestawienie)' : ' (Wbita)'), p: 'Aplikacja', c: null});
-        }
-        
-        window.db.drv.h.unshift({
-            id: Date.now() + i*100, rD: tObj.toISOString(), dt: dDisp, 
-            hW: hwD, g: vD, n: n_opD, k: kD, pk: kD, emptyK: 0, 
-            fc: fcD, tx: taxD, pF: pFeeD, cF: 0, vF: 0, tr: tr
-        });
-    }
-    
-    window.db.drv.h.sort(function(a,b){ return new Date(b.rD) - new Date(a.rD); });
-    if(k > 0 && window.db.drv.odo > 0) window.db.drv.odo += k;
-    
-    window.dShowOff = false; 
-    window.save(); 
-    window.db.tab = 'stats'; 
-    window.render();
-    
-    if(window.sysAlert) window.sysAlert("Sukces", tD > 1 ? "Rozbito poprawnie na "+tD+" dni i zaksięgowano!" : "Utarg zaksięgowany prosto do historii!", "success");
-};
+// Note: przeniesiono i ulepszono logikę do dAddOfflineWeekly (z podziałem na aplikacje)
 
-// --- SYNCHRONIZACJA Z DOMEM (TRANSFER GOTÓWKI + KONFETTI 🎉) ---
+// --- SYNCHRONIZACJA Z DOMEM (TRANSFER GOTÓWKI + KONFETTI 🎉) Premium Apple Style ---
 window.dTransferToHomeModal = function() {
     let accOpts = '';
     if (window.db.home && window.db.home.accs) {
@@ -404,7 +447,7 @@ window.dTransferToHomeModal = function() {
     }
     
     if(accOpts === '') { 
-        if(window.sysAlert) return window.sysAlert('Błąd', 'Brak kont w Budżecie Domowym! Dodaj je najpierw w module domowym.', 'error'); 
+        if(window.sysAlert) return window.sysAlert('Brak Portfeli', 'Nie masz żadnych kont w Budżecie Domowym. Dodaj je najpierw w module domowym!', 'error'); 
         return; 
     }
     
@@ -439,30 +482,39 @@ window.dTransferToHomeModal = function() {
     
     let availableCash = totalCashEarned - totalTransferred;
     if (availableCash <= 0) {
-        if(window.sysAlert) return window.sysAlert('Brak środków', 'Rozliczyłeś już całą gotówkę z Taxi w Budżecie Domowym!', 'info');
+        if(window.sysAlert) return window.sysAlert('Portfel Pusty', 'Rozliczyłeś już całą gotówkę z Taxi. Wszystko się zgadza!', 'info');
         return;
     }
     
-    let html = '<div id="m-transfer-home" class="modal-overlay" style="z-index: 30000; animation: fadeIn 0.2s;">' +
-        '<div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--success);">' +
-            '<h3 style="margin-top:0; color:var(--success);">💸 Wypłata Utargu</h3>' +
-            '<p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px;">Przelej zarobioną gotówkę do portfela domowego.</p>' +
+    let html = '<div id="m-transfer-home" class="modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:30000; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.8); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); animation:fadeIn 0.3s ease;">' +
+        '<div class="panel" style="width:90%; max-width:360px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(16,185,129,0.3); border-radius:32px; box-shadow:0 30px 60px rgba(0,0,0,0.9); overflow:hidden;">' +
             
-            '<div style="font-size:0.75rem; color:var(--success); margin-bottom:15px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); padding:10px; border-radius:8px; text-align:center;">' +
-                'Nierozliczona gotówka w portfelu:<br>' +
-                '<strong style="font-size:1.2rem;">'+Number(availableCash).toFixed(2)+' zł</strong>' +
+            '<div style="background:rgba(16,185,129,0.05); padding:30px 20px 20px 20px; text-align:center; border-bottom:1px solid rgba(16,185,129,0.1); position:relative;">' +
+                '<button style="position:absolute; right:20px; top:20px; background:rgba(255,255,255,0.05); border:none; width:35px; height:35px; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer;" onclick="document.getElementById(\'m-transfer-home\').remove()">✕</button>' +
+                '<div style="font-size:3.5rem; margin-bottom:5px; filter:drop-shadow(0 0 15px rgba(16,185,129,0.5)); animation: pulse 2s infinite;">💸</div>' +
+                '<h3 style="margin:0; color:#10b981; font-size:1.3rem; font-weight:900; letter-spacing:-0.5px; text-transform:uppercase;">Przelew Utargu</h3>' +
             '</div>' +
             
-            '<div class="inp-group" style="margin-bottom:15px;">' +
-                '<label>Kwota do przelania (zł)</label>' +
-                '<input type="number" step="0.01" id="dth-v" max="'+availableCash+'" placeholder="np. 250" value="'+Number(availableCash).toFixed(2)+'" class="big-inp" style="color:var(--success); background:rgba(0,0,0,0.5);">' +
+            '<div style="padding:25px 20px;">' +
+                
+                '<div style="text-align:center; margin-bottom:25px;">' +
+                    '<span style="font-size:0.7rem; color:var(--muted); font-weight:800; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:8px;">Nierozliczona gotówka w portfelu</span>' +
+                    '<strong style="font-size:2.2rem; color:#fff; font-weight:900; letter-spacing:-1px;">'+Number(availableCash).toFixed(2)+' zł</strong>' +
+                '</div>' +
+                
+                '<div class="inp-group" style="margin-bottom:15px;">' +
+                    '<label style="font-size:0.65rem; color:var(--muted); font-weight:700; margin-bottom:6px; display:block; text-transform:uppercase;">Kwota do przelania (zł)</label>' +
+                    '<input type="number" step="0.01" id="dth-v" max="'+availableCash+'" value="'+Number(availableCash).toFixed(2)+'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:16px; padding:16px; text-align:center; font-size:1.2rem; font-weight:900; outline:none; width:100%; box-sizing:border-box;">' +
+                '</div>' +
+                
+                '<div class="inp-group" style="margin-bottom:25px;">' +
+                    '<label style="font-size:0.65rem; color:var(--muted); font-weight:700; margin-bottom:6px; display:block; text-transform:uppercase;">Wybierz portfel domowy</label>' +
+                    '<select id="dth-acc" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:16px; padding:16px; font-size:0.95rem; font-weight:700; outline:none; width:100%; box-sizing:border-box; appearance:none;">'+accOpts+'</select>' +
+                '</div>' +
+                
+                '<button id="btn-transfer-exec" class="btn" style="background:linear-gradient(135deg, #10b981, #059669); color:#000; font-weight:900; padding:20px; font-size:1.05rem; letter-spacing:1px; border-radius:20px; border:none; box-shadow:0 10px 30px rgba(16,185,129,0.3); width:100%; outline:none;" onclick="window.dExecTransferToHome()">ZAKSIĘGUJ W DOMU</button>' +
             '</div>' +
-            '<div class="inp-group" style="margin-bottom:20px;">' +
-                '<label>Do jakiego portfela?</label>' +
-                '<select id="dth-acc" style="background:#18181b;">'+accOpts+'</select>' +
-            '</div>' +
-            '<button id="btn-transfer-exec" class="btn btn-success" style="padding:15px; font-weight:bold;" onclick="window.dExecTransferToHome()">ZAKSIĘGUJ W DOMU</button>' +
-            '<button class="btn" style="background:transparent; color:var(--muted); margin-top:5px; box-shadow:none;" onclick="document.getElementById(\'m-transfer-home\').remove()">ANULUJ</button>' +
+            
         '</div>' +
     '</div>';
     document.body.insertAdjacentHTML('beforeend', html);
@@ -481,13 +533,13 @@ window.dExecTransferToHome = function() {
     }
     
     if(v > maxV + 0.05) {
-        if(window.sysAlert) window.sysAlert('Odmowa', "Próbujesz przelać więcej, niż masz w gotówce z Taxi! (Max: "+Number(maxV).toFixed(2)+" zł)", 'error'); 
+        if(window.sysAlert) window.sysAlert('Odmowa', "Próbujesz przelać więcej, niż masz w gotówce z Taxi! (Maksymalnie: "+Number(maxV).toFixed(2)+" zł)", 'error'); 
         return;
     }
     
     if(btn) {
-        btn.innerHTML = "PRZELEWAM... 💸";
-        btn.style.opacity = "0.8";
+        btn.innerHTML = "PRZEKAZYWANIE... 💸";
+        btn.style.opacity = "0.7";
         btn.disabled = true;
     }
     
@@ -497,7 +549,7 @@ window.dExecTransferToHome = function() {
     if(!window.db.home) window.db.home = {trans: []};
     if(!window.db.home.trans) window.db.home.trans = [];
     
-    let dtStr = dObj.toLocaleDateString('pl-PL');
+    let dtStr = window.getLocalYMD ? window.getLocalYMD(dObj) : dObj.toISOString().split('T')[0];
     
     window.db.home.trans.push({
         id: Date.now(), type: 'inc', cat: 'Wypłata z Etatu', acc: accId,
@@ -508,7 +560,6 @@ window.dExecTransferToHome = function() {
     window.db.home.trans.sort(function(a,b){ return new Date(b.rD) - new Date(a.rD); });
     window.save();
     
-    // EFEKT WOW: Odpalenie Konfetti!
     if(typeof window.shootConfetti === 'function') {
         window.shootConfetti();
     }
@@ -516,10 +567,10 @@ window.dExecTransferToHome = function() {
     setTimeout(function() {
         let modal = document.getElementById('m-transfer-home');
         if(modal) modal.remove();
-        window.render();
+        if(typeof window.render === 'function') window.render();
         
         if(window.sysAlert) {
-            window.sysAlert('Sukces!', "Przelałeś "+Number(v).toFixed(2)+" zł do Budżetu Domowego! Zostały doliczone do portfela.", 'success');
+            window.sysAlert('Sukces!', "Zaksięgowano wpłatę "+Number(v).toFixed(2)+" zł do Budżetu Domowego!", 'success');
         }
     }, 600);
 };
