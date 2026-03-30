@@ -163,7 +163,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
         
         let act = ''; 
 
-        // --- ZAPOWIEDŹ PRO DLA PANELU TAXI (Zmieniona Ikona Taxi Premium) ---
+        // --- ZAPOWIEDŹ PRO DLA PANELU TAXI ---
         let panelProBanner = '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
             '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
             '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
@@ -209,7 +209,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             } else {
                 ch2 = '<div class="chip '+(window.dTPay==='Gotówka'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Gotówka'?chipActGreen:chipIdle)+'" onclick="window.dTC(\'p\',\'Gotówka\')">Gotówka</div>' +
                       '<div class="chip '+(window.dTPay==='Karta'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Karta'?chipActBlue:chipIdle)+'" onclick="window.dTC(\'p\',\'Karta\')">Karta</div>' +
-                      '<div class="chip '+(window.dTPay==='Voucher'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Voucher'?'background:rgba(168,85,247,0.15);color:#a855f7;border-color:rgba(168,85,247,0.4);box-shadow: 0 4px 15px rgba(168,85,247,0.2);':chipIdle)+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
+                      '<div class="chip '+(window.dTPay==='Voucher'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Voucher'?'background:rgba(168,85,247,0.15);color:#a855f7;border-color:rgba(168,85,247,0.4);box-shadow:0 0 15px rgba(168,85,247,0.2);':chipIdle)+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
             }
 
             let clientOpts = '';
@@ -609,17 +609,32 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             }
 
             // --- ZAPOWIEDŹ PRO DLA WYNIKÓW (Zmieniona Ikona Pucharów Premium) ---
-            let proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀\', \'info\')">' +
-                '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
-                '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
-                '<div style="display: flex; align-items: center; gap: 15px;">' +
-                    '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🏆✨</div>' +
-                    '<div style="text-align: left;">' +
-                        '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Wyniki</h4>' +
-                        '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Rozliczenia AI:</b> Wszystko w jednym miejscu.<br>✅ <b>Pełna Historia:</b> Analizuj swoje zyski!</div>' +
+            let proBannerHtml = '';
+            if (d.plat === 'apps') {
+                proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀\', \'info\')">' +
+                    '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+                    '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+                    '<div style="display: flex; align-items: center; gap: 15px;">' +
+                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🏆✨</div>' +
+                        '<div style="text-align: left;">' +
+                            '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Wyniki</h4>' +
+                            '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Rozliczenia AI:</b> Wszystko w jednym miejscu.<br>✅ <b>Pełna Historia:</b> Analizuj swoje zyski!</div>' +
+                        '</div>' +
                     '</div>' +
-                '</div>' +
-            '</div>';
+                '</div>';
+            } else {
+                proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀\', \'info\')">' +
+                    '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+                    '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+                    '<div style="display: flex; align-items: center; gap: 15px;">' +
+                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🏆✨</div>' +
+                        '<div style="text-align: left;">' +
+                            '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Wyniki</h4>' +
+                            '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Integracja e-Kasy:</b> Automatyczne zaciąganie kursów (API).</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }
 
             // =========================================================
             // BUDOWA AKORDEONÓW SZCZEGÓŁOWYCH P&L (Transparentność)
@@ -790,6 +805,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             proBannerHtml +
             pAndLHtml +
             historyLogHtml +
+            // POTĘŻNY MARGINES DOLNY (140px)
             '<div style="height:140px; width:100%; clear:both;"></div>' + nav;
         }
     } catch(err) {
