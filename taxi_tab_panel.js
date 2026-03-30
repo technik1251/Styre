@@ -163,14 +163,17 @@ window.rDrvPanel = function(d, t, nav, hdr) {
         
         let act = ''; 
 
-        // --- ZAPOWIEDŹ PRO DLA PANELU TAXI ---
-        let panelProBanner = '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; border-color: rgba(217, 70, 239, 0.2); cursor:pointer;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Automatyczny Import (PRO)\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. 🚀\', \'info\')">' +
-            '<div class="pro-badge-mini" style="background:#d946ef;">PRO</div>' +
-            '<h4 style="color:#d946ef; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
-            '<ul class="pro-list-mini">' +
-                '<li>✅ <b>Auto-Import Zleceń:</b> Kursy z Uber/Bolt wpadają same!</li>' +
-                '<li>✅ <b>Asystent Głosowy:</b> Dodawaj utarg mówiąc do telefonu.</li>' +
-            '</ul>' +
+        // --- ZAPOWIEDŹ PRO DLA PANELU TAXI (Premium Style) ---
+        let panelProBanner = '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
+            '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+            '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+            '<div style="display: flex; align-items: center; gap: 15px;">' +
+                '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🔮</div>' +
+                '<div style="text-align: left;">' +
+                    '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Automatyzacja Premium</h4>' +
+                    '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Auto-Import:</b> Zlecenia wpadają same.<br>✅ <b>Asystent Głosowy:</b> Notuj mówiąc!</div>' +
+                '</div>' +
+            '</div>' +
         '</div>';
 
         // ==========================================
@@ -341,7 +344,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     act += stoperHtml;
                 }
                 
-                // PRZYWRÓCONY REJESTR POJEDYNCZYCH KURSÓW
                 act += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 30px rgba(0,0,0,0.5); margin-bottom:20px;">' +
                     '<div style="text-align:center; margin-bottom:15px;">' +
                         '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">REJESTR POJEDYNCZEGO KURSU</span>' +
@@ -353,9 +355,10 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '<div class="chip-box" style="margin-bottom:0; justify-content:center; gap:8px; margin-top:10px;">'+ch2+'</div>' +
                     '</div>' +
                     
-                    '<div style="background:rgba(0,0,0,0.4); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:15px; margin-bottom:15px;">' +
+                    // --- ZMIENIONY, LEDOWY INPUT DLA KWOTY ---
+                    '<div style="background:#111116; border:1px solid #2a2a35; border-radius:20px; padding:20px; margin-bottom:15px; box-shadow:inset 0 4px 20px rgba(0,0,0,0.5); text-align:center;">' +
                         '<div style="display:flex; justify-content:center; align-items:center; gap:8px;">' +
-                            '<input type="number" id="dt-v" placeholder="0" style="color:#fff; border:none; background:transparent; font-size:3.2rem; font-weight:700; text-align:center; width:160px; padding:0; outline:none;">' +
+                            '<input type="number" id="dt-v" placeholder="0.00" style="color:#10b981; border:none; background:transparent; font-size:3.5rem; font-weight:900; text-align:center; width:160px; padding:0; outline:none; text-shadow:0 0 15px rgba(16,185,129,0.3); font-family:monospace; letter-spacing:1px;">' +
                             '<span style="font-size:1.4rem; font-weight:700; color:rgba(255,255,255,0.3); margin-top:12px;">zł</span>' +
                         '</div>' +
                     '</div>' +
@@ -369,7 +372,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '<select id="dt-cid" style="background:rgba(0,0,0,0.3); border-radius:14px; padding:14px; font-size:0.8rem; color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select>' +
                     '</div>' +
                     
-                    '<button class="btn" style="background:#0ea5e9; color:#fff; padding:18px; border-radius:16px; font-weight:800; font-size:1rem; letter-spacing:0.5px; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ KURS DO ZMIANY</button>' +
+                    '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; padding:18px; border-radius:20px; font-weight:900; font-size:1.05rem; letter-spacing:1px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.35); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ KURS DO ZMIANY</button>' +
                 '</div>';
                 
                 act += '<div class="panel" style="padding:15px; border-radius:24px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b);">' +
@@ -406,76 +409,77 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 }
                 act += '</div>';
             } else {
-                // EKRAN STARTOWY
-                act = '<div class="dash-hero" style="padding-top:40px; padding-bottom:30px;">' +
-                    '<div style="width:80px;height:80px;background:#10b981;border-radius:40px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:2.5rem;box-shadow:0 8px 25px rgba(16,185,129,0.3);">🚕</div>' +
-                    '<h1 style="font-size:2rem; font-weight:800; letter-spacing:-0.5px; margin-bottom:5px; color:#fff;">Cześć, '+(window.db.userName || 'Kierowco')+'!</h1>' +
-                    '<p style="margin-top:5px; font-size:0.85rem; color:rgba(255,255,255,0.5); font-weight:600;">Potwierdź stan licznika przed jazdą.</p>' +
+                // --- EKRAN STARTOWY PREMIUM ---
+                act = '<div class="dash-hero" style="padding-top:30px; padding-bottom:20px;">' +
+                    '<div style="width:70px; height:70px; background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2.2rem; box-shadow:0 8px 25px rgba(245,158,11,0.15);">🚕</div>' +
+                    '<h1 style="font-size:2.2rem; font-weight:900; letter-spacing:-1px; margin-bottom:5px; color:#fff;">Cześć, '+(window.db.userName || 'Kierowco')+'!</h1>' +
+                    '<p style="margin-top:5px; font-size:0.75rem; color:rgba(255,255,255,0.5); font-weight:800; text-transform:uppercase; letter-spacing:1px;">Potwierdź stan licznika przed jazdą</p>' +
                 '</div>' +
-                '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 20px 40px rgba(0,0,0,0.6); padding:30px 20px; border-radius:24px; margin:0 15px;">' +
-                    '<div style="background:rgba(0,0,0,0.4); border:1px inset rgba(255,255,255,0.05); border-radius:16px; padding:15px; margin-bottom:20px;">' +
-                        '<input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="ODO Start (KM)" style="width:100%; font-size:2.5rem; padding:0; text-align:center; background:transparent; border:none; color:#10b981; font-weight:800; outline:none; box-sizing:border-box;">' +
+                '<div style="padding:0 15px;">' +
+                    // --- ZMIENIONY, LEDOWY INPUT DLA ODO ---
+                    '<div style="background:#111116; border-radius:24px; padding:25px; text-align:center; border:1px solid #2a2a35; box-shadow:inset 0 4px 20px rgba(0,0,0,0.5), 0 8px 30px rgba(0,0,0,0.4); margin-bottom:20px;">' +
+                        '<div style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">STAN LICZNIKA POJAZDU (START)</div>' +
+                        '<input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="000000" style="width:100%; background:transparent; border:none; color:#f59e0b; font-size:3.5rem; font-weight:900; text-align:center; outline:none; padding:0; text-shadow:0 0 15px rgba(245,158,11,0.4); letter-spacing:2px; font-family:monospace;">' +
                     '</div>' +
-                    '<button class="btn" style="background:#10b981; color:#000; font-size:1.1rem; font-weight:800; letter-spacing:0.5px; padding:18px; border-radius:16px; border:none; box-shadow:0 6px 20px rgba(16, 185, 129, 0.3); width:100%; outline:none;" onclick="if(typeof window.dStartS===\'function\') window.dStartS()">ROZPOCZNIJ PRACĘ</button>' +
+                    '<button class="btn" style="background:linear-gradient(135deg, #10b981, #059669); color:#000; font-size:1.1rem; font-weight:900; letter-spacing:1px; padding:20px; border-radius:24px; border:none; box-shadow:0 10px 30px rgba(16,185,129,0.3); width:100%; text-transform:uppercase; outline:none;" onclick="if(typeof window.dStartS===\'function\') window.dStartS()">ROZPOCZNIJ PRACĘ</button>' +
                 '</div>';
                 
                 if(!window.dShowOff) {
-                    act += '<div style="padding:0 15px; margin-top:20px;">' +
-                        '<button class="btn" style="background:rgba(14,165,233,0.08); color:#0ea5e9; border:1px dashed rgba(14,165,233,0.3); font-size:0.8rem; font-weight:700; box-shadow:none; width:100%; padding:15px; border-radius:16px; outline:none;" onclick="window.dShowOff=true; window.render()">📥 ZAKSIĘGUJ ZALEGŁĄ ZMIANĘ</button>' +
+                    act += '<div style="padding:0 15px; margin-top:15px;">' +
+                        '<button class="btn" style="background:#1a1a22; color:#888; border:1px solid #2a2a35; font-size:0.8rem; font-weight:700; box-shadow:none; width:100%; padding:16px; border-radius:20px; outline:none;" onclick="window.dShowOff=true; window.render()">📥 ZAKSIĘGUJ ZALEGŁĄ ZMIANĘ</button>' +
                     '</div>';
-                    act += panelProBanner; // <--- Baner PRO na samym dole ekranu startowego
+                    act += panelProBanner;
                 } else {
-                    // NOWY, ROZBUDOWANY SYSTEM KSIĘGOWANIA DLA LENIWYCH (Podział na aplikacje)
                     let offlineInputsHtml = '';
                     if(d.plat === 'apps') {
                         offlineInputsHtml = 
-                            '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:16px; padding:15px; margin-bottom:15px;">' +
-                                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">ROZBICIE UTARGU (ZŁ)</label>' +
-                                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
-                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
-                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
-                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
-                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
-                                    '<div class="inp-group" style="margin:0; grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma z portfela)" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:12px; padding:14px; text-align:center; font-size:1.1rem; font-weight:800; outline:none;"></div>' +
+                            '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">' +
+                                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;">ROZBICIE UTARGU (ZŁ)</label>' +
+                                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0; grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma z portfela)" style="background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>' +
                                 '</div>' +
                             '</div>';
                     } else {
                         offlineInputsHtml = 
-                            '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:16px; padding:15px; margin-bottom:15px;">' +
-                                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">ROZBICIE UTARGU (ZŁ)</label>' +
-                                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
-                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:12px; padding:14px; text-align:center; font-size:1.1rem; font-weight:800; outline:none;"></div>' +
-                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-karta" placeholder="Karta/Terminal" style="background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.3); color:#0ea5e9; border-radius:12px; padding:14px; text-align:center; font-size:1.1rem; font-weight:800; outline:none;"></div>' +
-                                    '<div class="inp-group" style="margin:0; grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" style="background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); color:#a855f7; border-radius:12px; padding:14px; text-align:center; font-size:1.1rem; font-weight:800; outline:none;"></div>' +
+                            '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">' +
+                                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;">ROZBICIE UTARGU (ZŁ)</label>' +
+                                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" style="background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-karta" placeholder="Karta/Terminal" style="background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.3); color:#0ea5e9; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0; grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" style="background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.3); color:#a855f7; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>' +
                                 '</div>' +
                             '</div>';
                     }
 
                     act += '<div class="section-lbl" style="color:#0ea5e9; border-color:#0ea5e9; margin-top:30px; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase;">⚡ ZALEGŁA ZMIANA / RAPORT Z KASY</div>' +
-                    '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #0f172a, #09090b); border-radius:24px; padding:20px 15px; margin:0 15px; animation:fadeIn 0.3s; box-shadow:0 10px 30px rgba(0,0,0,0.5);">' +
+                    '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #0f172a, #09090b); border-radius:24px; padding:25px 20px; margin:0 15px; animation:fadeIn 0.3s; box-shadow:0 15px 40px rgba(0,0,0,0.6);">' +
                         
-                        '<div class="inp-row" style="margin-bottom:15px; gap:10px;">' +
-                            '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:4px; display:block;">Data Startu</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.05); border:none; border-radius:12px; padding:12px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                            '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:4px; display:block;">Data Zakończenia</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.05); border:none; border-radius:12px; padding:12px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                        '<div class="inp-row" style="margin-bottom:15px; gap:12px;">' +
+                            '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:6px; display:block;">Data Startu</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                            '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:6px; display:block;">Data Zakończenia</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
                         '</div>' +
                         
-                        '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:16px; padding:15px; margin-bottom:15px;">' +
-                            '<label style="font-size:0.65rem; color:#f59e0b; font-weight:800; text-align:center; display:block; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">STAN LICZNIKA POJAZDU</label>' +
-                            '<div class="inp-row" style="margin:0; gap:10px;">' +
-                                '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.9rem; font-weight:700; outline:none;"></div>' +
-                                '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.9rem; font-weight:700; outline:none;"></div>' +
+                        '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">' +
+                            '<label style="font-size:0.65rem; color:#f59e0b; font-weight:800; text-align:center; display:block; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">STAN LICZNIKA POJAZDU</label>' +
+                            '<div class="inp-row" style="margin:0; gap:12px;">' +
+                                '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
+                                '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
                             '</div>' +
                         '</div>' +
 
-                        offlineInputsHtml + // Wstrzyknięcie widoku rozbicia utargu
+                        offlineInputsHtml +
                         
-                        '<div class="inp-row" style="margin-bottom:20px; gap:10px;">' +
-                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-pk" placeholder="Dystans płatny (KM)" style="background:rgba(255,255,255,0.05); border:none; color:#fff; border-radius:12px; padding:14px; text-align:center; font-size:0.8rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-h" placeholder="Czas pracy (h)" style="background:rgba(255,255,255,0.05); border:none; color:#fff; border-radius:12px; padding:14px; text-align:center; font-size:0.8rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                        '<div class="inp-row" style="margin-bottom:25px; gap:12px;">' +
+                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-pk" placeholder="Dystans płatny (KM)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.85rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-h" placeholder="Czas pracy (h)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.85rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
                         '</div>' +
                         
-                        '<button class="btn" style="background:#0ea5e9; color:#fff; font-weight:800; padding:16px; font-size:0.95rem; border-radius:14px; border:none; box-shadow:0 6px 15px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAddOfflineWeekly===\'function\') window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button>' +
-                        '<button class="btn" style="background:transparent; color:rgba(255,255,255,0.5); margin-top:8px; border:1px solid rgba(255,255,255,0.1); border-radius:14px; box-shadow:none; padding:14px; font-weight:700; font-size:0.85rem; width:100%; outline:none;" onclick="window.dShowOff=false; window.render()">ANULUJ</button>' +
+                        '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; padding:18px; font-size:1.05rem; letter-spacing:1px; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.35); width:100%; outline:none;" onclick="if(typeof window.dAddOfflineWeekly===\'function\') window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button>' +
+                        '<button class="btn" style="background:transparent; color:rgba(255,255,255,0.4); margin-top:10px; border:1px solid rgba(255,255,255,0.1); border-radius:20px; box-shadow:none; padding:16px; font-weight:700; font-size:0.9rem; width:100%; outline:none;" onclick="window.dShowOff=false; window.render()">ANULUJ</button>' +
                     '</div>';
                 }
             }
@@ -650,64 +654,62 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 transferButtonHtml = '<button class="btn" style="margin-top:15px; width:calc(100% - 30px); margin-left:auto; margin-right:auto; font-weight:700; background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.05); padding:14px; border-radius:14px; outline:none;" disabled><span style="font-size:1rem; margin-right:8px;">✅</span> GOTÓWKA ROZLICZONA<br><small style="font-weight:600; font-size:0.65rem; display:block; margin-top:2px;">W domu: '+Number(totalTransferred).toFixed(2)+' zł</small></button>';
             }
 
-            let proBannerHtml = '';
-            if (d.plat === 'apps') {
-                proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 20px 15px; border-color: rgba(168, 85, 247, 0.2); cursor:pointer;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Inteligentny Asystent Zleceń (PRO)\', \'Wkrótce udostępnimy aplikację StyreOS PRO! Nakładka na ekran odczyta szczegóły zlecenia bezpośrednio z aplikacji partnerskiej i pokaże Ci zysk na czysto na malutkim bąbelku, zanim zdążysz to zaakceptować! 🚀\', \'info\')">' +
-                    '<div class="pro-badge-mini" style="background:#a855f7;">PRO</div>' +
-                    '<h4 style="color:#a855f7; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
-                    '<ul class="pro-list-mini">' +
-                        '<li>🔮 <b>Inteligentny Asystent:</b> Pływająca nakładka opłacalności kursu.</li>' +
-                    '</ul>' +
-                '</div>';
-            } else {
-                proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 20px 15px; border-color: rgba(14, 165, 233, 0.2); cursor:pointer;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Integracja e-Kasy / RT3000 (PRO)\', \'W wersji StyreOS PRO wprowadzimy bezpośrednią integrację z systemami korporacyjnymi i kasami wirtualnymi. Zlecenia będą wpadać do aplikacji w 100% automatycznie! 🖨️☁️\', \'info\')">' +
-                    '<div class="pro-badge-mini" style="background:#0ea5e9;">PRO</div>' +
-                    '<h4 style="color:#0ea5e9; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
-                    '<ul class="pro-list-mini">' +
-                        '<li>📡 <b>Integracja e-Kasy:</b> Automatyczne zaciąganie kursów (API).</li>' +
-                    '</ul>' +
-                '</div>';
-            }
+            // --- ZAPOWIEDŹ PRO DLA STATYSTYK (Premium Style) ---
+            let proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀\', \'info\')">' +
+                '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+                '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+                '<div style="display: flex; align-items: center; gap: 15px;">' +
+                    '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🔮</div>' +
+                    '<div style="text-align: left;">' +
+                        '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Centrum Funkcji PRO</h4>' +
+                        '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Wyceny AI:</b> Nakładka na ekran.<br>✅ <b>Integracja e-Kasy:</b> Pełen automat!</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
 
-            let bruttoDetHtml = '<div id="brutto-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
+            // =========================================================
+            // BUDOWA AKORDEONÓW SZCZEGÓŁOWYCH P&L (Transparentność)
+            // =========================================================
+
+            let bruttoDetHtml = '<div id="brutto-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);">';
             if(d.plat === 'apps') {
-                if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
-                if(uberEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z Uber:</span><span>+'+Number(uberEarned).toFixed(2)+' zł</span></div>';
-                if(boltEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z Bolt:</span><span>+'+Number(boltEarned).toFixed(2)+' zł</span></div>';
+                if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
+                if(uberEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z Uber:</span><span style="color:#fff;">+'+Number(uberEarned).toFixed(2)+' zł</span></div>';
+                if(boltEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z Bolt:</span><span style="color:#fff;">+'+Number(boltEarned).toFixed(2)+' zł</span></div>';
                 let otherApps = appEarned - uberEarned - boltEarned;
-                if(otherApps > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód Inne (Aplikacje):</span><span>+'+Number(otherApps).toFixed(2)+' zł</span></div>';
+                if(otherApps > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód Inne (Aplikacje):</span><span style="color:#fff;">+'+Number(otherApps).toFixed(2)+' zł</span></div>';
             } else {
-                if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
-                if(cardEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z Karty/Terminal:</span><span>+'+Number(cardEarned).toFixed(2)+' zł</span></div>';
-                if(vouchEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Przychód z Voucherów:</span><span>+'+Number(vouchEarned).toFixed(2)+' zł</span></div>';
+                if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
+                if(cardEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z Karty/Terminal:</span><span style="color:#0ea5e9;">+'+Number(cardEarned).toFixed(2)+' zł</span></div>';
+                if(vouchEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z Voucherów:</span><span style="color:#a855f7;">+'+Number(vouchEarned).toFixed(2)+' zł</span></div>';
             }
             bruttoDetHtml += '</div>';
 
-            let exDetHtml = '<div id="ex-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
+            let exDetHtml = '<div id="ex-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);">';
             let exList = fe.filter(function(e) { return e.ty === 'e'; });
             if (exList.length > 0) {
                 for(let i=0; i<exList.length; i++) {
-                    exDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>'+exList[i].d+' ('+exList[i].dt+'):</span><span>-'+Number(exList[i].v).toFixed(2)+' zł</span></div>';
+                    exDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>'+exList[i].d+' ('+exList[i].dt+'):</span><span>-'+Number(exList[i].v).toFixed(2)+' zł</span></div>';
                 }
             } else {
-                exDetHtml += '<div style="text-align:center;">Brak zrejestrowanych kosztów eksploatacyjnych.</div>';
+                exDetHtml += '<div style="text-align:center; padding: 10px 0;">Brak zrejestrowanych kosztów eksploatacyjnych.</div>';
             }
             exDetHtml += '</div>';
 
             let costPk = pkSum * (cfg.fuelPx || 0);
             let costEmpty = emptyKSum * (cfg.fuelPx || 0);
 
-            let fuelDetHtml = '<div id="fuel-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
-            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#fff;">Dystans całkowity ('+Number(k).toFixed(1)+' km):</span><span style="color:#fff;">-'+Number(fc).toFixed(2)+' zł</span></div>';
-            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>W tym płatny (z klientem) - '+Number(pkSum).toFixed(1)+' km:</span><span>-'+Number(costPk).toFixed(2)+' zł</span></div>';
-            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>W tym pusty (dojazdy) - '+Number(emptyKSum).toFixed(1)+' km:</span><span style="color:var(--danger);">-'+Number(costEmpty).toFixed(2)+' zł</span></div>';
-            fuelDetHtml += '<div style="text-align:right; font-size:0.6rem; margin-top:6px; opacity:0.8; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">Średni koszt: '+Number(cfg.fuelPx || 0).toFixed(2)+' zł/km</div>';
+            let fuelDetHtml = '<div id="fuel-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);">';
+            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:#fff;">Dystans całkowity ('+Number(k).toFixed(1)+' km):</span><span style="color:#fff;">-'+Number(fc).toFixed(2)+' zł</span></div>';
+            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>W tym płatny (z klientem) - '+Number(pkSum).toFixed(1)+' km:</span><span>-'+Number(costPk).toFixed(2)+' zł</span></div>';
+            fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>W tym pusty (dojazdy) - '+Number(emptyKSum).toFixed(1)+' km:</span><span style="color:var(--danger);">-'+Number(costEmpty).toFixed(2)+' zł</span></div>';
+            fuelDetHtml += '<div style="text-align:right; font-size:0.65rem; margin-top:8px; color:rgba(255,255,255,0.3); border-top:1px dashed rgba(255,255,255,0.05); padding-top:8px;">Średni koszt: '+Number(cfg.fuelPx || 0).toFixed(2)+' zł/km</div>';
             fuelDetHtml += '</div>';
 
-            let taxDetHtml = '<div id="tax-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Przychód Brutto ('+Number(g).toFixed(2)+' zł) * Podatek ('+Number((cfg.tax||0)*100).toFixed(1)+'%)</span><span>-'+Number(tx).toFixed(2)+' zł</span></div></div>';
-            let pfDetHtml = '<div id="pf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Przychód Brutto ('+Number(g).toFixed(2)+' zł) * Prowizja ('+Number((cfg.ePct||0)*100).toFixed(1)+'%)</span><span>-'+Number(pf).toFixed(2)+' zł</span></div></div>';
-            let cfDetHtml = '<div id="cf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Kartą ('+Number(cardEarned).toFixed(2)+' zł) * Prowizja Terminala ('+Number((cfg.cardF||0)*100).toFixed(1)+'%)</span><span>-'+Number(cf).toFixed(2)+' zł</span></div></div>';
-            let vfDetHtml = '<div id="vf-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Voucher ('+Number(vouchEarned).toFixed(2)+' zł) * Prowizja ('+Number((cfg.voucherF||0)*100).toFixed(1)+'%)</span><span>-'+Number(vf).toFixed(2)+' zł</span></div></div>';
+            let taxDetHtml = '<div id="tax-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Przychód Brutto ('+Number(g).toFixed(2)+' zł) * Podatek ('+Number((cfg.tax||0)*100).toFixed(1)+'%)</span><span>-'+Number(tx).toFixed(2)+' zł</span></div></div>';
+            let pfDetHtml = '<div id="pf-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Przychód Brutto ('+Number(g).toFixed(2)+' zł) * Prowizja ('+Number((cfg.ePct||0)*100).toFixed(1)+'%)</span><span>-'+Number(pf).toFixed(2)+' zł</span></div></div>';
+            let cfDetHtml = '<div id="cf-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Kartą ('+Number(cardEarned).toFixed(2)+' zł) * Prowizja Terminala ('+Number((cfg.cardF||0)*100).toFixed(1)+'%)</span><span>-'+Number(cf).toFixed(2)+' zł</span></div></div>';
+            let vfDetHtml = '<div id="vf-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Voucher ('+Number(vouchEarned).toFixed(2)+' zł) * Prowizja ('+Number((cfg.voucherF||0)*100).toFixed(1)+'%)</span><span>-'+Number(vf).toFixed(2)+' zł</span></div></div>';
 
             let bC_tot = getDaily(cfg.bC, cfg.bPeriod, daysInCurrentMonth) * daysToCharge;
             let iC_tot = getDaily(cfg.iC, cfg.iPeriod, daysInCurrentMonth) * daysToCharge;
@@ -715,27 +717,27 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             let uC_tot = getDaily(cfg.uC, cfg.uType, daysInCurrentMonth) * daysToCharge;
             let eC_tot = (cfg.eType === 'flat' ? getDaily(cfg.eC, cfg.ePeriod, daysInCurrentMonth) : 0) * daysToCharge;
 
-            let fixedDetailsHtml = '<div id="fixed-costs-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
-            if(bC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Abonament za bazę / Korporację:</span><span>-'+Number(bC_tot).toFixed(2)+' zł</span></div>';
-            if(iC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>ZUS / Ubezpieczenie Pojazdu:</span><span>-'+Number(iC_tot).toFixed(2)+' zł</span></div>';
-            if(cC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Amortyzacja Auta (Rata/Wynajem):</span><span>-'+Number(cC_tot).toFixed(2)+' zł</span></div>';
-            if(uC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Księgowość / Inne usługi:</span><span>-'+Number(uC_tot).toFixed(2)+' zł</span></div>';
-            if(eC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span>Abonament (Stała opłata partnerska):</span><span>-'+Number(eC_tot).toFixed(2)+' zł</span></div>';
+            let fixedDetailsHtml = '<div id="fixed-costs-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);">';
+            if(bC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Abonament za bazę / Korporację:</span><span>-'+Number(bC_tot).toFixed(2)+' zł</span></div>';
+            if(iC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>ZUS / Ubezpieczenie Pojazdu:</span><span>-'+Number(iC_tot).toFixed(2)+' zł</span></div>';
+            if(cC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Amortyzacja Auta (Rata/Wynajem):</span><span>-'+Number(cC_tot).toFixed(2)+' zł</span></div>';
+            if(uC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Księgowość / Inne usługi:</span><span>-'+Number(uC_tot).toFixed(2)+' zł</span></div>';
+            if(eC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Abonament (Stała opłata partnerska):</span><span>-'+Number(eC_tot).toFixed(2)+' zł</span></div>';
             fixedDetailsHtml += '</div>';
 
             let makeRow = function(label, valueStr, valColor, detId, detHtml) {
-                return '<div class="fin-row" style="flex-direction:column; align-items:stretch; font-size:0.75rem; margin-bottom:8px; cursor:pointer; background:rgba(255,255,255,0.02); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.03);" onclick="let el=document.getElementById(\''+detId+'\'); let icon=document.getElementById(\''+detId+'-icon\'); if(el.style.display===\'none\'){el.style.display=\'block\'; icon.innerHTML=\'🔼\';}else{el.style.display=\'none\'; icon.innerHTML=\'🔽\';}">' +
-                    '<div style="display:flex; justify-content:space-between; width:100%;">' +
-                        '<span class="fin-label" style="color:rgba(255,255,255,0.8);">' + label + ' <span id="'+detId+'-icon" style="font-size:0.6rem; margin-left:4px; opacity:0.6;">🔽</span></span>' +
-                        '<span class="fin-val" style="color:'+valColor+'; padding-top:2px;">' + valueStr + '</span>' +
+                return '<div class="fin-row" style="flex-direction:column; align-items:stretch; font-size:0.85rem; margin-bottom:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:16px; border-radius:16px; border:1px solid rgba(255,255,255,0.05); backdrop-filter:blur(10px); transition:transform 0.2s;" onclick="let el=document.getElementById(\''+detId+'\'); let icon=document.getElementById(\''+detId+'-icon\'); if(el.style.display===\'none\'){el.style.display=\'block\'; icon.innerHTML=\'🔼\'; this.style.transform=\'scale(1.02)\';}else{el.style.display=\'none\'; icon.innerHTML=\'🔽\'; this.style.transform=\'scale(1)\';}">' +
+                    '<div style="display:flex; justify-content:space-between; width:100%; align-items:center;">' +
+                        '<span class="fin-label" style="color:rgba(255,255,255,0.8); font-weight:600;">' + label + ' <span id="'+detId+'-icon" style="font-size:0.6rem; margin-left:6px; opacity:0.5;">🔽</span></span>' +
+                        '<span class="fin-val" style="color:'+valColor+'; font-weight:900; letter-spacing:0.5px;">' + valueStr + '</span>' +
                     '</div>' +
                     detHtml +
                 '</div>';
             };
 
-            let pAndLHtml = '<div class="panel" style="padding:20px 15px; margin:0 15px 15px; border-radius:20px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 8px 25px rgba(0,0,0,0.4);">' +
-                '<div style="text-align:center; margin-bottom:15px;">' +
-                    '<span style="font-size:0.7rem; color:rgba(255,255,255,0.3); font-weight:800; text-transform:uppercase; letter-spacing:1px;">ZESTAWIENIE FINANSOWE (P&L)</span>' +
+            let pAndLHtml = '<div class="panel" style="padding:25px 20px; margin:0 15px 15px; border-radius:24px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 15px 40px rgba(0,0,0,0.6);">' +
+                '<div style="text-align:center; margin-bottom:20px;">' +
+                    '<span style="font-size:0.75rem; color:rgba(255,255,255,0.3); font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">WODOSPAD FINANSOWY (P&L)</span>' +
                 '</div>' +
                 makeRow('Przychody Operacyjne Brutto', Number(g).toFixed(2)+' zł', '#10b981', 'brutto-det', bruttoDetHtml) +
                 makeRow('Koszty Eksploatacyjne (Serwis)', '-'+Number(ex).toFixed(2)+' zł', '#ef4444', 'ex-det', exDetHtml) +
@@ -745,88 +747,88 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 (pf > 0 ? makeRow('Prowizja Aplikacji', '-'+Number(pf).toFixed(2)+' zł', '#ef4444', 'pf-det', pfDetHtml) : '') +
                 makeRow('Zobowiązania Podatkowe (VAT/PIT)', '-'+Number(tx).toFixed(2)+' zł', '#ef4444', 'tax-det', taxDetHtml) +
                 makeRow('Koszty Stałe / Amortyzacja '+(!window.db.drv.showFixed ? '(Wyłączone)' : '(Za '+daysToCharge+' dni)'), '-'+Number(totalDynamicFix).toFixed(2)+' zł', '#ef4444', 'fixed-costs-det', (window.db.drv.showFixed ? fixedDetailsHtml : '')) +
-                '<div class="fin-row" style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; border:1px inset rgba(255,255,255,0.05); margin-top:12px;">' +
-                    '<span class="fin-label" style="color:#fff; font-size:0.85rem; font-weight:900; letter-spacing:1px;">ZYSK NETTO (OPERACYJNY)</span>' +
-                    '<span class="fin-val" style="font-size:1.4rem; font-weight:900; letter-spacing:-0.5px; color:'+(n >= 0 ? '#10b981' : '#ef4444')+'">'+Number(n).toFixed(2)+' zł</span>' +
+                '<div class="fin-row" style="background:rgba(0,0,0,0.4); padding:20px; border-radius:16px; border:1px inset rgba(255,255,255,0.05); margin-top:20px; box-shadow:inset 0 4px 15px rgba(0,0,0,0.3);">' +
+                    '<span class="fin-label" style="color:#fff; font-size:0.95rem; font-weight:900; letter-spacing:1px; text-transform:uppercase;">ZYSK NETTO (OPERACYJNY)</span>' +
+                    '<span class="fin-val" style="font-size:1.8rem; font-weight:900; letter-spacing:-1px; color:'+(n >= 0 ? '#10b981' : '#ef4444')+'">'+Number(n).toFixed(2)+' zł</span>' +
                 '</div>' +
             '</div>';
 
-            let historyLogHtml = '<div class="panel" style="margin:0 15px 15px; padding:15px; border-radius:20px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 8px 25px rgba(0,0,0,0.4);">' +
-                '<div style="text-align:center; margin-bottom:15px;">' +
-                    '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">HISTORIA ROZLICZEŃ</span>' +
+            let historyLogHtml = '<div class="panel" style="margin:0 15px 15px; padding:25px 20px; border-radius:24px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 15px 40px rgba(0,0,0,0.6);">' +
+                '<div style="text-align:center; margin-bottom:20px;">' +
+                    '<span style="font-size:0.75rem; color:rgba(255,255,255,0.3); font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">HISTORIA ZMIAN</span>' +
                 '</div>';
             
             if(fs.length > 0) {
                 for(let i=0; i<fs.length; i++) {
                     let x = fs[i];
-                    historyLogHtml += '<div class="log-item" style="border:none; border-left:3px solid '+(x.n >= 0 ? '#10b981' : '#ef4444')+'; flex-direction:column; align-items:flex-start; padding:12px; margin-bottom:10px; border-radius:14px; background:rgba(0,0,0,0.2);">' +
-                        '<div style="display:flex; justify-content:space-between; width:100%; margin-bottom:6px;">' +
-                            '<div><strong style="font-size:0.95rem; color:#fff; font-weight:700;">'+x.dt+'</strong></div>' +
-                            '<strong style="color:'+(x.n >= 0 ? '#10b981' : '#ef4444')+'; font-size:0.95rem;">Netto: '+Number(x.n || 0).toFixed(2)+' zł</strong>' +
+                    historyLogHtml += '<div class="log-item" style="border:none; border-left:4px solid '+(x.n >= 0 ? '#10b981' : '#ef4444')+'; flex-direction:column; align-items:flex-start; padding:16px; margin-bottom:12px; border-radius:16px; background:rgba(0,0,0,0.3); box-shadow:inset 0 2px 10px rgba(0,0,0,0.2);">' +
+                        '<div style="display:flex; justify-content:space-between; width:100%; margin-bottom:8px; align-items:center;">' +
+                            '<div><strong style="font-size:1rem; color:#fff; font-weight:800; letter-spacing:0.5px;">'+x.dt+'</strong></div>' +
+                            '<strong style="color:'+(x.n >= 0 ? '#10b981' : '#ef4444')+'; font-size:1.1rem; letter-spacing:-0.5px;">Netto: '+Number(x.n || 0).toFixed(2)+' zł</strong>' +
                         '</div>' +
                         '<div style="display:flex; justify-content:space-between; width:100%; align-items:center;">' +
-                            '<span style="color:rgba(255,255,255,0.4); font-size:0.65rem;">Brutto: <span style="color:#fff;">'+Number(x.g || 0).toFixed(2)+' zł</span> | '+Number(x.k || 0).toFixed(1)+' km</span>' +
-                            '<div style="display:flex; gap:6px;">' +
-                                '<button class="btn" style="padding:6px 10px; background:rgba(255,255,255,0.05); border:none; border-radius:8px; font-size:0.7rem; cursor:pointer; outline:none;" onclick="if(typeof window.dEditHistory===\'function\') window.dEditHistory('+x.id+')">✏️</button>' +
-                                '<button class="btn-danger" style="padding:6px 10px; border:none; border-radius:8px; font-weight:bold; background:rgba(239,68,68,0.15); color:#ef4444; font-size:0.7rem; cursor:pointer; outline:none;" onclick="if(typeof window.dDelHistory===\'function\') window.dDelHistory('+x.id+')">🗑️</button>' +
+                            '<span style="color:rgba(255,255,255,0.4); font-size:0.75rem; font-weight:600;">Brutto: <span style="color:#fff;">'+Number(x.g || 0).toFixed(2)+' zł</span> | '+Number(x.k || 0).toFixed(1)+' km</span>' +
+                            '<div style="display:flex; gap:8px;">' +
+                                '<button class="btn" style="padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; font-size:0.8rem; cursor:pointer; outline:none;" onclick="if(typeof window.dEditHistory===\'function\') window.dEditHistory('+x.id+')">✏️</button>' +
+                                '<button class="btn-danger" style="padding:8px 12px; border:none; border-radius:10px; font-weight:bold; background:rgba(239,68,68,0.15); color:#ef4444; font-size:0.8rem; cursor:pointer; outline:none;" onclick="if(typeof window.dDelHistory===\'function\') window.dDelHistory('+x.id+')">🗑️</button>' +
                             '</div>' +
                         '</div>' +
                     '</div>';
                 }
             } else {
-                historyLogHtml += '<div style="text-align:center;color:rgba(255,255,255,0.3);font-size:0.75rem;padding:20px 0; background:rgba(0,0,0,0.15); border-radius:14px; border:1px dashed rgba(255,255,255,0.05);">Brak zapisanych zmian w tym okresie.</div>';
+                historyLogHtml += '<div style="text-align:center;color:rgba(255,255,255,0.3);font-size:0.8rem;padding:30px 0; background:rgba(0,0,0,0.2); border-radius:16px; border:1px dashed rgba(255,255,255,0.05); font-weight:600;">Brak zapisanych zmian w tym okresie.</div>';
             }
             historyLogHtml += '</div>';
 
             appContainer.innerHTML = hdr + 
-            '<div class="mode-switch" style="margin:12px 15px; border-radius:14px; padding:4px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05);">' +
-                '<div class="m-btn '+(fM==='today'?'active':'')+'" style="padding:10px; font-size:0.65rem; border-radius:10px; font-weight:700;" onclick="window.db.filter=\'today\'; window.render()">Dziś</div>' +
-                '<div class="m-btn '+(fM==='week'?'active':'')+'" style="padding:10px; font-size:0.65rem; border-radius:10px; font-weight:700;" onclick="window.db.filter=\'week\'; window.render()">Tydzień</div>' +
-                '<div class="m-btn '+(fM==='month'?'active':'')+'" style="padding:10px; font-size:0.65rem; border-radius:10px; font-weight:700;" onclick="window.db.filter=\'month\'; window.render()">Miesiąc</div>' +
-                '<div class="m-btn '+(fM==='all'?'active':'')+'" style="padding:10px; font-size:0.65rem; border-radius:10px; font-weight:700;" onclick="window.db.filter=\'all\'; window.render()">Całość</div>' +
-                '<div class="m-btn '+(fM==='custom'?'active':'')+'" style="padding:10px; font-size:0.65rem; border-radius:10px; font-weight:700;" onclick="window.db.filter=\'custom\'; window.render()">Własny</div>' +
+            '<div class="mode-switch" style="margin:12px 15px; border-radius:16px; padding:6px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05);">' +
+                '<div class="m-btn '+(fM==='today'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'today\'; window.render()">Dziś</div>' +
+                '<div class="m-btn '+(fM==='week'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'week\'; window.render()">Tydzień</div>' +
+                '<div class="m-btn '+(fM==='month'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'month\'; window.render()">Miesiąc</div>' +
+                '<div class="m-btn '+(fM==='all'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'all\'; window.render()">Całość</div>' +
+                '<div class="m-btn '+(fM==='custom'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'custom\'; window.render()">Własny</div>' +
             '</div>' +
             customDatesHtml +
-            '<div style="display:flex; justify-content:center; gap:8px; margin-bottom:15px; padding:0 15px;">' +
-                '<button class="chip '+(window.db.drv.showFixed?'active':'')+'" style="font-size:0.65rem; padding:6px 12px; border-radius:16px; font-weight:800; background:'+(window.db.drv.showFixed?'rgba(255,255,255,0.1)':'transparent')+'; border:1px solid rgba(255,255,255,0.1); color:'+(window.db.drv.showFixed?'#fff':'var(--muted)')+';" onclick="window.db.drv.showFixed=true; window.render()">Koszty pełne</button>' +
-                '<button class="chip '+(!window.db.drv.showFixed?'active':'')+'" style="font-size:0.65rem; padding:6px 12px; border-radius:16px; font-weight:800; background:'+(!window.db.drv.showFixed?'rgba(255,255,255,0.1)':'transparent')+'; border:1px solid rgba(255,255,255,0.1); color:'+(!window.db.drv.showFixed?'#fff':'var(--muted)')+';" onclick="window.db.drv.showFixed=false; window.render()">Tylko Operacyjny</button>' +
+            '<div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px; padding:0 15px;">' +
+                '<button class="chip '+(window.db.drv.showFixed?'active':'')+'" style="font-size:0.7rem; padding:8px 16px; border-radius:20px; font-weight:800; background:'+(window.db.drv.showFixed?'rgba(255,255,255,0.1)':'transparent')+'; border:1px solid rgba(255,255,255,0.1); color:'+(window.db.drv.showFixed?'#fff':'var(--muted)')+';" onclick="window.db.drv.showFixed=true; window.render()">Koszty pełne</button>' +
+                '<button class="chip '+(!window.db.drv.showFixed?'active':'')+'" style="font-size:0.7rem; padding:8px 16px; border-radius:20px; font-weight:800; background:'+(!window.db.drv.showFixed?'rgba(255,255,255,0.1)':'transparent')+'; border:1px solid rgba(255,255,255,0.1); color:'+(!window.db.drv.showFixed?'#fff':'var(--muted)')+';" onclick="window.db.drv.showFixed=false; window.render()">Tylko Operacyjny</button>' +
             '</div>' +
-            '<div class="dash-hero" style="padding-top:0; padding-bottom:15px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:15px;">' +
-                '<p style="font-size:0.6rem; font-weight:800; color:rgba(255,255,255,0.4); letter-spacing:1px; text-transform:uppercase;">'+(window.db.drv.showFixed ? 'TWOJE PRAWDZIWE NETTO' : 'ZYSK Z KURSÓW (BEZ KOSZTÓW STAŁYCH)')+'</p>' +
-                '<h1 style="color:'+(n>=0?'#10b981':'#ef4444')+'; font-size:3rem; font-weight:900; letter-spacing:-1.5px; margin:0;">'+Number(n).toFixed(2)+' zł</h1>' +
+            '<div class="dash-hero" style="padding-top:0; padding-bottom:20px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:20px;">' +
+                '<p style="font-size:0.65rem; font-weight:800; color:rgba(255,255,255,0.4); letter-spacing:1px; text-transform:uppercase;">'+(window.db.drv.showFixed ? 'TWOJE PRAWDZIWE NETTO' : 'ZYSK Z KURSÓW (BEZ KOSZTÓW STAŁYCH)')+'</p>' +
+                '<h1 style="color:'+(n>=0?'#10b981':'#ef4444')+'; font-size:3.5rem; font-weight:900; letter-spacing:-2px; margin:0; text-shadow:0 0 20px '+(n>=0?'rgba(16,185,129,0.3)':'rgba(239,68,68,0.3)')+';">'+Number(n).toFixed(2)+' zł</h1>' +
                 transferButtonHtml +
             '</div>' +
             breakdownStatsHtml +
             
-            '<div style="padding:0 15px; display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">' +
-                '<div style="display:flex; gap:10px;">' +
-                    '<div class="box" style="flex:1; padding:12px; border-radius:16px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05);">' +
-                        '<span style="color:#0ea5e9; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">ZYSK JEDNOSTKOWY (1 KM)</span>' +
-                        '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(rKm).toFixed(2)+' zł</strong>' +
+            '<div style="padding:0 15px; display:flex; flex-direction:column; gap:12px; margin-bottom:25px;">' +
+                '<div style="display:flex; gap:12px;">' +
+                    '<div class="box" style="flex:1; padding:16px; border-radius:20px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05); box-shadow:0 8px 20px rgba(0,0,0,0.3);">' +
+                        '<span style="color:#0ea5e9; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">ZYSK JEDNOSTKOWY (1 KM)</span>' +
+                        '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+Number(rKm).toFixed(2)+' zł</strong>' +
                     '</div>' +
-                    '<div class="box" style="flex:1; padding:12px; border-radius:16px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05);">' +
-                        '<span style="color:#d946ef; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">ZYSK GODZINOWY (1 H)</span>' +
-                        '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(rHr).toFixed(2)+' zł</strong>' +
-                    '</div>' +
-                '</div>' +
-                '<div style="display:flex; gap:10px;">' +
-                    '<div class="box" style="flex:1; padding:12px; border-radius:16px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05);">' +
-                        '<span style="color:#10b981; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">AKTYWNE DNI</span>' +
-                        '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+daysToCharge+' dni</strong>' +
-                    '</div>' +
-                    '<div class="box" style="flex:1; padding:12px; border-radius:16px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05);">' +
-                        '<span style="color:#f59e0b; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">CZAS ZALOGOWANIA</span>' +
-                        '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(th).toFixed(1)+' h</strong>' +
+                    '<div class="box" style="flex:1; padding:16px; border-radius:20px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05); box-shadow:0 8px 20px rgba(0,0,0,0.3);">' +
+                        '<span style="color:#d946ef; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">ZYSK GODZINOWY (1 H)</span>' +
+                        '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+Number(rHr).toFixed(2)+' zł</strong>' +
                     '</div>' +
                 '</div>' +
-                '<div style="display:flex; gap:10px;">' +
-                    '<div class="box" style="flex:1; border:1px solid rgba(16,185,129,0.1); background:rgba(16,185,129,0.05); padding:12px; border-radius:16px;">' +
-                        '<span style="color:#10b981; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">DYSTANS PŁATNY</span>' +
-                        '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(pkSum).toFixed(1)+' km</strong>' +
+                '<div style="display:flex; gap:12px;">' +
+                    '<div class="box" style="flex:1; padding:16px; border-radius:20px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05); box-shadow:0 8px 20px rgba(0,0,0,0.3);">' +
+                        '<span style="color:#10b981; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">AKTYWNE DNI</span>' +
+                        '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+daysToCharge+' dni</strong>' +
                     '</div>' +
-                    '<div class="box" style="flex:1; border:1px solid rgba(239,68,68,0.1); background:rgba(239,68,68,0.05); padding:12px; border-radius:16px;">' +
-                        '<span style="color:#ef4444; font-size:0.6rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">PUSTE PRZEBIEGI</span>' +
-                        '<strong style="color:#fff; font-size:1.1rem; display:block; margin-top:4px;">'+Number(emptyKSum).toFixed(1)+' km</strong>' +
+                    '<div class="box" style="flex:1; padding:16px; border-radius:20px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05); box-shadow:0 8px 20px rgba(0,0,0,0.3);">' +
+                        '<span style="color:#f59e0b; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">CZAS ZALOGOWANIA</span>' +
+                        '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+Number(th).toFixed(1)+' h</strong>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="display:flex; gap:12px;">' +
+                    '<div class="box" style="flex:1; border:1px solid rgba(16,185,129,0.2); background:rgba(16,185,129,0.05); padding:16px; border-radius:20px; box-shadow:inset 0 2px 10px rgba(0,0,0,0.2);">' +
+                        '<span style="color:#10b981; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">DYSTANS PŁATNY</span>' +
+                        '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+Number(pkSum).toFixed(1)+' km</strong>' +
+                    '</div>' +
+                    '<div class="box" style="flex:1; border:1px solid rgba(239,68,68,0.2); background:rgba(239,68,68,0.05); padding:16px; border-radius:20px; box-shadow:inset 0 2px 10px rgba(0,0,0,0.2);">' +
+                        '<span style="color:#ef4444; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">PUSTE PRZEBIEGI</span>' +
+                        '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+Number(emptyKSum).toFixed(1)+' km</strong>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
