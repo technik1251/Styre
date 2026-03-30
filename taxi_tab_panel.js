@@ -92,13 +92,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                       '<div class="chip '+(window.dTPay==='Voucher'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Voucher'?'background:rgba(168,85,247,0.15);color:#a855f7;border-color:rgba(168,85,247,0.4);box-shadow:0 0 10px rgba(168,85,247,0.3);':chipIdle)+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
             }
             
-            let clientOpts = '';
-            if(d.clients && d.clients.length > 0) {
-                for(let i=0; i<d.clients.length; i++) {
-                    clientOpts += '<option value="'+d.clients[i].id+'">'+d.clients[i].n+'</option>';
-                }
-            }
-            
             let now = new Date();
             let dim = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
             let getDaily = function(val, p, dim) { let v = parseFloat(val)||0; if(p==='week') return v/7; if(p==='year') return v/365; return v/dim; };
@@ -106,18 +99,17 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             let cfg = d.cfg || {};
             let dailyFix = getDaily(cfg.bC, cfg.bPeriod, dim) + getDaily(cfg.iC, cfg.iPeriod, dim) + getDaily(cfg.cC, cfg.cType, dim) + getDaily(cfg.uC, cfg.uType, dim) + (cfg.eType === 'flat' ? getDaily(cfg.eC, cfg.ePeriod, dim) : 0);
             
-            let g=0, cf=0, vf=0, curK=0, sumCash=0, sumCard=0, sumVouch=0, sumApp=0, sumUber=0, sumBolt=0;
+            let g=0, sumCash=0, sumCard=0, sumVouch=0, sumApp=0, sumUber=0, sumBolt=0;
             
             if(d.sh && d.sh.on && d.sh.tr) {
                 for(let i=0; i<d.sh.tr.length; i++) {
                     let x = d.sh.tr[i];
                     let val = parseFloat(x.v) || 0;
                     g += val; 
-                    curK += (parseFloat(x.k) || 0);
                     
                     if(x.p === 'Gotówka') sumCash += val;
-                    else if(x.p === 'Karta') { cf += val * (cfg.cardF || 0); sumCard += val; }
-                    else if(x.p === 'Voucher') { vf += val * (cfg.voucherF || 0); sumVouch += val; }
+                    else if(x.p === 'Karta') { sumCard += val; }
+                    else if(x.p === 'Voucher') { sumVouch += val; }
                     else {
                         sumApp += val;
                         if(x.s === 'Uber') sumUber += val;
@@ -125,11 +117,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     }
                 }
             }
-            
-            let pFee = cfg.eType === 'pct' ? g * (cfg.ePct || 0) : 0;
-            let tax = g * (cfg.tax || 0);
-            let fuelC = curK * (cfg.fuelPx || 0);
-            let n = g - tax - pFee - cf - vf - fuelC - dailyFix;
             
             let stoperHtml = '<div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.1); padding: 8px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-size: 0.6rem; color: #3b82f6; text-transform:uppercase; font-weight:800; letter-spacing:1px;">🔒 Śledzenie GPS wkrótce</div>';
             if(d.sh && d.sh.on) {
@@ -148,12 +135,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 }
             }
             
-            let diffHrs = 0, diffMins = 0, activeHrs = 0, etaHtml = '';
-            let goal = cfg.goal || 350;
-            let showGross = window.db.drv.panelMode === 'gross';
-            let displayVal = showGross ? g : n;
-            let displayLabel = showGross ? 'PRZYCHÓD BRUTTO' : 'ZYSK NETTO (OPERACYJNY)';
-            let progressPct = displayVal > 0 ? Math.min((displayVal / goal) * 100, 100) : 0;
+            let diffHrs = 0, diffMins = 0, activeHrs = 0;
             
             if(d.sh && d.sh.shiftStart) {
                 let activeShiftMs = Date.now() - d.sh.shiftStart;
@@ -161,19 +143,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 diffHrs = Math.floor(activeShiftMs/3600000);
                 diffMins = Math.floor((activeShiftMs%3600000)/60000);
                 activeHrs = activeShiftMs/3600000;
-                
-                if(displayVal > 0 && activeHrs > 0 && displayVal < goal) {
-                    let rateHr = displayVal / activeHrs;
-                    let remaining = goal - displayVal;
-                    let etaHrs = remaining / rateHr;
-                    let etaH = Math.floor(etaHrs);
-                    let etaM = Math.round((etaHrs - etaH) * 60);
-                    etaHtml = 'Do celu: <strong>~'+etaH+'h '+etaM+'m</strong> ('+Number(rateHr).toFixed(0)+' zł/h)';
-                } else if(displayVal >= goal) {
-                    etaHtml = '<span style="color:#10b981; font-weight:800;">🎉 Cel osiągnięty!</span>';
-                } else {
-                    etaHtml = 'Szacowanie... Czekam na zarobek.';
-                }
             }
             
             let breakdownHtml = '';
@@ -195,17 +164,8 @@ window.rDrvPanel = function(d, t, nav, hdr) {
 
             if (d.sh && d.sh.on) {
                 act += '<div class="dash-hero" style="padding-bottom:10px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:12px;">' +
-                    '<p style="font-size:0.55rem; font-weight:800; color:rgba(255,255,255,0.3); letter-spacing:1px; text-transform:uppercase; margin-bottom:2px;">'+displayLabel+'</p>' +
-                    '<h1 style="font-size:2.6rem; color:'+(displayVal>=0?'#10b981':'#ef4444')+'; font-weight:900; letter-spacing:-1.5px; margin:0;">'+Number(displayVal||0).toFixed(2)+' zł</h1>' +
-                    '<div style="display:flex; justify-content:center; gap:8px; margin-top:10px; margin-bottom:10px;">' +
-                        '<button class="chip '+(!showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.65rem; border-radius:16px; font-weight:700; background:'+(!showGross?'rgba(255,255,255,0.08)':'transparent')+'; border:1px solid rgba(255,255,255,0.08); color:'+(!showGross?'#fff':'rgba(255,255,255,0.4)')+';" onclick="window.db.drv.panelMode=\'net\';window.render()">Zysk Netto</button>' +
-                        '<button class="chip '+(showGross?'active':'')+'" style="flex:none; padding: 6px 12px; font-size:0.65rem; border-radius:16px; font-weight:700; background:'+(showGross?'rgba(255,255,255,0.08)':'transparent')+'; border:1px solid rgba(255,255,255,0.08); color:'+(showGross?'#fff':'rgba(255,255,255,0.4)')+';" onclick="window.db.drv.panelMode=\'gross\';window.render()">Przychód Brutto</button>' +
-                    '</div>' +
-                    '<div style="margin-top: 8px; padding: 0 10px;">' +
-                        '<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:rgba(255,255,255,0.4); margin-bottom:4px; font-weight:700;"><span>Cel: '+goal+' zł</span><span style="color:'+(progressPct>=100?'#10b981':'#fff')+';">'+Number(progressPct||0).toFixed(0)+'%</span></div>' +
-                        '<div style="width:100%; background:rgba(0,0,0,0.4); height:6px; border-radius:3px; overflow:hidden; border:1px inset rgba(255,255,255,0.05);"><div style="width:'+progressPct+'%; background:'+(progressPct>=100?'#10b981':'rgba(255,255,255,0.7)')+'; height:100%; transition:width 0.6s; border-radius:3px;"></div></div>' +
-                        '<div style="font-size:0.6rem; color:rgba(255,255,255,0.3); text-align:center; margin-top:6px;">'+etaHtml+'</div>' +
-                    '</div>' +
+                    '<p style="font-size:0.55rem; font-weight:800; color:rgba(255,255,255,0.3); letter-spacing:1px; text-transform:uppercase; margin-bottom:2px;">ZAREJESTROWANY UTARG</p>' +
+                    '<h1 style="font-size:2.6rem; color:#10b981; font-weight:900; letter-spacing:-1.5px; margin:0;">'+Number(g).toFixed(2)+' zł</h1>' +
                     breakdownHtml +
                     '<div style="display:flex; justify-content:center; gap:8px; margin-top:15px; padding:0 5px;">' +
                         '<div style="flex:1; background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.05); padding:10px; border-radius:12px; display:flex; flex-direction:column; justify-content:center;">' +
@@ -214,7 +174,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '</div>' +
                         '<div style="flex:1; display:flex; flex-direction:column; gap:6px;">' +
                             '<button style="flex:1; border-radius:12px; font-size:0.7rem; font-weight:800; background:'+(d.sh.sPS?'#10b981':'rgba(255,255,255,0.05)')+'; color:'+(d.sh.sPS?'#000':'#fff')+'; border:1px solid '+(d.sh.sPS?'#10b981':'rgba(255,255,255,0.08)')+'; outline:none;" onclick="if(typeof window.toggleShiftPause===\'function\') window.toggleShiftPause()">'+(d.sh.sPS?'▶ WZNÓW':'☕ PRZERWA')+'</button>' +
-                            '<button style="flex:1; border-radius:12px; font-size:0.7rem; font-weight:800; background:rgba(239,68,68,0.1); color:#ef4444; border:none; outline:none;" onclick="if(typeof window.openEndShiftModal===\'function\') window.openEndShiftModal()">🔴 ZAKOŃCZ</button>' +
+                            '<button style="flex:1; border-radius:12px; font-size:0.7rem; font-weight:800; background:rgba(239,68,68,0.1); color:#ef4444; border:none; outline:none;" onclick="if(typeof window.openEndShiftModal===\'function\') window.openEndShiftModal()">🔴 ZAKOŃCZ ZMIANĘ</button>' +
                         '</div>' +
                     '</div>' +
                 '</div>';
@@ -225,10 +185,10 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     act += stoperHtml;
                 }
                 
-                // Formularz dodawania kursu (Rejestr Przejazdów)
+                // ZMIANA: Usunięto czas i dystans. Teraz to służy tylko do rejestrowania "Szybkiego Utargu" (kasa do ręki)
                 act += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 30px rgba(0,0,0,0.5); margin-bottom:20px;">' +
                     '<div style="text-align:center; margin-bottom:15px;">' +
-                        '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">REJESTR PRZEJAZDÓW</span>' +
+                        '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">REJESTR SZYBKIEGO UTARGU</span>' +
                     '</div>' +
                     
                     '<div style="margin-bottom:15px;">' +
@@ -237,7 +197,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '<div class="chip-box" style="margin-bottom:0; justify-content:center; gap:8px; margin-top:10px;">'+ch2+'</div>' +
                     '</div>' +
                     
-                    // Pole na kwotę
                     '<div style="background:rgba(0,0,0,0.4); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:15px; margin-bottom:15px;">' +
                         '<div style="display:flex; justify-content:center; align-items:center; gap:8px;">' +
                             '<input type="number" id="dt-v" placeholder="0" style="color:#fff; border:none; background:transparent; font-size:3.2rem; font-weight:700; text-align:center; width:160px; padding:0; outline:none;">' +
@@ -245,20 +204,11 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '</div>' +
                     '</div>' +
                     
-                    '<div class="inp-row" style="margin-bottom:15px; gap:10px;">' +
-                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-m" placeholder="Czas (min)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.9rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-k" placeholder="Dystans (km)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.9rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                    '</div>' +
-                    
-                    '<div class="inp-group" style="margin-bottom:15px;">' +
-                        '<select id="dt-cid" style="background:rgba(0,0,0,0.3); border-radius:14px; padding:14px; font-size:0.8rem; color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select>' +
-                    '</div>' +
-                    
-                    '<button class="btn" style="background:#0ea5e9; color:#fff; padding:18px; border-radius:16px; font-weight:800; font-size:1rem; letter-spacing:0.5px; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ KURS</button>' +
+                    '<button class="btn" style="background:#0ea5e9; color:#fff; padding:18px; border-radius:16px; font-weight:800; font-size:1rem; letter-spacing:0.5px; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ ZAROBEK DO ZMIANY</button>' +
                 '</div>';
                 
                 act += '<div class="panel" style="padding:15px; border-radius:24px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b);">' +
-                    '<div style="font-size:0.7rem; margin-bottom:15px; color:rgba(255,255,255,0.4); font-weight:800; letter-spacing:1px; text-align:center;">DZIENNIK AKTYWNOŚCI</div>';
+                    '<div style="font-size:0.7rem; margin-bottom:15px; color:rgba(255,255,255,0.4); font-weight:800; letter-spacing:1px; text-align:center;">DZIENNIK ZAROBKÓW BIEŻĄCEJ ZMIANY</div>';
                     
                 let trsList = d.sh.tr || [];
                 if(trsList.length > 0) {
@@ -276,18 +226,16 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                                     '<strong style="font-size:1.05rem; color:#fff; display:block; margin-bottom:2px; font-weight:700;">'+Number(x.v||0).toFixed(2)+' zł</strong>' +
                                     '<div style="display:flex; gap:6px; font-size:0.65rem; color:rgba(255,255,255,0.5); align-items:center; font-weight:600;">' +
                                         '<span>'+(x.time||'--:--')+'</span><span style="opacity:0.3">•</span><span style="color:'+color+';">'+x.p+'</span><span style="opacity:0.3">•</span><span>'+x.s+'</span>' +
-                                        (x.k>0 ? '<span style="opacity:0.3">•</span><span>'+Number(x.k).toFixed(1)+' km</span>' : '') +
                                     '</div>' +
                                 '</div>' +
                             '</div>' +
                             '<div style="display:flex; flex-direction:column; gap:6px;">' +
-                                '<button style="background:rgba(255,255,255,0.05); color:#fff; border:none; border-radius:10px; padding:6px 10px; cursor:pointer; font-size:0.7rem; outline:none;" onclick="if(typeof window.dEditT===\'function\') window.dEditT('+x.id+')">✏️</button>' +
                                 '<button style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; border-radius:10px; padding:6px 10px; cursor:pointer; font-size:0.7rem; outline:none;" onclick="if(typeof window.dDelT===\'function\') window.dDelT('+x.id+')">🗑️</button>' +
                             '</div>' +
                         '</div>';
                     }
                 } else {
-                    act += '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:20px 0;font-size:0.8rem; background:rgba(0,0,0,0.2); border-radius:16px; border:1px dashed rgba(255,255,255,0.05);">Brak zarejestrowanych kursów.</div>';
+                    act += '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:20px 0;font-size:0.8rem; background:rgba(0,0,0,0.2); border-radius:16px; border:1px dashed rgba(255,255,255,0.05);">Brak dodanych zarobków.</div>';
                 }
                 act += '</div>';
             } else {
@@ -299,38 +247,44 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 '</div>' +
                 '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 20px 40px rgba(0,0,0,0.6); padding:30px 20px; border-radius:24px; margin:0 15px;">' +
                     '<div style="background:rgba(0,0,0,0.4); border:1px inset rgba(255,255,255,0.05); border-radius:16px; padding:15px; margin-bottom:20px;">' +
-                        '<input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="ODO" style="width:100%; font-size:2.5rem; padding:0; text-align:center; background:transparent; border:none; color:#10b981; font-weight:800; outline:none; box-sizing:border-box;">' +
+                        '<input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="ODO Start (KM)" style="width:100%; font-size:2.5rem; padding:0; text-align:center; background:transparent; border:none; color:#10b981; font-weight:800; outline:none; box-sizing:border-box;">' +
                     '</div>' +
                     '<button class="btn" style="background:#10b981; color:#000; font-size:1.1rem; font-weight:800; letter-spacing:0.5px; padding:18px; border-radius:16px; border:none; box-shadow:0 6px 20px rgba(16, 185, 129, 0.3); width:100%; outline:none;" onclick="if(typeof window.dStartS===\'function\') window.dStartS()">ROZPOCZNIJ PRACĘ</button>' +
                 '</div>';
                 
                 if(!window.dShowOff) {
                     act += '<div style="padding:0 15px; margin-top:20px;">' +
-                        '<button class="btn" style="background:rgba(14,165,233,0.08); color:#0ea5e9; border:1px dashed rgba(14,165,233,0.3); font-size:0.8rem; font-weight:700; box-shadow:none; width:100%; padding:15px; border-radius:16px; outline:none;" onclick="window.dShowOff=true; window.render()">📥 WPROWADŹ UTARG Z RAPORTU KASY</button>' +
+                        '<button class="btn" style="background:rgba(14,165,233,0.08); color:#0ea5e9; border:1px dashed rgba(14,165,233,0.3); font-size:0.8rem; font-weight:700; box-shadow:none; width:100%; padding:15px; border-radius:16px; outline:none;" onclick="window.dShowOff=true; window.render()">📥 ZAKSIĘGUJ ZALEGŁĄ ZMIANĘ</button>' +
                     '</div>';
                 } else {
-                    act += '<div class="section-lbl" style="color:#0ea5e9; border-color:#0ea5e9; margin-top:30px; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase;">⚡ Raport z Kasy (Zaległe)</div>' +
+                    // NOWY, ZAAWANSOWANY SYSTEM KSIĘGOWANIA HISTORII
+                    act += '<div class="section-lbl" style="color:#0ea5e9; border-color:#0ea5e9; margin-top:30px; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase;">⚡ ZALEGŁA ZMIANA / RAPORT Z KASY</div>' +
                     '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #0f172a, #09090b); border-radius:24px; padding:20px 15px; margin:0 15px; animation:fadeIn 0.3s; box-shadow:0 10px 30px rgba(0,0,0,0.5);">' +
-                        '<div class="form-section" style="padding:12px; margin-bottom:15px; background:rgba(0,0,0,0.3); border-radius:16px; border:1px solid rgba(255,255,255,0.05);">' +
-                            '<div class="fs-title" style="margin-bottom:10px; font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-align:center;">'+(d.plat==='apps'?'Wybierz Aplikację':'Wybierz Źródło')+'</div>' +
-                            '<div class="chip-box" style="margin-bottom:0; padding-bottom:0; justify-content:center; gap:8px;">'+ch1+'</div>'+otherSrcHtml+
-                        '</div>' +
+                        
                         '<div class="inp-row" style="margin-bottom:15px; gap:10px;">' +
-                            '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:4px; display:block;">Data Od</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.05); border:none; border-radius:12px; padding:12px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                            '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:4px; display:block;">Data Do</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.05); border:none; border-radius:12px; padding:12px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                            '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:4px; display:block;">Data Startu</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.05); border:none; border-radius:12px; padding:12px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                            '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:4px; display:block;">Data Zakończenia</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.05); border:none; border-radius:12px; padding:12px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
                         '</div>' +
+                        
+                        '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:16px; padding:15px; margin-bottom:15px;">' +
+                            '<label style="font-size:0.65rem; color:#f59e0b; font-weight:800; text-align:center; display:block; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">STAN LICZNIKA POJAZDU</label>' +
+                            '<div class="inp-row" style="margin:0; gap:10px;">' +
+                                '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-s" placeholder="Start (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.9rem; font-weight:700; outline:none;"></div>' +
+                                '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.9rem; font-weight:700; outline:none;"></div>' +
+                            '</div>' +
+                        '</div>' +
+
                         '<div class="inp-group" style="margin-bottom:15px; background:rgba(0,0,0,0.4); border-radius:16px; padding:15px; border:1px inset rgba(255,255,255,0.05);">' +
-                            '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">PRZYCHÓD OPERACYJNY BRUTTO</label>' +
+                            '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">UTARG BRUTTO (ZE WSZYSTKICH APEK)</label>' +
                             '<input type="number" id="dw-v" placeholder="0.00" style="width:100%; color:#0ea5e9; border:none; background:transparent; font-size:2.2rem; font-weight:800; text-align:center; outline:none; padding:0; box-sizing:border-box;">' +
                         '</div>' +
-                        '<div class="inp-row" style="margin-bottom:15px; gap:10px;">' +
-                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-k" placeholder="Przebieg (KM)" style="background:rgba(255,255,255,0.05); border:none; color:#fff; border-radius:12px; padding:14px; text-align:center; font-size:0.85rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-c" placeholder="W tym gotówka" style="background:rgba(255,255,255,0.05); border:none; color:#fff; border-radius:12px; padding:14px; text-align:center; font-size:0.85rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                        
+                        '<div class="inp-row" style="margin-bottom:20px; gap:10px;">' +
+                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-pk" placeholder="Z pasażerem (KM z apek)" style="background:rgba(255,255,255,0.05); border:none; color:#fff; border-radius:12px; padding:14px; text-align:center; font-size:0.8rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-h" placeholder="Czas pracy (godziny)" style="background:rgba(255,255,255,0.05); border:none; color:#fff; border-radius:12px; padding:14px; text-align:center; font-size:0.8rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
                         '</div>' +
-                        '<div class="inp-group" style="margin-bottom:20px;">' +
-                            '<input type="number" id="dw-h" placeholder="Godziny pracy (opcjonalnie)" style="background:rgba(255,255,255,0.05); border:none; color:#fff; border-radius:12px; padding:14px; text-align:center; font-size:0.85rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;">' +
-                        '</div>' +
-                        '<button class="btn" style="background:#0ea5e9; color:#fff; font-weight:800; padding:16px; font-size:0.95rem; border-radius:14px; border:none; box-shadow:0 6px 15px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAddOfflineWeekly===\'function\') window.dAddOfflineWeekly()">ZAKSIĘGUJ W HISTORII</button>' +
+                        
+                        '<button class="btn" style="background:#0ea5e9; color:#fff; font-weight:800; padding:16px; font-size:0.95rem; border-radius:14px; border:none; box-shadow:0 6px 15px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAddOfflineWeekly===\'function\') window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button>' +
                         '<button class="btn" style="background:transparent; color:rgba(255,255,255,0.5); margin-top:8px; border:1px solid rgba(255,255,255,0.1); border-radius:14px; box-shadow:none; padding:14px; font-weight:700; font-size:0.85rem; width:100%; outline:none;" onclick="window.dShowOff=false; window.render()">ANULUJ</button>' +
                     '</div>';
                 }
@@ -504,21 +458,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 transferButtonHtml = '<button class="btn btn-success" style="margin-top:15px; width:calc(100% - 30px); margin-left:auto; margin-right:auto; font-weight:800; background:#10b981; color:#000; box-shadow: 0 4px 15px rgba(16,185,129,0.3); padding:14px; border-radius:14px; border:none; outline:none; cursor:pointer;" onclick="if(typeof window.dTransferToHomeModal===\'function\') window.dTransferToHomeModal()"><span style="font-size:1.1rem; margin-right:8px;">💸</span> PRZELEJ DO BUDŻETU<br><small style="font-weight:600; font-size:0.7rem; color:rgba(0,0,0,0.6); display:block; margin-top:2px;">Nierozliczone: '+Number(availableCashForTransfer).toFixed(2)+' zł</small></button>';
             } else {
                 transferButtonHtml = '<button class="btn" style="margin-top:15px; width:calc(100% - 30px); margin-left:auto; margin-right:auto; font-weight:700; background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.05); padding:14px; border-radius:14px; outline:none;" disabled><span style="font-size:1rem; margin-right:8px;">✅</span> GOTÓWKA ROZLICZONA<br><small style="font-weight:600; font-size:0.65rem; display:block; margin-top:2px;">W domu: '+Number(totalTransferred).toFixed(2)+' zł</small></button>';
-            }
-
-            let proBannerHtml = '';
-            if (d.plat === 'apps') {
-                proBannerHtml = '<div style="margin: 15px; padding: 15px; background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(139, 92, 246, 0.05)); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Inteligentny Asystent Zleceń (PRO)\', \'Wkrótce udostępnimy aplikację StyreOS PRO! Nakładka na ekran odczyta szczegóły zlecenia bezpośrednio z aplikacji partnerskiej i w ułamku sekundy pokaże Ci zysk na czysto na malutkim bąbelku, zanim zdążysz to zaakceptować! 🚀\', \'info\')">' +
-                    '<div style="font-size: 1.6rem; margin-bottom: 4px;">🔮</div>' +
-                    '<strong style="color: #c084fc; font-size: 0.8rem; display: block; text-transform: uppercase; letter-spacing:1px; font-weight:800;">Inteligentny Asystent</strong>' +
-                    '<span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); margin-top: 4px; display: block; line-height:1.4;">Pływająca nakładka opłacalności kursu - tylko w wersji PRO! Kliknij po info.</span>' +
-                '</div>';
-            } else {
-                proBannerHtml = '<div style="margin: 15px; padding: 15px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(2, 132, 199, 0.05)); border: 1px solid rgba(14, 165, 233, 0.2); border-radius: 16px; cursor: pointer; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Integracja e-Kasy / RT3000 (PRO)\', \'W wersji StyreOS PRO wprowadzimy bezpośrednią integrację z systemami korporacyjnymi i kasami wirtualnymi (API). Zlecenia i e-paragony będą wpadać do aplikacji w 100% automatycznie! 🖨️☁️\', \'info\')">' +
-                    '<div style="font-size: 1.6rem; margin-bottom: 4px;">📡</div>' +
-                    '<strong style="color: #38bdf8; font-size: 0.8rem; display: block; text-transform: uppercase; letter-spacing:1px; font-weight:800;">Integracja e-Kasy</strong>' +
-                    '<span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); margin-top: 4px; display: block; line-height:1.4;">Automatyczne zaciąganie kursów (API) w wersji PRO. Kliknij po info.</span>' +
-                '</div>';
             }
 
             // =========================================================
@@ -695,7 +634,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 '</div>' +
             '</div>' +
             
-            proBannerHtml +
             pAndLHtml +
             historyLogHtml +
             // POTĘŻNY MARGINES DOLNY (140px)
