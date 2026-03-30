@@ -2,6 +2,113 @@
 // PLIK: taxi_tab_panel.js - Zakładki Panel (Term) i Wyniki (Stats)
 // ==========================================
 
+// --- NOWY SILNIK KSIĘGOWANIA ZBIORCZEGO (Z PODZIAŁEM NA APLIKACJE) ---
+window.dAddOfflineWeekly = function() {
+    let dFrom = document.getElementById('dw-d-from') ? document.getElementById('dw-d-from').value : '';
+    let dTo = document.getElementById('dw-d-to') ? document.getElementById('dw-d-to').value : '';
+    
+    let oS = parseFloat(document.getElementById('dw-odo-s') ? document.getElementById('dw-odo-s').value : 0) || 0;
+    let oE = parseFloat(document.getElementById('dw-odo-e') ? document.getElementById('dw-odo-e').value : 0) || 0;
+    
+    let pk = parseFloat(document.getElementById('dw-pk') ? document.getElementById('dw-pk').value : 0) || 0; 
+    let h = parseFloat(document.getElementById('dw-h') ? document.getElementById('dw-h').value : 0) || 0; 
+    
+    let d = window.db.drv;
+    let plat = d.plat;
+    
+    let sumV = 0;
+    let trList = [];
+    
+    let rDateStr = dTo || (window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0]);
+    let rDateObj = new Date(rDateStr);
+    rDateObj.setHours(12,0,0,0);
+    
+    // ZBIERANIE KWOT Z OSOBNYCH POL
+    let cf = 0, vf = 0;
+    
+    if (plat === 'apps') {
+        let vUber = parseFloat(document.getElementById('dw-v-uber').value) || 0;
+        let vBolt = parseFloat(document.getElementById('dw-v-bolt').value) || 0;
+        let vFree = parseFloat(document.getElementById('dw-v-freenow').value) || 0;
+        let vInna = parseFloat(document.getElementById('dw-v-inna').value) || 0;
+        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
+        
+        if (vUber > 0) trList.push({id: Date.now()+1, p: 'Aplikacja', s: 'Uber', v: vUber, k: 0, time: '--:--'});
+        if (vBolt > 0) trList.push({id: Date.now()+2, p: 'Aplikacja', s: 'Bolt', v: vBolt, k: 0, time: '--:--'});
+        if (vFree > 0) trList.push({id: Date.now()+3, p: 'Aplikacja', s: 'FreeNow', v: vFree, k: 0, time: '--:--'});
+        if (vInna > 0) trList.push({id: Date.now()+4, p: 'Aplikacja', s: 'Inna', v: vInna, k: 0, time: '--:--'});
+        if (vCash > 0) trList.push({id: Date.now()+5, p: 'Gotówka', s: 'Aplikacja', v: vCash, k: 0, time: '--:--'});
+        
+        sumV = vUber + vBolt + vFree + vInna + vCash;
+    } else {
+        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
+        let vKarta = parseFloat(document.getElementById('dw-v-karta').value) || 0;
+        let vVouch = parseFloat(document.getElementById('dw-v-voucher').value) || 0;
+        
+        if (vCash > 0) trList.push({id: Date.now()+1, p: 'Gotówka', s: 'Postój/Centrala', v: vCash, k: 0, time: '--:--'});
+        if (vKarta > 0) trList.push({id: Date.now()+2, p: 'Karta', s: 'Terminal', v: vKarta, k: 0, time: '--:--'});
+        if (vVouch > 0) trList.push({id: Date.now()+3, p: 'Voucher', s: 'Korporacja', v: vVouch, k: 0, time: '--:--'});
+        
+        sumV = vCash + vKarta + vVouch;
+        
+        cf = vKarta * (d.cfg.cardF || 0);
+        vf = vVouch * (d.cfg.voucherF || 0);
+    }
+    
+    if (sumV <= 0 && oS === 0 && oE === 0) {
+        if(window.sysAlert) window.sysAlert("Błąd", "Wprowadź chociaż jedną kwotę utargu lub stan licznika!", "error");
+        return;
+    }
+    
+    let distTotal = 0;
+    if (oE > 0 && oS > 0 && oE >= oS) {
+        distTotal = oE - oS;
+        window.db.drv.odo = oE; 
+    }
+    
+    let emptyK = distTotal > pk ? (distTotal - pk) : 0;
+    
+    let taxRate = (d.cfg && d.cfg.tax) ? d.cfg.tax : 0;
+    let fuelPx = (d.cfg && d.cfg.fuelPx) ? d.cfg.fuelPx : 0;
+    let isPct = (d.cfg && d.cfg.eType === 'pct');
+    let ePct = (d.cfg && d.cfg.ePct) ? d.cfg.ePct : 0;
+    
+    let tax = sumV * taxRate;
+    let pFee = isPct ? sumV * ePct : 0;
+    let fc = distTotal * fuelPx; 
+    
+    let n = sumV - fc - tax - pFee - cf - vf;
+    
+    let periodStr = dFrom === dTo ? dFrom : (dFrom + ' do ' + dTo);
+    if (!periodStr) periodStr = window.getLocalYMD ? window.getLocalYMD() : 'Zaległa Zmiana';
+    
+    if (!window.db.drv.h) window.db.drv.h = [];
+    window.db.drv.h.push({
+        id: Date.now(),
+        dt: periodStr,
+        rD: rDateObj.toISOString(),
+        g: sumV,
+        n: n,
+        k: distTotal,
+        pk: pk,
+        emptyK: emptyK,
+        hW: h,
+        fc: fc,
+        tx: tax,
+        pF: pFee,
+        cF: cf,
+        vF: vf,
+        tr: trList
+    });
+    
+    window.db.drv.h.sort((a,b) => new Date(b.rD) - new Date(a.rD));
+    window.dShowOff = false;
+    
+    if(typeof window.save === 'function') window.save();
+    if(typeof window.render === 'function') window.render();
+    if(window.sysAlert) window.sysAlert("Zaksięgowano!", "Rozliczenie dodane. Puste kilometry zostały wyliczone.", "success");
+};
+
 // --- LOGIKA STOPERA I PRZERW W PRACY ---
 window.startLiveRide = window.startLiveRide || function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
@@ -56,6 +163,16 @@ window.rDrvPanel = function(d, t, nav, hdr) {
         
         let act = ''; 
 
+        // --- ZAPOWIEDŹ PRO DLA PANELU TAXI ---
+        let panelProBanner = '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; border-color: rgba(217, 70, 239, 0.2); cursor:pointer;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Automatyczny Import (PRO)\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. 🚀\', \'info\')">' +
+            '<div class="pro-badge-mini" style="background:#d946ef;">PRO</div>' +
+            '<h4 style="color:#d946ef; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
+            '<ul class="pro-list-mini">' +
+                '<li>✅ <b>Auto-Import Zleceń:</b> Kursy z Uber/Bolt wpadają same!</li>' +
+                '<li>✅ <b>Asystent Głosowy:</b> Dodawaj utarg mówiąc do telefonu.</li>' +
+            '</ul>' +
+        '</div>';
+
         // ==========================================
         // ZAKŁADKA: PANEL (TERM) - TRWAJĄCA ZMIANA
         // ==========================================
@@ -107,7 +224,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             let dailyFix = getDaily(cfg.bC, cfg.bPeriod, dim) + getDaily(cfg.iC, cfg.iPeriod, dim) + getDaily(cfg.cC, cfg.cType, dim) + getDaily(cfg.uC, cfg.uType, dim) + (cfg.eType === 'flat' ? getDaily(cfg.eC, cfg.ePeriod, dim) : 0);
             
             let g=0, sumCash=0, sumCard=0, sumVouch=0, sumApp=0, sumUber=0, sumBolt=0;
-            let n = 0; // Netto (dla podglądu, docelowo pełne przeliczenie w Historii)
+            let n = 0; 
             
             if(d.sh && d.sh.on && d.sh.tr) {
                 for(let i=0; i<d.sh.tr.length; i++) {
@@ -126,7 +243,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 }
             }
 
-            // Skrócone obliczenia netto dla bieżącej zmiany (szacunkowe)
             let tax = g * (cfg.tax || 0);
             let pFee = cfg.eType === 'pct' ? g * (cfg.ePct || 0) : 0;
             n = g - tax - pFee - dailyFix;
@@ -225,10 +341,10 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     act += stoperHtml;
                 }
                 
-                // POWRÓT DO PEŁNEGO REJESTRU (Dystans, Czas, VIP) dla "aptekarzy" i jeżdżących z ekranem
+                // PRZYWRÓCONY REJESTR POJEDYNCZYCH KURSÓW
                 act += '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); padding:20px 15px; border-radius:24px; box-shadow:0 10px 30px rgba(0,0,0,0.5); margin-bottom:20px;">' +
                     '<div style="text-align:center; margin-bottom:15px;">' +
-                        '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">REJESTR POJEDYNCZYCH KURSÓW</span>' +
+                        '<span style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:800; text-transform:uppercase; letter-spacing:1px;">REJESTR POJEDYNCZEGO KURSU</span>' +
                     '</div>' +
                     
                     '<div style="margin-bottom:15px;">' +
@@ -253,11 +369,11 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '<select id="dt-cid" style="background:rgba(0,0,0,0.3); border-radius:14px; padding:14px; font-size:0.8rem; color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.05); outline:none; width:100%; box-sizing:border-box;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select>' +
                     '</div>' +
                     
-                    '<button class="btn" style="background:#0ea5e9; color:#fff; padding:18px; border-radius:16px; font-weight:800; font-size:1rem; letter-spacing:0.5px; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ KURS</button>' +
+                    '<button class="btn" style="background:#0ea5e9; color:#fff; padding:18px; border-radius:16px; font-weight:800; font-size:1rem; letter-spacing:0.5px; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ KURS DO ZMIANY</button>' +
                 '</div>';
                 
                 act += '<div class="panel" style="padding:15px; border-radius:24px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b);">' +
-                    '<div style="font-size:0.7rem; margin-bottom:15px; color:rgba(255,255,255,0.4); font-weight:800; letter-spacing:1px; text-align:center;">DZIENNIK ZAROBKÓW BIEŻĄCEJ ZMIANY</div>';
+                    '<div style="font-size:0.7rem; margin-bottom:15px; color:rgba(255,255,255,0.4); font-weight:800; letter-spacing:1px; text-align:center;">DZIENNIK BIEŻĄCEJ ZMIANY</div>';
                     
                 let trsList = d.sh.tr || [];
                 if(trsList.length > 0) {
@@ -286,7 +402,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '</div>';
                     }
                 } else {
-                    act += '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:20px 0;font-size:0.8rem; background:rgba(0,0,0,0.2); border-radius:16px; border:1px dashed rgba(255,255,255,0.05);">Brak dodanych zarobków.</div>';
+                    act += '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:20px 0;font-size:0.8rem; background:rgba(0,0,0,0.2); border-radius:16px; border:1px dashed rgba(255,255,255,0.05);">Brak zarejestrowanych kursów.</div>';
                 }
                 act += '</div>';
             } else {
@@ -307,8 +423,34 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     act += '<div style="padding:0 15px; margin-top:20px;">' +
                         '<button class="btn" style="background:rgba(14,165,233,0.08); color:#0ea5e9; border:1px dashed rgba(14,165,233,0.3); font-size:0.8rem; font-weight:700; box-shadow:none; width:100%; padding:15px; border-radius:16px; outline:none;" onclick="window.dShowOff=true; window.render()">📥 ZAKSIĘGUJ ZALEGŁĄ ZMIANĘ</button>' +
                     '</div>';
+                    act += panelProBanner; // <--- Baner PRO na samym dole ekranu startowego
                 } else {
-                    // WBITKA ZBIORCZA DLA "LENIWYCH" (Z ODO)
+                    // NOWY, ROZBUDOWANY SYSTEM KSIĘGOWANIA DLA LENIWYCH (Podział na aplikacje)
+                    let offlineInputsHtml = '';
+                    if(d.plat === 'apps') {
+                        offlineInputsHtml = 
+                            '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:16px; padding:15px; margin-bottom:15px;">' +
+                                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">ROZBICIE UTARGU (ZŁ)</label>' +
+                                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0; grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma z portfela)" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:12px; padding:14px; text-align:center; font-size:1.1rem; font-weight:800; outline:none;"></div>' +
+                                '</div>' +
+                            '</div>';
+                    } else {
+                        offlineInputsHtml = 
+                            '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:16px; padding:15px; margin-bottom:15px;">' +
+                                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">ROZBICIE UTARGU (ZŁ)</label>' +
+                                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:12px; padding:14px; text-align:center; font-size:1.1rem; font-weight:800; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-karta" placeholder="Karta/Terminal" style="background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.3); color:#0ea5e9; border-radius:12px; padding:14px; text-align:center; font-size:1.1rem; font-weight:800; outline:none;"></div>' +
+                                    '<div class="inp-group" style="margin:0; grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" style="background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); color:#a855f7; border-radius:12px; padding:14px; text-align:center; font-size:1.1rem; font-weight:800; outline:none;"></div>' +
+                                '</div>' +
+                            '</div>';
+                    }
+
                     act += '<div class="section-lbl" style="color:#0ea5e9; border-color:#0ea5e9; margin-top:30px; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase;">⚡ ZALEGŁA ZMIANA / RAPORT Z KASY</div>' +
                     '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #0f172a, #09090b); border-radius:24px; padding:20px 15px; margin:0 15px; animation:fadeIn 0.3s; box-shadow:0 10px 30px rgba(0,0,0,0.5);">' +
                         
@@ -320,19 +462,16 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:16px; padding:15px; margin-bottom:15px;">' +
                             '<label style="font-size:0.65rem; color:#f59e0b; font-weight:800; text-align:center; display:block; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">STAN LICZNIKA POJAZDU</label>' +
                             '<div class="inp-row" style="margin:0; gap:10px;">' +
-                                '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-s" placeholder="Start (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.9rem; font-weight:700; outline:none;"></div>' +
+                                '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.9rem; font-weight:700; outline:none;"></div>' +
                                 '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:0.9rem; font-weight:700; outline:none;"></div>' +
                             '</div>' +
                         '</div>' +
 
-                        '<div class="inp-group" style="margin-bottom:15px; background:rgba(0,0,0,0.4); border-radius:16px; padding:15px; border:1px inset rgba(255,255,255,0.05);">' +
-                            '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">UTARG BRUTTO (ZE WSZYSTKICH APEK)</label>' +
-                            '<input type="number" id="dw-v" placeholder="0.00" style="width:100%; color:#0ea5e9; border:none; background:transparent; font-size:2.2rem; font-weight:800; text-align:center; outline:none; padding:0; box-sizing:border-box;">' +
-                        '</div>' +
+                        offlineInputsHtml + // Wstrzyknięcie widoku rozbicia utargu
                         
                         '<div class="inp-row" style="margin-bottom:20px; gap:10px;">' +
-                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-pk" placeholder="Z pasażerem (KM z apek)" style="background:rgba(255,255,255,0.05); border:none; color:#fff; border-radius:12px; padding:14px; text-align:center; font-size:0.8rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-h" placeholder="Czas pracy (godziny)" style="background:rgba(255,255,255,0.05); border:none; color:#fff; border-radius:12px; padding:14px; text-align:center; font-size:0.8rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-pk" placeholder="Dystans płatny (KM)" style="background:rgba(255,255,255,0.05); border:none; color:#fff; border-radius:12px; padding:14px; text-align:center; font-size:0.8rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-h" placeholder="Czas pracy (h)" style="background:rgba(255,255,255,0.05); border:none; color:#fff; border-radius:12px; padding:14px; text-align:center; font-size:0.8rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
                         '</div>' +
                         
                         '<button class="btn" style="background:#0ea5e9; color:#fff; font-weight:800; padding:16px; font-size:0.95rem; border-radius:14px; border:none; box-shadow:0 6px 15px rgba(14,165,233,0.3); width:100%; outline:none;" onclick="if(typeof window.dAddOfflineWeekly===\'function\') window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button>' +
@@ -511,9 +650,24 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 transferButtonHtml = '<button class="btn" style="margin-top:15px; width:calc(100% - 30px); margin-left:auto; margin-right:auto; font-weight:700; background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.05); padding:14px; border-radius:14px; outline:none;" disabled><span style="font-size:1rem; margin-right:8px;">✅</span> GOTÓWKA ROZLICZONA<br><small style="font-weight:600; font-size:0.65rem; display:block; margin-top:2px;">W domu: '+Number(totalTransferred).toFixed(2)+' zł</small></button>';
             }
 
-            // =========================================================
-            // BUDOWA AKORDEONÓW SZCZEGÓŁOWYCH P&L (Transparentność)
-            // =========================================================
+            let proBannerHtml = '';
+            if (d.plat === 'apps') {
+                proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 20px 15px; border-color: rgba(168, 85, 247, 0.2); cursor:pointer;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Inteligentny Asystent Zleceń (PRO)\', \'Wkrótce udostępnimy aplikację StyreOS PRO! Nakładka na ekran odczyta szczegóły zlecenia bezpośrednio z aplikacji partnerskiej i pokaże Ci zysk na czysto na malutkim bąbelku, zanim zdążysz to zaakceptować! 🚀\', \'info\')">' +
+                    '<div class="pro-badge-mini" style="background:#a855f7;">PRO</div>' +
+                    '<h4 style="color:#a855f7; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
+                    '<ul class="pro-list-mini">' +
+                        '<li>🔮 <b>Inteligentny Asystent:</b> Pływająca nakładka opłacalności kursu.</li>' +
+                    '</ul>' +
+                '</div>';
+            } else {
+                proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 20px 15px; border-color: rgba(14, 165, 233, 0.2); cursor:pointer;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Integracja e-Kasy / RT3000 (PRO)\', \'W wersji StyreOS PRO wprowadzimy bezpośrednią integrację z systemami korporacyjnymi i kasami wirtualnymi. Zlecenia będą wpadać do aplikacji w 100% automatycznie! 🖨️☁️\', \'info\')">' +
+                    '<div class="pro-badge-mini" style="background:#0ea5e9;">PRO</div>' +
+                    '<h4 style="color:#0ea5e9; margin:0 0 10px 0; font-weight:900;">Wkrótce w Planie PRO</h4>' +
+                    '<ul class="pro-list-mini">' +
+                        '<li>📡 <b>Integracja e-Kasy:</b> Automatyczne zaciąganie kursów (API).</li>' +
+                    '</ul>' +
+                '</div>';
+            }
 
             let bruttoDetHtml = '<div id="brutto-det" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.05); width:100%; font-size:0.65rem; color:var(--muted);">';
             if(d.plat === 'apps') {
@@ -677,6 +831,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 '</div>' +
             '</div>' +
             
+            proBannerHtml +
             pAndLHtml +
             historyLogHtml +
             // POTĘŻNY MARGINES DOLNY (140px)
