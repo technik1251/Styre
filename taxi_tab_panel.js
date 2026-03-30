@@ -163,7 +163,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
         
         let act = ''; 
 
-        // --- ZAPOWIEDŹ PRO DLA PANELU TAXI (Zmieniona Ikona i Kompaktowy Styl) ---
+        // --- ZAPOWIEDŹ PRO DLA PANELU TAXI (Zmieniona Ikona Taxi Premium) ---
         let panelProBanner = '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
             '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
             '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
@@ -183,7 +183,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; }
             if(!window.dTPay) { window.dTPay = d.plat === 'apps' ? 'Aplikacja' : 'Gotówka'; }
             
-            // Nowe style Chipów (przewijane, apple style)
             let chipStyle = 'flex: 0 0 auto; border-radius: 16px; font-weight: 800; padding: 10px 20px; font-size: 0.75rem; letter-spacing: 0.5px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s; cursor: pointer;';
             let chipActBlue = 'background: rgba(14,165,233,0.15); color: #0ea5e9; border-color: rgba(14,165,233,0.4); box-shadow: 0 4px 15px rgba(14,165,233,0.2);';
             let chipActGreen = 'background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.4); box-shadow: 0 4px 15px rgba(16,185,129,0.2);';
@@ -210,7 +209,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             } else {
                 ch2 = '<div class="chip '+(window.dTPay==='Gotówka'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Gotówka'?chipActGreen:chipIdle)+'" onclick="window.dTC(\'p\',\'Gotówka\')">Gotówka</div>' +
                       '<div class="chip '+(window.dTPay==='Karta'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Karta'?chipActBlue:chipIdle)+'" onclick="window.dTC(\'p\',\'Karta\')">Karta</div>' +
-                      '<div class="chip '+(window.dTPay==='Voucher'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Voucher'?'background:rgba(168,85,247,0.15);color:#a855f7;border-color:rgba(168,85,247,0.4);box-shadow:0 0 15px rgba(168,85,247,0.2);':chipIdle)+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
+                      '<div class="chip '+(window.dTPay==='Voucher'?'active':'')+'" style="'+chipStyle+(window.dTPay==='Voucher'?'background:rgba(168,85,247,0.15);color:#a855f7;border-color:rgba(168,85,247,0.4);box-shadow: 0 4px 15px rgba(168,85,247,0.2);':chipIdle)+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
             }
 
             let clientOpts = '';
@@ -265,11 +264,8 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 activeHrs = activeShiftMs/3600000;
             }
 
-            // --- NOWY DESIGN HERO CARD (TRWAJĄCA ZMIANA) ---
             if (d.sh && d.sh.on) {
                 act += '<div style="background: linear-gradient(145deg, #13131a, #0a0a0f); border: 1px solid rgba(255,255,255,0.05); border-radius: 24px; padding: 25px 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); margin-bottom: 20px; position: relative; overflow: hidden;">' +
-                    
-                    // Header (Status & Czas)
                     '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">' +
                         '<div style="display:flex; align-items:center; gap: 8px;">' +
                             '<div style="width: 10px; height: 10px; border-radius: 50%; background: '+(d.sh.sPS ? '#f59e0b' : '#10b981')+'; box-shadow: 0 0 10px '+(d.sh.sPS ? 'rgba(245,158,11,0.5)' : 'rgba(16,185,129,0.5)')+';"></div>' +
@@ -277,8 +273,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '</div>' +
                         '<div style="font-size: 0.85rem; font-weight: 800; color: #0ea5e9; background: rgba(14,165,233,0.1); padding: 6px 12px; border-radius: 12px; border: 1px solid rgba(14,165,233,0.2);">⏱️ '+diffHrs+'h '+diffMins+'m</div>' +
                     '</div>' +
-                    
-                    // Główny licznik (Toggle Netto/Brutto)
                     '<div style="text-align: center; margin-bottom: 25px; cursor:pointer;" onclick="window.db.drv.panelMode = window.db.drv.panelMode === \'gross\' ? \'net\' : \'gross\'; window.render()">' +
                         '<div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px; display:flex; justify-content:center; align-items:center; gap:6px;">' +
                             displayLabel + ' <span style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:6px; font-size:0.55rem;">🔁</span>' +
@@ -286,7 +280,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '<div style="font-size: 3.5rem; font-weight: 900; color: '+(displayVal>=0?'#10b981':'#ef4444')+'; letter-spacing: -2px; line-height: 1; text-shadow: 0 0 20px '+(displayVal>=0?'rgba(16,185,129,0.3)':'rgba(239,68,68,0.3)')+';">' + Number(displayVal||0).toFixed(2) + ' zł</div>' +
                     '</div>';
                 
-                // Pigułki z rozbiciem (Kompaktowe)
                 if(d.plat === 'apps') {
                     act += '<div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 25px;">' +
                         '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #10b981;">💵 '+Number(sumCash).toFixed(2)+'</div>' +
@@ -301,7 +294,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     '</div>';
                 }
 
-                // Przyciski iOS Style
                 act += '<div style="display: flex; gap: 12px;">' +
                     '<button style="flex: 1; background: '+(d.sh.sPS ? '#10b981' : 'rgba(255,255,255,0.05)')+'; color: '+(d.sh.sPS ? '#000' : '#fff')+'; border: 1px solid '+(d.sh.sPS ? '#10b981' : 'rgba(255,255,255,0.1)')+'; padding: 16px; border-radius: 18px; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; box-shadow: '+(d.sh.sPS ? '0 4px 15px rgba(16,185,129,0.3)' : 'none')+'; outline:none;" onclick="if(typeof window.toggleShiftPause===\'function\') window.toggleShiftPause()">' +
                         (d.sh.sPS ? '▶ WZNÓW PRACĘ' : '☕ PRZERWA') +
@@ -312,7 +304,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 '</div>' +
             '</div>';
                 
-                // STOPER GPS / LIVE RIDE
                 if(d.liveRideStart) {
                     let isWaiting = d.sh.rWS !== null;
                     act += '<div style="background: '+(isWaiting?'rgba(14,165,233,0.05)':'rgba(16,185,129,0.05)')+'; border: 1px solid '+(isWaiting?'rgba(14,165,233,0.3)':'rgba(16,185,129,0.3)')+'; padding: 15px; border-radius: 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">' +
@@ -326,37 +317,25 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     act += '<button style="width:100%; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-size:1rem; font-weight:900; letter-spacing:1px; padding:18px; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(16,185,129,0.3); margin-bottom:20px; outline:none;" onclick="if(typeof window.startLiveRide===\'function\') window.startLiveRide()">🟢 ROZPOCZNIJ KURS (STOPER)</button>';
                 }
                 
-                // ODNOWIONY REJESTR POJEDYNCZYCH KURSÓW (Premium Style)
                 act += '<div style="background: #111116; border: 1px solid #2a2a35; border-radius: 24px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px;">' +
                     '<div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; text-align: center;">Dodaj pojedynczy kurs</div>' +
-                    
-                    '<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 5px;">' +
-                        ch1 +
-                    '</div>' +
+                    '<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 5px;">'+ch1+'</div>' +
                     otherSrcHtml +
-                    '<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px;">' +
-                        ch2 +
-                    '</div>' +
-                    
-                    // LEDowy input dla kwoty
+                    '<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px;">'+ch2+'</div>' +
                     '<div style="background: #000; border: 1px inset rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">' +
                         '<input type="number" id="dt-v" placeholder="0.00" style="color: #0ea5e9; border: none; background: transparent; font-size: 3rem; font-weight: 900; text-align: center; width: 160px; outline: none; font-family: monospace; text-shadow: 0 0 15px rgba(14,165,233,0.3);">' +
                         '<span style="font-size: 1.4rem; font-weight: 700; color: rgba(255,255,255,0.3); margin-top: 10px; margin-left: 5px;">zł</span>' +
                     '</div>' +
-                    
                     '<div class="inp-row" style="margin-bottom:15px; gap:10px;">' +
                         '<div class="inp-group" style="margin:0;"><input type="number" id="dt-m" placeholder="Czas (min)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.95rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
                         '<div class="inp-group" style="margin:0;"><input type="number" id="dt-k" placeholder="Dystans (km)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.95rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
                     '</div>' +
-                    
                     '<div class="inp-group" style="margin-bottom:15px;">' +
                         '<select id="dt-cid" style="background:rgba(0,0,0,0.3); border-radius:14px; padding:16px; font-size:0.85rem; color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.08); outline:none; width:100%; box-sizing:border-box;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select>' +
                     '</div>' +
-                    
                     '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; padding:18px; border-radius:16px; font-weight:900; font-size:1.05rem; letter-spacing:1px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.35); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ KURS DO ZMIANY</button>' +
                 '</div>';
                 
-                // Dziennik Zmiany
                 act += '<div style="margin: 30px 5px 15px 5px; text-align: center;"><span style="font-size:0.7rem; color:rgba(255,255,255,0.4); font-weight:800; letter-spacing:1px; text-transform:uppercase;">DZIENNIK ZAROBKÓW</span></div>';
                     
                 let trsList = d.sh.tr || [];
@@ -389,14 +368,12 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     act += '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:30px 0;font-size:0.85rem; background:rgba(0,0,0,0.2); border-radius:20px; border:1px dashed rgba(255,255,255,0.05); font-weight:600;">Brak zarejestrowanych kursów na tej zmianie.</div>';
                 }
             } else {
-                // --- EKRAN STARTOWY PREMIUM ---
                 act = '<div class="dash-hero" style="padding-top:30px; padding-bottom:20px;">' +
                     '<div style="width:70px; height:70px; background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2.2rem; box-shadow:0 8px 25px rgba(245,158,11,0.15);">🚕</div>' +
                     '<h1 style="font-size:2.2rem; font-weight:900; letter-spacing:-1px; margin-bottom:5px; color:#fff;">Cześć, '+(window.db.userName || 'Kierowco')+'!</h1>' +
                     '<p style="margin-top:5px; font-size:0.75rem; color:rgba(255,255,255,0.5); font-weight:800; text-transform:uppercase; letter-spacing:1px;">Potwierdź stan licznika przed jazdą</p>' +
                 '</div>' +
                 '<div style="padding:0 15px;">' +
-                    // --- ZMIENIONY, LEDOWY INPUT DLA ODO ---
                     '<div style="background:#111116; border-radius:24px; padding:25px; text-align:center; border:1px solid #2a2a35; box-shadow:inset 0 4px 20px rgba(0,0,0,0.5), 0 8px 30px rgba(0,0,0,0.4); margin-bottom:20px;">' +
                         '<div style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">STAN LICZNIKA POJAZDU (START)</div>' +
                         '<input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="000000" style="width:100%; background:transparent; border:none; color:#f59e0b; font-size:3.5rem; font-weight:900; text-align:center; outline:none; padding:0; text-shadow:0 0 15px rgba(245,158,11,0.4); letter-spacing:2px; font-family:monospace;">' +
@@ -408,21 +385,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     act += '<div style="padding:0 15px; margin-top:15px;">' +
                         '<button class="btn" style="background:#1a1a22; color:#888; border:1px solid #2a2a35; font-size:0.8rem; font-weight:700; box-shadow:none; width:100%; padding:16px; border-radius:20px; outline:none;" onclick="window.dShowOff=true; window.render()">📥 ZAKSIĘGUJ ZALEGŁĄ ZMIANĘ</button>' +
                     '</div>';
-                    
-                    // --- ZAPOWIEDŹ PRO DLA PANELU TAXI (Zmieniona Ikona Taxi Premium) ---
-                    let panelProBanner = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
-                        '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
-                        '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
-                        '<div style="display: flex; align-items: center; gap: 15px;">' +
-                            '<div style="font-size: 2.5rem; text-shadow: 0 0 10px rgba(217,70,239,0.4);">🚕✨</div>' + // Zastąpiono 🤖
-                            '<div style="text-align: left;">' +
-                                '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Usługi Taxi</h4>' + // Zmieniono nagłówek
-                                '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Automatyczne Zlecenia:</b> Kursy wpadają same.<br>✅ <b>Premium Rozliczenia:</b> Wszystko w jednym miejscu!</div>' + // Zmieniono tekst
-                            '</div>' +
-                        '</div>' +
-                    '</div>';
                     act += panelProBanner;
-
                 } else {
                     let offlineInputsHtml = '';
                     if(d.plat === 'apps') {
@@ -451,12 +414,10 @@ window.rDrvPanel = function(d, t, nav, hdr) {
 
                     act += '<div class="section-lbl" style="color:#0ea5e9; border-color:#0ea5e9; margin-top:30px; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase;">⚡ ZALEGŁA ZMIANA / RAPORT Z KASY</div>' +
                     '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #0f172a, #09090b); border-radius:24px; padding:25px 20px; margin:0 15px; animation:fadeIn 0.3s; box-shadow:0 15px 40px rgba(0,0,0,0.6);">' +
-                        
                         '<div class="inp-row" style="margin-bottom:15px; gap:12px;">' +
                             '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:6px; display:block;">Data Startu</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
                             '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:6px; display:block;">Data Zakończenia</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
                         '</div>' +
-                        
                         '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">' +
                             '<label style="font-size:0.65rem; color:#f59e0b; font-weight:800; text-align:center; display:block; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">STAN LICZNIKA POJAZDU</label>' +
                             '<div class="inp-row" style="margin:0; gap:12px;">' +
@@ -464,14 +425,11 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                                 '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
                             '</div>' +
                         '</div>' +
-
                         offlineInputsHtml +
-                        
                         '<div class="inp-row" style="margin-bottom:25px; gap:12px;">' +
                             '<div class="inp-group" style="margin:0;"><input type="number" id="dw-pk" placeholder="Dystans płatny (KM)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.85rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
                             '<div class="inp-group" style="margin:0;"><input type="number" id="dw-h" placeholder="Czas pracy (h)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.85rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
                         '</div>' +
-                        
                         '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; padding:18px; font-size:1.05rem; letter-spacing:1px; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.35); width:100%; outline:none;" onclick="if(typeof window.dAddOfflineWeekly===\'function\') window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button>' +
                         '<button class="btn" style="background:transparent; color:rgba(255,255,255,0.4); margin-top:10px; border:1px solid rgba(255,255,255,0.1); border-radius:20px; box-shadow:none; padding:16px; font-weight:700; font-size:0.9rem; width:100%; outline:none;" onclick="window.dShowOff=false; window.render()">ANULUJ</button>' +
                     '</div>';
@@ -504,8 +462,9 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 else if(fM === 'today' && sd.toDateString() === now.toDateString()) fs.push(s);
                 else if(fM === 'month' && sd.getMonth() === now.getMonth() && sd.getFullYear() === now.getFullYear()) fs.push(s);
                 else if(fM === 'week') {
-                    let diff = now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1);
-                    let st = new Date(now.setDate(diff)); st.setHours(0,0,0,0);
+                    let wN = new Date();
+                    let diff = wN.getDate() - wN.getDay() + (wN.getDay() === 0 ? -6 : 1);
+                    let st = new Date(wN.setDate(diff)); st.setHours(0,0,0,0);
                     if(sd >= st) fs.push(s);
                 }
                 else if(fM === 'custom' && sd >= dF && sd <= dT) fs.push(s);
@@ -519,8 +478,9 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 else if(fM === 'today' && ed.toDateString() === now.toDateString()) fe.push(e);
                 else if(fM === 'month' && ed.getMonth() === now.getMonth() && ed.getFullYear() === now.getFullYear()) fe.push(e);
                 else if(fM === 'week') {
-                    let diff = now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1);
-                    let st = new Date(now.setDate(diff)); st.setHours(0,0,0,0);
+                    let wN = new Date();
+                    let diff = wN.getDate() - wN.getDay() + (wN.getDay() === 0 ? -6 : 1);
+                    let st = new Date(wN.setDate(diff)); st.setHours(0,0,0,0);
                     if(ed >= st) fe.push(e);
                 }
                 else if(fM === 'custom' && ed >= dF && ed <= dT) fe.push(e);
@@ -649,32 +609,17 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             }
 
             // --- ZAPOWIEDŹ PRO DLA WYNIKÓW (Zmieniona Ikona Pucharów Premium) ---
-            let proBannerHtml = '';
-            if (d.plat === 'apps') {
-                proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀\', \'info\')">' +
-                    '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
-                    '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
-                    '<div style="display: flex; align-items: center; gap: 15px;">' +
-                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🏆✨</div>' + // Zastąpiono 🤖
-                        '<div style="text-align: left;">' +
-                            '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Wyniki</h4>' + // Zmieniono nagłówek
-                            '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Rozliczenia AI:</b> Wszystko w jednym miejscu.<br>✅ <b>Pełna Historia:</b> Analizuj swoje zyski!</div>' + // Zmieniono tekst
-                        '</div>' +
+            let proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀\', \'info\')">' +
+                '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+                '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+                '<div style="display: flex; align-items: center; gap: 15px;">' +
+                    '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🏆✨</div>' +
+                    '<div style="text-align: left;">' +
+                        '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Wyniki</h4>' +
+                        '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Rozliczenia AI:</b> Wszystko w jednym miejscu.<br>✅ <b>Pełna Historia:</b> Analizuj swoje zyski!</div>' +
                     '</div>' +
-                '</div>';
-            } else {
-                proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀\', \'info\')">' +
-                    '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
-                    '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
-                    '<div style="display: flex; align-items: center; gap: 15px;">' +
-                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🏆✨</div>' + // Zastąpiono 📡
-                        '<div style="text-align: left;">' +
-                            '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Wyniki</h4>' + // Zmieniono nagłówek
-                            '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Integracja e-Kasy:</b> Automatyczne zaciąganie kursów (API).</div>' + // Zmieniono tekst
-                        '</div>' +
-                    '</div>' +
-                '</div>';
-            }
+                '</div>' +
+            '</div>';
 
             // =========================================================
             // BUDOWA AKORDEONÓW SZCZEGÓŁOWYCH P&L (Transparentność)
@@ -845,7 +790,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
             proBannerHtml +
             pAndLHtml +
             historyLogHtml +
-            // POTĘŻNY MARGINES DOLNY (140px)
             '<div style="height:140px; width:100%; clear:both;"></div>' + nav;
         }
     } catch(err) {
