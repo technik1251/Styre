@@ -1,7 +1,8 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Kompaktowy Terminal Premium (Smart Netto, Auto-Taksometr, Multitaryfa)
+// PLIK: taxi_tab_term.js - Niezawodny Terminal (Global Tracker, Smart Netto, Auto-Resume)
 // ==========================================
 
+// --- BEZPIECZNE FUNKCJE POMOCNICZE ---
 window.dTC = function(type, val) {
     if(type === 's') window.dTSrc = val;
     if(type === 'p') window.dTPay = val;
@@ -35,6 +36,7 @@ window.dStartS = function() {
     };
     window.db.drv.liveRideStart = null;
     
+    // Inicjalizacja Globalnego Śledzenia Zmiany
     window.initGlobalTracker();
 
     if(typeof window.save === 'function') window.save(); 
@@ -51,6 +53,7 @@ window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 };
 
+// --- NIEZAWODNY GLOBAL TRACKER (Dystans Zmiany) ---
 window.initGlobalTracker = function() {
     if (!('geolocation' in navigator)) return;
     let s = window.db.drv.sh;
@@ -63,10 +66,10 @@ window.initGlobalTracker = function() {
         let lat = position.coords.latitude;
         let lng = position.coords.longitude;
         
-        if (!s.sPS) { 
+        if (!s.sPS) { // Gdy nie jesteśmy na pauzie
             if (s.lastShiftPos) {
                 let distTotal = window.getDistanceFromLatLonInKm(s.lastShiftPos.lat, s.lastShiftPos.lng, lat, lng);
-                if (distTotal > 0.005) { 
+                if (distTotal > 0.005) { // Filtr (5 metrów)
                     s.shiftDist += distTotal;
                     let elShiftDist = document.getElementById('shift-total-dist');
                     if(elShiftDist) elShiftDist.innerHTML = s.shiftDist.toFixed(1) + ' km';
@@ -78,6 +81,7 @@ window.initGlobalTracker = function() {
     }, function(err) { console.warn('Global GPS:', err); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 });
 };
 
+// --- NIEZAWODNE WZNOWIENIE TAKSOMETRU (Auto-Resume) ---
 window.resumeLiveRide = function() {
     let s = window.db.drv.sh;
     if (!s || !window.db.drv.liveRideStart) return;
@@ -113,19 +117,25 @@ window.resumeLiveRide = function() {
     if(!window.liveRideTimer) window.liveRideTimer = setInterval(window.updateLiveRideUI, 1000);
 };
 
+// --- LOGIKA CELU DZIENNEGO (OSOBNE CELE NETTO I BRUTTO) ---
 window.dGoalMode = window.dGoalMode || 'netto';
 window.toggleGoalMode = function() {
     window.dGoalMode = (window.dGoalMode === 'brutto') ? 'netto' : 'brutto';
     if(typeof window.render === 'function') window.render();
 };
 window.dSetGoal = function() {
-    let current = (window.db.drv.cfg && window.db.drv.cfg.dailyGoal) ? window.db.drv.cfg.dailyGoal : 400;
-    let ng = prompt("Podaj swój DZIENNY CEL BRUTTO (zł):\n(System automatycznie przeliczy Prawdziwe Netto na podstawie Twoich kosztów i prowizji)", current);
+    let isNetto = window.dGoalMode === 'netto';
+    let current = isNetto ? ((window.db.drv.cfg && window.db.drv.cfg.goalNetto) || 300) : ((window.db.drv.cfg && window.db.drv.cfg.goalBrutto) || 400);
+    let modeName = isNetto ? 'NETTO (na rękę)' : 'BRUTTO (utarg)';
+    
+    let ng = prompt("Podaj swój DZIENNY CEL " + modeName + " (zł):", current);
     if(ng !== null && ng !== '') {
         let val = parseFloat(ng);
         if(!isNaN(val) && val > 0) {
             if(!window.db.drv.cfg) window.db.drv.cfg = {};
-            window.db.drv.cfg.dailyGoal = val;
+            if(isNetto) window.db.drv.cfg.goalNetto = val;
+            else window.db.drv.cfg.goalBrutto = val;
+            
             if(typeof window.save === 'function') window.save();
             if(typeof window.render === 'function') window.render();
         }
@@ -148,6 +158,7 @@ window.toggleLiveTariff = function() {
     }
 };
 
+// --- SILNIK PRAWDZIWEGO TAKSOMETRU (AUTO-KOREK) ---
 window.updateLiveRideUI = function() {
     if (!window.db || !window.db.drv || !window.db.drv.liveRideStart) return;
     let d = window.db.drv;
@@ -320,7 +331,7 @@ window.openEndShiftModal = function() {
 
             '<div style="margin-bottom:20px;">' +
                 '<label style="font-size:0.65rem; color:rgba(255,255,255,0.6); font-weight:800; margin-bottom:8px; display:block; text-transform:uppercase;">Płatny Dystans z Aplikacji (KM)</label>' +
-                '<input type="number" step="0.1" id="dw-m-pk" placeholder="np. 85.5" class="compact-inp">' +
+                '<input type="number" step="0.1" id="dw-m-pk" placeholder="np. 85.5" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:1.1rem; font-weight:700; outline:none; width:100%; box-sizing:border-box;">' +
             '</div>' +
             
             '<button style="background:linear-gradient(135deg, #ef4444, #b91c1c); color:#fff; font-weight:900; padding:18px; border-radius:20px; border:none; width:100%; font-size:1.1rem; box-shadow:0 8px 25px rgba(239,68,68,0.4); cursor:pointer;" onclick="window.dEndS()">ROZLICZ ZMIANĘ</button>' +
@@ -409,7 +420,6 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         let html = [];
         html.push(hdr);
 
-        // STYLE LUXURY KOMPAKT
         html.push('<style>');
         html.push('.glass-card { background: rgba(20, 20, 25, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); position: relative; overflow: hidden; padding: 20px; }');
         html.push('.compact-inp { background: rgba(0,0,0,0.4); border: 1px inset rgba(255,255,255,0.05); color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-size: 1.1rem; font-weight: 700; outline: none; width: 100%; box-sizing: border-box; }');
@@ -464,70 +474,67 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             diffMins = Math.floor((aMs % 3600000) / 60000);
         }
 
+        if(d.sh && d.sh.on && !d.sh.globalWatchId) {
+            window.initGlobalTracker();
+        }
+
         if (d.sh && d.sh.on) {
             html.push('<div style="padding:0 15px; margin-top:15px;">');
             
             // ==========================================
-            // MODUŁ CELU DZIENNEGO (SMART GOAL ETA & PRAWDZIWE NETTO)
+            // MODUŁ CELU DZIENNEGO (SMART GOAL & PRAWDZIWE NETTO)
             // ==========================================
             let isNetto = window.dGoalMode === 'netto';
-            let goalBrutto = (d.cfg && d.cfg.dailyGoal) ? parseFloat(d.cfg.dailyGoal) : 400;
             
+            // Kalkulacja prawdziwych kosztów Netto (stałych i zmiennych)
             let totalKm = (d.sh.shiftDist || 0) + manualKm;
             let taxRate = (d.cfg && d.cfg.tax) ? parseFloat(d.cfg.tax) : 0;
             let fuelPx = (d.cfg && d.cfg.fuelPx) ? parseFloat(d.cfg.fuelPx) : 0;
             let ePct = (d.cfg && d.cfg.eType === 'pct') ? (parseFloat(d.cfg.ePct) || 0) : 0;
+            
             let eFixDaily = (d.cfg && d.cfg.eType === 'fix') ? (parseFloat(d.cfg.eFix) || 0) / 7 : 0; 
             let carDaily = (d.cfg && d.cfg.carRent) ? (parseFloat(d.cfg.carRent) / 7) : 0; 
+            let zusDaily = (d.cfg && d.cfg.zus) ? (parseFloat(d.cfg.zus) / 30) : 0;
             let fixedOtherDaily = (d.cfg && d.cfg.fixedDaily) ? parseFloat(d.cfg.fixedDaily) : 0;
+            
             let cardF = (d.cfg && d.cfg.cardF) ? parseFloat(d.cfg.cardF) : 0;
             let vouchF = (d.cfg && d.cfg.voucherF) ? parseFloat(d.cfg.voucherF) : 0;
 
-            let fixedCosts = eFixDaily + carDaily + fixedOtherDaily;
+            let fixedCosts = eFixDaily + carDaily + zusDaily + fixedOtherDaily;
             let varCosts = (totalKm * fuelPx) + (g * taxRate) + (g * ePct) + (sumCard * cardF) + (sumVouch * vouchF);
-            
+
             let currentBrutto = g;
             let currentNetto = g - varCosts - fixedCosts;
-
-            // Szacowanie Netto dla celu Brutto
-            let fuelRatio = g > 0 ? ((totalKm * fuelPx) / g) : 0.05; 
-            let cardRatio = g > 0 ? ((sumCard * cardF + sumVouch * vouchF) / g) : 0;
-            let goalNetto = goalBrutto - (goalBrutto * taxRate) - (goalBrutto * ePct) - (goalBrutto * fuelRatio) - (goalBrutto * cardRatio) - fixedCosts;
-            
             let currProg = isNetto ? currentNetto : currentBrutto;
-            let activeGoal = isNetto ? goalNetto : goalBrutto;
-            if(isNetto && activeGoal < 0) activeGoal = 1;
 
-            let pct = 0;
-            if (isNetto) {
-                let startNetto = -fixedCosts;
-                let totalJourney = activeGoal - startNetto;
-                let covered = currProg - startNetto;
-                pct = totalJourney > 0 ? (covered / totalJourney) * 100 : 0;
-            } else {
-                pct = (currProg / activeGoal) * 100;
-            }
+            // Osobne cele Brutto i Netto
+            let goalBrutto = (d.cfg && d.cfg.goalBrutto) ? parseFloat(d.cfg.goalBrutto) : ((d.cfg && d.cfg.dailyGoal) ? parseFloat(d.cfg.dailyGoal) : 400);
+            let goalNetto = (d.cfg && d.cfg.goalNetto) ? parseFloat(d.cfg.goalNetto) : 300;
+            let activeGoal = isNetto ? goalNetto : goalBrutto;
+            
+            // Pasek postępu (Zaczyna zawsze od 0 na ekranie, ukrywając początkowe minusy)
+            let startValue = isNetto ? -fixedCosts : 0;
+            let totalJourney = activeGoal - startValue;
+            let covered = currProg - startValue;
+            let pct = (totalJourney > 0) ? (covered / totalJourney) * 100 : 0;
             pct = Math.min(Math.max(pct, 0), 100);
 
+            // Wyliczanie EFEKTYWNOŚCI i ETA DO CELU
             let etaStr = '--:--';
-            let speedPerHour = 0;
-            if(activeHrs > 0.25) { 
-                if(isNetto) {
-                    speedPerHour = (g - varCosts) / activeHrs; 
-                    if(speedPerHour > 0 && currProg < activeGoal) {
-                        let hoursLeft = (activeGoal - currProg) / speedPerHour;
-                        let mLeft = Math.round(hoursLeft * 60);
-                        etaStr = Math.floor(mLeft / 60) + 'h ' + (mLeft % 60) + 'm';
-                    } else if (currProg >= activeGoal) etaStr = 'Osiągnięto! 🎉';
-                    else etaStr = 'Prędkość ujemna...';
+            let speedPerHour = activeHrs > 0 ? (currProg / activeHrs) : 0;
+
+            if (activeHrs > 0.25) { 
+                let hourlyMargin = isNetto ? ((g - varCosts) / activeHrs) : (g / activeHrs);
+                let remaining = activeGoal - currProg;
+                
+                if (remaining <= 0) {
+                    etaStr = 'Osiągnięto! 🎉';
+                } else if (hourlyMargin > 0) {
+                    let hoursLeft = remaining / hourlyMargin;
+                    let mLeft = Math.round(hoursLeft * 60);
+                    etaStr = Math.floor(mLeft / 60) + 'h ' + (mLeft % 60) + 'm';
                 } else {
-                    speedPerHour = g / activeHrs;
-                    if(speedPerHour > 0 && currProg < activeGoal) {
-                        let hoursLeft = (activeGoal - currProg) / speedPerHour;
-                        let mLeft = Math.round(hoursLeft * 60);
-                        etaStr = Math.floor(mLeft / 60) + 'h ' + (mLeft % 60) + 'm';
-                    } else if (currProg >= activeGoal) etaStr = 'Osiągnięto! 🎉';
-                    else etaStr = 'Kalibracja AI...';
+                    etaStr = 'Jazda na stracie...';
                 }
             } else {
                 etaStr = 'Kalibracja AI...';
@@ -544,9 +551,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('<div style="height:10px; background:rgba(0,0,0,0.5); border-radius:5px; border:1px inset rgba(255,255,255,0.05); margin-bottom:12px;"><div style="height:100%; width:'+pct+'%; background:linear-gradient(90deg, #f59e0b, #10b981); border-radius:5px; box-shadow:0 0 10px rgba(16,185,129,0.5); transition:width 0.5s ease;"></div></div>');
             html.push('<div style="display:flex; justify-content:space-between; font-size:0.7rem; font-weight:800;"><span style="color:var(--muted);">EFEKTYWNOŚĆ: '+(speedPerHour).toFixed(2)+' zł/h</span><span style="color:#0ea5e9;">ETA DO CELU: '+etaStr+'</span></div></div>');
 
-            // ==========================================
-            // ZWARTY PASEK INFORMACYJNY
-            // ==========================================
+            // Zwarty Pasek Informacyjny
             html.push('<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:15px;">');
             html.push('<div class="glass-card" style="padding:12px 10px; text-align:center; border-color:rgba(16,185,129,0.2);"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">UTARG BRUTTO</div><div style="font-size:1.2rem; font-weight:900; color:#10b981;">'+Number(g).toFixed(2)+' zł</div></div>');
             html.push('<div class="glass-card" style="padding:12px 10px; text-align:center; border-color:rgba(14,165,233,0.2);"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">CZAS ZMIANY</div><div style="font-size:1.2rem; font-weight:900; color:#0ea5e9;">'+diffHrs+'h '+diffMins+'m</div></div>');
@@ -558,9 +563,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('<button style="flex:1; padding:14px; border-radius:14px; font-weight:800; font-size:0.8rem; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);" onclick="if(window.openEndShiftModal) window.openEndShiftModal()">🔴 ZAKOŃCZ ZMIANĘ</button>');
             html.push('</div>');
             
-            // ==========================================
             // MODUŁ GPS (LIVE TAKSOMETR MULTITARYFOWY)
-            // ==========================================
             if(d.liveRideStart) {
                 let cTime = '00:00'; 
                 let startPrice = (d.q && d.q.s) ? d.q.s : 9.0;
@@ -580,7 +583,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
 
                 html.push('<button style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; font-size: 0.95rem; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); cursor: pointer; outline:none;" onclick="if(window.stopLiveRide) window.stopLiveRide()">🛑 ZAKOŃCZ KURS</button></div>');
             } else {
-                html.push('<button style="width:100%; padding:18px; border-radius:16px; margin-bottom:15px; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(16,185,129,0.3);" onclick="window.startLiveRide()">🛰️ ROZPOCZNIJ KURS (GPS)</button>');
+                html.push('<button style="width:100%; padding:18px; border-radius:16px; margin-bottom:15px; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(16,185,129,0.3);" onclick="if(window.startLiveRide) window.startLiveRide()">🛰️ ROZPOCZNIJ KURS (GPS)</button>');
             }
             
             let autoM = d.sh.tempAutoMins !== undefined ? d.sh.tempAutoMins : '';
@@ -652,6 +655,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         
         appContainer.innerHTML = html.join('') + '<div style="height:150px;"></div>' + nav;
 
+        // --- AUTO WZNOWIENIE (Jeśli strona była odświeżona podczas kursu) ---
         if (d.liveRideStart && (!d.sh || !d.sh.rWS)) {
             if (!window.liveRideTimer) window.resumeLiveRide();
             setTimeout(window.updateLiveRideUI, 50);
