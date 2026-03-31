@@ -508,6 +508,22 @@ window.submitPremiumEndShiftModal = function() {
 };
 
 // --- RENDER GŁÓWNY (UI) KOMPAKTOWY PREMIUM ---
+window.getOfflineHTML = function(d) {
+    let lblStyle = 'font-size:0.6rem; color:var(--muted); font-weight:800; text-transform:uppercase; margin-bottom:6px; display:block; text-align:left;';
+    let html = '<div style="color:#0ea5e9; margin-top:10px; font-size:0.75rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:15px;">⚡ ZALEGŁA ZMIANA (OFFLINE)</div><div class="crystal-card crystal-panel" style="padding:25px 15px; margin-bottom:20px;">';
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;"><div><label style="'+lblStyle+'">Data Startu</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" class="compact-inp"></div><div><label style="'+lblStyle+'">Data Koniec</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" class="compact-inp"></div></div>';
+    html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#f59e0b; font-weight:900; text-align:center; display:block; margin-bottom:10px;">STAN LICZNIKA POJAZDU</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div><div><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div></div></div>';
+    
+    if(d.plat === 'apps') {
+        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" class="compact-inp"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma)" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3); font-size:1.2rem; padding:15px;"></div></div></div>';
+    } else {
+        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3);"></div><div><input type="number" step="0.01" id="dw-v-karta" placeholder="Terminal" class="compact-inp" style="color:#0ea5e9; border-color:rgba(14,165,233,0.3);"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" class="compact-inp" style="color:#a855f7; border-color:rgba(168,85,247,0.3);"></div></div></div>';
+    }
+    
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;"><div><label style="'+lblStyle+'">Dystans Płatny (KM)</label><input type="number" id="dw-pk" placeholder="0.0" class="compact-inp"></div><div><label style="'+lblStyle+'">Czas Pracy (H)</label><input type="number" id="dw-h" placeholder="0" class="compact-inp"></div></div><button style="width:100%; padding:18px; border-radius:16px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3);" onclick="window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button><button style="width:100%; padding:16px; border-radius:16px; background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.1); margin-top:10px; font-weight:800; font-size:0.85rem;" onclick="window.dShowOff=false; window.render()">ANULUJ</button></div>';
+    return html;
+};
+
 window.rDrvTerm = function(d, t, nav, hdr) {
     try {
         let appContainer = document.getElementById('app');
@@ -515,8 +531,8 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         
         let html = [hdr];
         
-        // ZASZYCIE STYLÓW CSS W KODZIE JS - Ostateczna ochrona przed brakiem cache
-        html.push('<style id="crystal-styles-v12">');
+        // ZASZYTE STYLE CSS - OSTATECZNA OCHRONA PRZED CACHE
+        html.push('<style id="crystal-styles-v13">');
         html.push('.crystal-card { background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.2) 100%); border: 1px solid rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.3); border-radius: 16px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 8px 20px rgba(0,0,0,0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 15px 5px; text-align: center; position: relative; overflow: hidden; }');
         html.push('.crystal-card::after { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%); transform: skewX(-25deg); animation: shine 6s infinite; }');
         html.push('@keyframes shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }');
@@ -529,11 +545,12 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         html.push('.crystal-gross { border-top-color: rgba(16,185,129,0.6); box-shadow: inset 0 1px 2px rgba(16,185,129,0.4), 0 6px 15px rgba(0,0,0,0.5), 0 0 12px rgba(16,185,129,0.1); }');
         html.push('.crystal-dist { border-top-color: rgba(245,158,11,0.6); box-shadow: inset 0 1px 2px rgba(245,158,11,0.4), 0 6px 15px rgba(0,0,0,0.5), 0 0 12px rgba(245,158,11,0.1); }');
         html.push('.crystal-panel { border-top-color: rgba(255,255,255,0.2); box-shadow: inset 0 1px 2px rgba(255,255,255,0.1), 0 6px 15px rgba(0,0,0,0.5); }');
-        
-        // Neo-Kreator Kursu CSS
-        html.push('.crystal-chip { padding: 10px 14px; border-radius: 12px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.4); color: var(--muted); text-align: center; flex: 1; white-space: nowrap; }');
-        html.push('.crystal-chip.active.blue { background: linear-gradient(135deg, rgba(14,165,233,0.3), rgba(14,165,233,0.1)); color: #fff; border-color: rgba(14,165,233,0.6); box-shadow: 0 4px 15px rgba(14,165,233,0.3); text-shadow: 0 0 5px rgba(255,255,255,0.5); transform: translateY(-2px); }');
-        html.push('.crystal-chip.active.green { background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(16,185,129,0.1)); color: #fff; border-color: rgba(16,185,129,0.6); box-shadow: 0 4px 15px rgba(16,185,129,0.3); text-shadow: 0 0 5px rgba(255,255,255,0.5); transform: translateY(-2px); }');
+        html.push('.compact-inp { background: rgba(0,0,0,0.4); border: 1px inset rgba(255,255,255,0.05); color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-size: 1.1rem; font-weight: 700; outline: none; width: 100%; box-sizing: border-box; transition: border 0.3s; } .compact-inp:focus { border-color: rgba(14,165,233,0.5); }');
+        html.push('.btn-taryfa { width:100%; height:100%; border-radius:10px; font-weight:900; font-size:1rem; background: linear-gradient(to bottom, #333, #111); box-shadow: 0 3px 0 #000, inset 0 2px 4px rgba(255,255,255,0.2); cursor:pointer; outline:none; transition:all 0.1s; } .btn-taryfa:active { transform: translateY(3px); box-shadow: 0 0 0 #000, inset 0 2px 4px rgba(255,255,255,0.2); }');
+        // Nowe Neo Chipy do Kreatora Kursu
+        html.push('.neo-chip { padding: 10px 14px; border-radius: 12px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.4); color: var(--muted); text-align: center; flex: 1; white-space: nowrap; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }');
+        html.push('.neo-chip.active.blue { background: linear-gradient(135deg, rgba(14,165,233,0.3), rgba(14,165,233,0.1)); color: #fff; border-color: rgba(14,165,233,0.6); box-shadow: 0 4px 15px rgba(14,165,233,0.3), inset 0 1px 2px rgba(255,255,255,0.2); text-shadow: 0 0 5px rgba(255,255,255,0.5); transform: translateY(-2px); }');
+        html.push('.neo-chip.active.green { background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(16,185,129,0.1)); color: #fff; border-color: rgba(16,185,129,0.6); box-shadow: 0 4px 15px rgba(16,185,129,0.3), inset 0 1px 2px rgba(255,255,255,0.2); text-shadow: 0 0 5px rgba(255,255,255,0.5); transform: translateY(-2px); }');
         html.push('.neo-input-box { background: rgba(0,0,0,0.6); border: 1px solid rgba(14,165,233,0.3); border-radius: 16px; padding: 15px; box-shadow: inset 0 4px 20px rgba(0,0,0,0.8), 0 0 15px rgba(14,165,233,0.1); display: flex; align-items: center; justify-content: center; transition: all 0.3s; }');
         html.push('.neo-input-box:focus-within { border-color: #0ea5e9; box-shadow: inset 0 4px 20px rgba(0,0,0,0.8), 0 0 25px rgba(14,165,233,0.3); }');
         html.push('</style>');
@@ -541,17 +558,17 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; }
         if(!window.dTPay) { window.dTPay = d.plat === 'apps' ? 'Aplikacja' : 'Gotówka'; }
         
-        let cSrc = function(name) { return window.dTSrc === name ? 'crystal-chip active blue' : 'crystal-chip idle'; };
-        let cPay = function(name, cl) { return window.dTPay === name ? 'crystal-chip active '+cl : 'crystal-chip idle'; };
+        let cSrc = function(name) { return window.dTSrc === name ? 'neo-chip active blue' : 'neo-chip'; };
+        let cPay = function(name, cl) { return window.dTPay === name ? 'neo-chip active '+cl : 'neo-chip'; };
         
         let ch1 = '', ch2 = '', otherSrcHtml = '';
         if(d.plat === 'apps') {
             ch1 = '<div class="'+cSrc('Uber')+'" onclick="window.dTC(\'s\',\'Uber\')">Uber</div><div class="'+cSrc('Bolt')+'" onclick="window.dTC(\'s\',\'Bolt\')">Bolt</div><div class="'+cSrc('FreeNow')+'" onclick="window.dTC(\'s\',\'FreeNow\')">FreeNow</div><div class="'+cSrc('Inna')+'" onclick="window.dTC(\'s\',\'Inna\')">Inna</div>';
-            otherSrcHtml = (window.dTSrc === 'Inna') ? '<div style="margin-bottom:10px;"><input type="text" id="dt-other-src" placeholder="Nazwa apki..." class="compact-inp" value="'+(window.dOtherSrc||'')+'" onchange="window.dOtherSrc=this.value"></div>' : '';
+            otherSrcHtml = (window.dTSrc === 'Inna') ? '<div style="margin-bottom:15px;"><input type="text" id="dt-other-src" placeholder="Nazwa apki..." class="compact-inp" value="'+(window.dOtherSrc||'')+'" onchange="window.dOtherSrc=this.value"></div>' : '';
             ch2 = '<div class="'+cPay('Aplikacja','blue')+'" onclick="window.dTC(\'p\',\'Aplikacja\')">Aplikacja</div><div class="'+cPay('Gotówka','green')+'" onclick="window.dTC(\'p\',\'Gotówka\')">Gotówka</div>';
         } else {
             ch1 = '<div class="'+cSrc('Centrala')+'" onclick="window.dTC(\'s\',\'Centrala\')">Centrala</div><div class="'+cSrc('Postój')+'" onclick="window.dTC(\'s\',\'Postój\')">Postój</div><div class="'+cSrc('Prywatny')+'" onclick="window.dTC(\'s\',\'Prywatny\')">Prywatny</div>';
-            ch2 = '<div class="'+cPay('Gotówka','green')+'" onclick="window.dTC(\'p\',\'Gotówka\')">Gotówka</div><div class="'+cPay('Karta','blue')+'" onclick="window.dTC(\'p\',\'Karta\')">Karta</div><div class="'+cPay('Voucher','blue')+'" style="'+(window.dTPay==='Voucher'?'color:#a855f7; border-color:rgba(168,85,247,0.4); background:rgba(168,85,247,0.15);':'')+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
+            ch2 = '<div class="'+cPay('Gotówka','green')+'" onclick="window.dTC(\'p\',\'Gotówka\')">Gotówka</div><div class="'+cPay('Karta','blue')+'" onclick="window.dTC(\'p\',\'Karta\')">Karta</div><div class="'+cPay('Voucher','blue')+'" style="'+(window.dTPay==='Voucher'?'color:#a855f7; border-color:rgba(168,85,247,0.4); box-shadow:0 4px 15px rgba(168,85,247,0.3);':'')+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
         }
 
         let clientOpts = '';
@@ -703,7 +720,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             }
 
             // GŁÓWNY PANEL (Kryształowy Duży)
-            html.push('<div class="crystal-card crystal-main" style="padding:20px 15px; margin-bottom:10px;">');
+            html.push('<div class="crystal-card crystal-main" style="padding:20px 15px; margin-bottom:15px;">');
             html.push('<div style="font-size:0.7rem; color:var(--muted); font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:5px;">'+(isNetto?'NETTO CAŁY DZIEŃ':'BRUTTO CAŁY DZIEŃ')+'</div>');
             html.push('<div style="font-size:3.5rem; font-weight:900; color:'+(isNetto?'#10b981':'#0ea5e9')+'; line-height:1; margin-bottom:15px;"><span id="goal-current-val">'+currProg.toFixed(2)+'</span> <span style="font-size:1.2rem; color:rgba(255,255,255,0.4);">zł</span></div>');
             
@@ -719,30 +736,30 @@ window.rDrvTerm = function(d, t, nav, hdr) {
 
             // --- ZWARTY WIDOK INFORMACYJNY (Kryształowe Kafelki 2x2) ---
             if (d.plat === 'apps') {
-                html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">');
+                html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">');
                 html.push('<div class="crystal-card crystal-uber"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px; letter-spacing:1px;">UBER</div><div style="font-size:1.3rem; font-weight:900; color:#0ea5e9;">'+Number(uSum).toFixed(2)+'</div></div>');
                 html.push('<div class="crystal-card crystal-bolt"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px; letter-spacing:1px;">BOLT</div><div style="font-size:1.3rem; font-weight:900; color:#22c55e;">'+Number(bSum).toFixed(2)+'</div></div>');
                 html.push('<div class="crystal-card crystal-freenow"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px; letter-spacing:1px;">FREENOW / INNE</div><div style="font-size:1.3rem; font-weight:900; color:#d946ef;">'+Number(fSum+iSum).toFixed(2)+'</div></div>');
                 html.push('<div class="crystal-card crystal-cash"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px; letter-spacing:1px;">GOTÓWKA</div><div style="font-size:1.3rem; font-weight:900; color:#10b981;">'+Number(sumCash).toFixed(2)+'</div></div>');
                 html.push('</div>');
             } else {
-                html.push('<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">');
+                html.push('<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px;">');
                 html.push('<div class="crystal-card crystal-cash"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">GOTÓWKA</div><div style="font-size:1.3rem; font-weight:900; color:#10b981;">'+Number(sumCash).toFixed(2)+'</div></div>');
                 html.push('<div class="crystal-card crystal-uber"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">KARTA</div><div style="font-size:1.3rem; font-weight:900; color:#0ea5e9;">'+Number(sumCard).toFixed(2)+'</div></div>');
                 html.push('<div class="crystal-card crystal-freenow"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">VOUCHER</div><div style="font-size:1.3rem; font-weight:900; color:#a855f7;">'+Number(sumVouch).toFixed(2)+'</div></div>');
                 html.push('</div>');
             }
 
-            // --- NOWE KAFELKI KRYSZTAŁOWE DLA STATYSTYK BIEŻĄCYCH ---
-            html.push('<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">');
+            // --- KAFELKI KRYSZTAŁOWE DLA STATYSTYK BIEŻĄCYCH ---
+            html.push('<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px;">');
             html.push('<div class="crystal-card crystal-time"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">CZAS PRACY</div><div id="ui-shift-time" style="font-size:1.1rem; font-weight:900; color:#0ea5e9;">0h 0m</div></div>');
             html.push('<div class="crystal-card crystal-gross"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">UTARG ZMIANY</div><div style="font-size:1.1rem; font-weight:900; color:#10b981;">'+Number(g).toFixed(2)+' zł</div></div>');
             html.push('<div class="crystal-card crystal-dist"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">DYSTANS (GPS)</div><div style="font-size:1.1rem; font-weight:900; color:#f59e0b;"><span id="shift-total-dist">'+Number(d.sh.shiftDist||0).toFixed(1)+'</span> km</div></div>');
             html.push('</div>');
 
-            html.push('<div style="display:flex; gap:8px; margin-bottom:10px;">');
-            html.push('<button id="ui-pause-btn" style="flex:1; border-radius:12px; padding:12px; font-weight:800; font-size:0.8rem; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1); transition:all 0.3s;" onclick="window.toggleShiftPause()">☕ PRZERWA</button>');
-            html.push('<button style="flex:1; border-radius:12px; padding:12px; font-weight:800; font-size:0.8rem; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);" onclick="if(window.openPremiumEndShiftModal) window.openPremiumEndShiftModal()">🔴 ZAKOŃCZ ZMIANĘ</button>');
+            html.push('<div style="display:flex; gap:10px; margin-bottom:10px;">');
+            html.push('<button id="ui-pause-btn" style="flex:1; border-radius:14px; padding:15px; font-weight:900; font-size:0.85rem; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1); transition:all 0.3s; box-shadow:0 4px 15px rgba(0,0,0,0.3);" onclick="window.toggleShiftPause()">☕ PRZERWA</button>');
+            html.push('<button style="flex:1; border-radius:14px; padding:15px; font-weight:900; font-size:0.85rem; background:linear-gradient(135deg, rgba(239,68,68,0.2), rgba(185,28,28,0.2)); color:#ef4444; border:1px solid rgba(239,68,68,0.4); box-shadow:0 4px 15px rgba(239,68,68,0.2);" onclick="if(window.openPremiumEndShiftModal) window.openPremiumEndShiftModal()">🔴 ZAKOŃCZ ZMIANĘ</button>');
             html.push('</div>');
             html.push('<div style="text-align:center; margin-bottom:15px;"><button style="background:transparent; color:#ef4444; border:none; font-size:0.65rem; font-weight:800; text-decoration:underline; cursor:pointer; opacity:0.8;" onclick="window.dCancelShift()">🗑️ Anuluj (Kasuj dane)</button></div>');
             
@@ -754,46 +771,46 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 let tColor = (activeTariff==='t1')?'#10b981':(activeTariff==='t2')?'#3b82f6':(activeTariff==='t3')?'#f59e0b':'#ef4444';
 
                 html.push('<div class="crystal-card crystal-panel" style="padding:15px; margin-bottom:15px;">');
-                html.push('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><div style="display: flex; align-items: center; gap: 8px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></div><span style="color:#10b981; font-size: 0.75rem; font-weight: 900; letter-spacing: 1px; text-transform:uppercase;">W Trasie</span></div><div id="live-ride-time" style="font-size: 1.1rem; font-weight: 900; color: #0ea5e9; font-family: monospace;">'+cTime+'</div></div>');
+                html.push('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><div style="display: flex; align-items: center; gap: 8px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow:0 0 10px #10b981;"></div><span style="color:#10b981; font-size: 0.75rem; font-weight: 900; letter-spacing: 1px; text-transform:uppercase; text-shadow:0 0 5px rgba(16,185,129,0.5);">W Trasie</span></div><div id="live-ride-time" style="font-size: 1.1rem; font-weight: 900; color: #0ea5e9; font-family: monospace;">'+cTime+'</div></div>');
 
                 html.push('<div style="text-align:center; margin-bottom:10px; display:flex; flex-direction:column; align-items:center;">');
                 html.push('<div id="live-ride-status" style="min-height:22px; margin-bottom:5px;"></div>');
-                html.push('<div style="display:flex; align-items:baseline; justify-content:center; gap:6px;"><span id="live-ride-price" style="font-size:3.5rem; font-weight:900; color:#10b981; font-family:monospace; line-height:1; text-shadow:0 0 20px rgba(16,185,129,0.4);">'+startPrice.toFixed(2)+'</span><span style="font-size:1.2rem; color:rgba(255,255,255,0.3);">zł</span></div></div>');
+                html.push('<div style="display:flex; align-items:baseline; justify-content:center; gap:6px;"><span id="live-ride-price" style="font-size:4rem; font-weight:900; color:#10b981; font-family:monospace; line-height:1; text-shadow:0 0 25px rgba(16,185,129,0.5);">'+startPrice.toFixed(2)+'</span><span style="font-size:1.2rem; color:rgba(255,255,255,0.3);">zł</span></div></div>');
 
-                html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">');
-                html.push('<div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:10px; text-align:center;"><span style="font-size:0.55rem; color:var(--muted); display:block;">DYSTANS (GPS)</span><strong id="live-ride-dist" style="font-size:1.3rem; color:#fff;">0.00</strong></div>');
-                html.push('<div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:10px; text-align:center; display:flex; align-items:center; justify-content:center;"><button id="live-tariff-btn" class="btn-taryfa" style="color: '+tColor+'; border: 1px solid '+tColor+'; text-shadow: 0 0 10px rgba(255,255,255,0.2); font-size:0.95rem;" onclick="if(window.toggleLiveTariff) window.toggleLiveTariff()">🔄 TARYFA: ' + activeTariff.toUpperCase() + '</button></div></div>');
+                html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">');
+                html.push('<div class="neo-input-box" style="padding:10px; flex-direction:column; gap:4px;"><span style="font-size:0.55rem; color:var(--muted); font-weight:800;">DYSTANS (GPS)</span><strong id="live-ride-dist" style="font-size:1.3rem; color:#fff;">0.00</strong></div>');
+                html.push('<div style="display:flex; align-items:stretch;"><button id="live-tariff-btn" class="btn-taryfa" style="color: '+tColor+'; border: 1px solid '+tColor+'; text-shadow: 0 0 10px rgba(255,255,255,0.2); font-size:0.95rem;" onclick="if(window.toggleLiveTariff) window.toggleLiveTariff()">🔄 TARYFA: ' + activeTariff.toUpperCase() + '</button></div></div>');
 
-                html.push('<button style="width: 100%; padding: 12px; border-radius: 10px; font-weight: 900; font-size: 0.9rem; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); cursor: pointer; outline:none;" onclick="if(window.stopLiveRide) window.stopLiveRide()">🛑 ZAKOŃCZ KURS</button></div>');
+                html.push('<button style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; font-size: 0.95rem; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.4); cursor: pointer; outline:none; box-shadow:0 0 15px rgba(239,68,68,0.2);" onclick="if(window.stopLiveRide) window.stopLiveRide()">🛑 ZAKOŃCZ KURS</button></div>');
             } else {
-                html.push('<button style="width:100%; padding:15px; border-radius:14px; margin-bottom:15px; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-weight:900; font-size:0.95rem; border:none; box-shadow:0 6px 20px rgba(16,185,129,0.3);" onclick="if(window.startLiveRide) window.startLiveRide()">🟢 ROZPOCZNIJ KURS (STOPER / GPS)</button>');
+                html.push('<button style="width:100%; padding:18px; border-radius:16px; margin-bottom:20px; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(16,185,129,0.4);" onclick="if(window.startLiveRide) window.startLiveRide()">🟢 ROZPOCZNIJ KURS (STOPER / GPS)</button>');
             }
             
             let autoM = d.sh.tempAutoMins !== undefined ? d.sh.tempAutoMins : '';
             let autoK = d.sh.tempAutoKm !== undefined ? d.sh.tempAutoKm : '';
             let autoP = d.sh.tempAutoPrice !== undefined ? d.sh.tempAutoPrice : '';
-            let isHighlight = autoM !== '' ? 'border-color:#10b981; color:#10b981;' : '';
+            let isHighlight = autoM !== '' ? 'color:#10b981;' : '';
             d.sh.tempAutoMins = undefined; d.sh.tempAutoKm = undefined; d.sh.tempAutoPrice = undefined;
 
             // --- NOWY, LUKSUSOWY KREATOR KURSU ---
-            html.push('<div class="crystal-card crystal-panel" style="padding: 20px 15px; margin-bottom: 20px; border-top-color:rgba(14,165,233,0.4);">');
+            html.push('<div class="crystal-card crystal-panel" style="padding: 20px 15px; margin-bottom: 20px; border-top-color:rgba(14,165,233,0.5);">');
             html.push('<div style="font-size: 0.75rem; color: #0ea5e9; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; text-align: center; letter-spacing:1.5px; text-shadow: 0 0 10px rgba(14,165,233,0.3);">✨ REJESTRACJA KURSU</div>');
             
             html.push('<div style="display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; padding-bottom:5px;">'+ch1+'</div>');
             html.push(otherSrcHtml);
             html.push('<div style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;">'+ch2+'</div>');
             
-            html.push('<div class="neo-input-box" style="margin-bottom:15px;">');
-            html.push('<input type="number" id="dt-v" placeholder="0.00" value="'+autoP+'" style="background:transparent; border:none; color:#fff; font-size:3.5rem; font-weight:900; text-align:center; outline:none; width:100%; font-family:monospace; text-shadow: 0 0 20px rgba(255,255,255,0.4);"><span style="font-size:1.5rem; color:var(--muted); font-weight:700; margin-left:10px;">zł</span>');
+            html.push('<div class="neo-input-box" style="margin-bottom:20px;">');
+            html.push('<input type="number" id="dt-v" placeholder="0.00" value="'+autoP+'" style="background:transparent; border:none; color:#fff; font-size:3.8rem; font-weight:900; text-align:center; outline:none; width:100%; font-family:monospace; text-shadow: 0 0 20px rgba(255,255,255,0.3);"><span style="font-size:1.5rem; color:var(--muted); font-weight:700; margin-left:10px;">zł</span>');
             html.push('</div>');
             
             html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">');
-            html.push('<div style="background:rgba(0,0,0,0.4); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.55rem; color:var(--muted); font-weight:800; display:block; margin-bottom:6px; text-align:center; letter-spacing:1px;">CZAS (MIN)</label><input type="number" id="dt-m" placeholder="0" value="'+autoM+'" style="width:100%; background:transparent; border:none; color:#fff; text-align:center; font-size:1.5rem; font-weight:800; outline:none;" ' + (autoM !== '' ? 'style="color:#10b981;"' : '') + '></div>');
-            html.push('<div style="background:rgba(0,0,0,0.4); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.55rem; color:var(--muted); font-weight:800; display:block; margin-bottom:6px; text-align:center; letter-spacing:1px;">DYSTANS (KM)</label><input type="number" step="0.1" id="dt-k" placeholder="0.0" value="'+autoK+'" style="width:100%; background:transparent; border:none; color:#fff; text-align:center; font-size:1.5rem; font-weight:800; outline:none;" ' + (autoK !== '' ? 'style="color:#10b981;"' : '') + '></div>');
+            html.push('<div class="neo-input-box" style="padding:12px; flex-direction:column; gap:6px;"><label style="font-size:0.6rem; color:var(--muted); font-weight:800; text-align:center; letter-spacing:1px;">CZAS (MIN)</label><input type="number" id="dt-m" placeholder="0" value="'+autoM+'" style="width:100%; background:transparent; border:none; color:#fff; text-align:center; font-size:1.5rem; font-weight:800; outline:none; '+isHighlight+'"></div>');
+            html.push('<div class="neo-input-box" style="padding:12px; flex-direction:column; gap:6px;"><label style="font-size:0.6rem; color:var(--muted); font-weight:800; text-align:center; letter-spacing:1px;">DYSTANS (KM)</label><input type="number" step="0.1" id="dt-k" placeholder="0.0" value="'+autoK+'" style="width:100%; background:transparent; border:none; color:#fff; text-align:center; font-size:1.5rem; font-weight:800; outline:none; '+isHighlight+'"></div>');
             html.push('</div>');
 
-            html.push('<div class="inp-group" style="margin-bottom:15px;"><select id="dt-cid" style="width:100%; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:12px; border-radius:12px; font-size:0.9rem; font-weight:700; outline:none; appearance:none; text-align:center;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select></div>');
-            html.push('<button style="width:100%; padding:18px; border-radius:16px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1.1rem; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.4); outline:none; cursor:pointer; letter-spacing:1px;" onclick="if(window.dAddT) window.dAddT()">ZAPISZ KURS</button></div>');
+            html.push('<div class="inp-group" style="margin-bottom:15px;"><select id="dt-cid" style="width:100%; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:15px; border-radius:14px; font-size:0.95rem; font-weight:700; outline:none; appearance:none; text-align:center; box-shadow:inset 0 2px 10px rgba(0,0,0,0.5);"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select></div>');
+            html.push('<button style="width:100%; padding:18px; border-radius:14px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1.1rem; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.4); outline:none; cursor:pointer; letter-spacing:1px;" onclick="if(window.dAddT) window.dAddT()">ZAPISZ KURS</button></div>');
             
             // DZIENNIK
             html.push('<div style="margin: 30px 15px 10px 15px; text-align: center;"><span style="font-size:0.7rem; color:var(--muted); font-weight:900; text-transform:uppercase;">DZIENNIK ZAROBKÓW BIEŻĄCEJ ZMIANY</span></div>');
