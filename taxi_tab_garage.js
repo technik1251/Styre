@@ -33,13 +33,13 @@ window.rDrvGarage = function(d, t, nav, hdr) {
             act += '<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:15px; text-align:center; margin-bottom:15px;">';
             act += '<span style="font-size:0.8rem; color:var(--muted); font-weight:600;">Brak pełnych cykli tankowań do obliczeń.<br>Zatankuj do pełna 2 razy.</span>';
             act += '</div>';
+        } else {
+            act += '<div style="background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(239,68,68,0.2); border-radius:24px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5); margin-bottom:25px;">';
+            act += '<div style="font-size:0.7rem; color:rgba(255,255,255,0.5); font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">ZBIORCZY KOSZT PALIW (MIX) NA 1 KM</div>';
+            act += '<div style="font-size:3.5rem; font-weight:900; color:#ef4444; text-shadow:0 0 20px rgba(239,68,68,0.4); line-height:1; margin-bottom:10px;">'+Number(fuelStats.ck).toFixed(2)+' zł</div>';
+            act += '<div style="font-size:0.75rem; color:var(--muted); font-weight:600;">Dystans mix: '+Number(fuelStats.dist).toFixed(0)+' KM | Wydano: '+Number(fuelStats.cost).toFixed(2)+' zł</div>';
+            act += '</div>';
         }
-
-        act += '<div style="background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(239,68,68,0.2); border-radius:24px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5); margin-bottom:25px;">';
-        act += '<div style="font-size:0.7rem; color:rgba(255,255,255,0.5); font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">ZBIORCZY KOSZT PALIW (MIX) NA 1 KM</div>';
-        act += '<div style="font-size:3.5rem; font-weight:900; color:#ef4444; text-shadow:0 0 20px rgba(239,68,68,0.4); line-height:1; margin-bottom:10px;">'+Number(fuelStats.ck).toFixed(2)+' zł</div>';
-        act += '<div style="font-size:0.75rem; color:var(--muted); font-weight:600;">Dystans mix: '+Number(fuelStats.dist).toFixed(0)+' KM | Wydano: '+Number(fuelStats.cost).toFixed(2)+' zł</div>';
-        act += '</div>';
 
         // ZAKŁADKI (TANKOWANIE / SERWIS)
         let isFuel = window.garageTabMode === 'fuel';
@@ -49,12 +49,11 @@ window.rDrvGarage = function(d, t, nav, hdr) {
         act += '</div>';
 
         // FORMULARZ
-        act += '<div class="panel" style="padding:25px 20px; border-radius:28px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid '+(isFuel ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)')+'; box-shadow:0 15px 40px rgba(0,0,0,0.6); margin-bottom:25px;">';
-        
         let inpStyle = 'background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:1.1rem; font-weight:700; outline:none; width:100%; box-sizing:border-box;';
         let lblStyle = 'font-size:0.65rem; color:var(--muted); font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; display:block;';
 
         if (isFuel) {
+            act += '<div class="panel" style="padding:25px 20px; border-radius:28px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(245,158,11,0.3); box-shadow:0 15px 40px rgba(0,0,0,0.6); margin-bottom:25px;">';
             act += '<div style="text-align:center; margin-bottom:20px;"><span style="font-size:0.75rem; color:rgba(245,158,11,0.8); font-weight:900; text-transform:uppercase; letter-spacing:1px;">⛽ NOWE TANKOWANIE</span></div>';
             
             act += '<div class="inp-row" style="margin-bottom:15px; gap:12px;">';
@@ -73,7 +72,9 @@ window.rDrvGarage = function(d, t, nav, hdr) {
             act += '</div>';
 
             act += '<button class="btn" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#000; padding:20px; border-radius:20px; font-weight:900; font-size:1.1rem; letter-spacing:1px; border:none; box-shadow:0 10px 30px rgba(245,158,11,0.4); width:100%; outline:none;" onclick="if(window.dAF) window.dAF()">ZAPISZ TANKOWANIE</button>';
+            act += '</div>';
         } else {
+            act += '<div class="panel" style="padding:25px 20px; border-radius:28px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(239,68,68,0.3); box-shadow:0 15px 40px rgba(0,0,0,0.6); margin-bottom:25px;">';
             act += '<div style="text-align:center; margin-bottom:20px;"><span style="font-size:0.75rem; color:rgba(239,68,68,0.8); font-weight:900; text-transform:uppercase; letter-spacing:1px;">🔧 NOWY SERWIS / WYDATEK</span></div>';
             
             act += '<div class="inp-row" style="margin-bottom:15px; gap:12px;">';
@@ -84,8 +85,8 @@ window.rDrvGarage = function(d, t, nav, hdr) {
             act += '<div class="inp-group" style="margin-bottom:25px;"><label style="'+lblStyle+'">OPIS WYDATKU</label><input type="text" id="de-c" placeholder="np. Myjnia, Wycieraczki, Płyn..." style="'+inpStyle+' text-align:left;"></div>';
 
             act += '<button class="btn" style="background:linear-gradient(135deg, #ef4444, #b91c1c); color:#fff; padding:20px; border-radius:20px; font-weight:900; font-size:1.1rem; letter-spacing:1px; border:none; box-shadow:0 10px 30px rgba(239,68,68,0.4); width:100%; outline:none;" onclick="if(window.dAE) window.dAE()">ZAPISZ WYDATEK</button>';
+            act += '</div>';
         }
-        act += '</div>';
 
         // HISTORIA WYDATKÓW
         act += '<div style="margin: 30px 5px 15px 5px; text-align: center;"><span style="font-size:0.75rem; color:var(--muted); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">HISTORIA WYDATKÓW Z GARAŻU</span></div>';
@@ -114,7 +115,7 @@ window.rDrvGarage = function(d, t, nav, hdr) {
             act += '<div style="background:rgba(0,0,0,0.2); border:1px dashed rgba(255,255,255,0.05); border-radius:24px; padding:30px; text-align:center; color:var(--muted); font-weight:600; font-size:0.85rem; margin-bottom:20px;">Brak wpisów w tej kategorii.</div>';
         }
 
-        // BANER OCR
+        // BANER OCR (NA DOLE)
         let alertCodeOCR = "if(window.sysAlert) window.sysAlert('Skaner OCR PRO', 'Koniec z ręcznym przepisywaniem! W wersji PRO zrobisz zdjęcie paragonu, a AI samo uzupełni kwoty i litry. 📸🚀', 'info')";
         act += '<div class="pro-teaser-panel" style="margin: 25px 0; padding: 25px 20px; background: linear-gradient(135deg, #0f172a 0%, #000000 100%); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 28px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; text-align:center;" onclick="' + alertCodeOCR + '">' +
             '<div style="font-size:3rem; filter:drop-shadow(0 0 15px rgba(14,165,233,0.5)); margin-bottom:10px;">📸</div>' +
