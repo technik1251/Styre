@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_quote.js - Asystent Wyceny z Inteligentnym Kontekstem Miasta
+// PLIK: taxi_tab_quote.js - Asystent Wyceny i Mapa (Smart Context & Auto-Scroll)
 // ==========================================
 
 window.rDrvQuote = function(d, t, nav, hdr) {
@@ -13,7 +13,7 @@ window.rDrvQuote = function(d, t, nav, hdr) {
         window.qCurrentTime = 0;
         window.qTariffMode = 'day'; 
 
-        // Pobranie domyślnego miasta z ustawień
+        // Pobranie domyślnego miasta z ustawień (np. Szczecin)
         let defCity = (d.cfg && d.cfg.defCity) ? d.cfg.defCity : 'Warszawa';
 
         let act = '';
@@ -26,7 +26,7 @@ window.rDrvQuote = function(d, t, nav, hdr) {
 
         act += '<div style="padding:0 15px;">';
 
-        // --- FORMULARZ ADRESÓW (ZE SMART KONTEKSTEM) ---
+        // --- FORMULARZ ADRESÓW ---
         act += '<div class="panel" style="padding:25px 20px; border-radius:28px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05); box-shadow:0 15px 40px rgba(0,0,0,0.6); margin-bottom:20px;">';
         
         act += '<div style="margin-bottom:20px;">';
@@ -36,17 +36,18 @@ window.rDrvQuote = function(d, t, nav, hdr) {
 
         act += '<div style="margin-bottom:25px;">';
         act += '<label style="font-size:0.7rem; color:#ef4444; font-weight:800; display:flex; align-items:center; gap:8px; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;"><div style="width:10px; height:10px; background:#ef4444; border-radius:50%; box-shadow:0 0 8px #ef4444;"></div> ADRES DOCELOWY</label>';
-        act += '<input type="text" id="qa-end" placeholder="Ulica (jeśli inne miasto, dodaj po przecinku)" style="width:100%; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); color:#fff; padding:18px; border-radius:16px; font-size:1.05rem; font-weight:700; outline:none; box-sizing:border-box;">';
+        act += '<input type="text" id="qa-end" placeholder="Ulica (domyślnie: '+defCity+')" style="width:100%; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); color:#fff; padding:18px; border-radius:16px; font-size:1.05rem; font-weight:700; outline:none; box-sizing:border-box;">';
         act += '</div>';
 
         act += '<button id="btn-calc-route" class="btn" style="width:100%; background:linear-gradient(135deg, #d946ef, #a855f7); color:#fff; padding:20px; border-radius:20px; font-weight:900; font-size:1.1rem; letter-spacing:1px; border:none; box-shadow:0 10px 30px rgba(217,70,239,0.4); outline:none; cursor:pointer;" onclick="window.qFindRoute()">🔍 WYZNACZ TRASĘ I CENĘ</button>';
         act += '</div>';
 
-        // --- UKRYTA MAPA I WYNIKI ---
-        act += '<div id="q-results" style="display:none; animation:fadeIn 0.5s ease;">';
+        // --- SEKCJA WYNIKÓW (UKRYTA DOMYŚLNIE) ---
+        act += '<div id="q-results" style="display:none; animation:fadeIn 0.5s ease; scroll-margin-top: 20px;">';
         
         act += '<div class="panel" style="padding:15px; border-radius:28px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05); box-shadow:0 15px 40px rgba(0,0,0,0.6); margin-bottom:20px;">';
-        act += '<div id="q-map" style="width:100%; height:220px; border-radius:16px; background:#2a2a35; margin-bottom:15px; z-index:1; overflow:hidden;"></div>';
+        
+        act += '<div id="q-map" style="width:100%; height:250px; border-radius:16px; background:#2a2a35; margin-bottom:15px; z-index:1; overflow:hidden;"></div>';
         
         act += '<div style="display:flex; gap:10px; margin-bottom:15px;">';
         act += '<div style="flex:1; background:rgba(0,0,0,0.4); padding:15px; border-radius:16px; text-align:center; border:1px inset rgba(255,255,255,0.05);"><span style="display:block; font-size:0.65rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:5px;">DYSTANS</span><strong id="qr-dist" style="font-size:1.6rem; color:#fff; font-weight:900;">0.0 km</strong></div>';
@@ -70,15 +71,17 @@ window.rDrvQuote = function(d, t, nav, hdr) {
         act += '<div id="q-final-price" style="font-size:4rem; font-weight:900; color:#d946ef; font-family:monospace; text-shadow:0 0 20px rgba(217,70,239,0.4); line-height:1;">0.00 <span style="font-size:1.5rem; color:rgba(217,70,239,0.5);">zł</span></div>';
         act += '</div>';
 
-        act += '</div></div>'; 
+        act += '</div></div>'; // Koniec sekcji wyników
 
-        // --- BANER PRO (MAPA AI) ---
+        // --- BANER PRO (MAPA AI) - TERAZ NA SAMYM DOLE ---
         let alertCodeQuote = "if(window.sysAlert) window.sysAlert('Mapa AI PRO', 'W wersji PRO aplikacja analizuje korki w mieście (Traffic AI) i automatycznie pobiera adresy z Twojej aplikacji korporacyjnej! 🗺️🚀', 'info')";
-        act += '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; padding: 25px 20px; background: linear-gradient(145deg, #130a1c, #09090b); border: 1px solid rgba(217, 70, 239, 0.2); border-radius: 28px; text-align:center; position: relative; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.5); cursor: pointer;" onclick="' + alertCodeQuote + '">';
+        act += '<div class="pro-teaser-panel" style="margin: 0 0 25px 0; padding: 25px 20px; background: linear-gradient(145deg, #130a1c, #09090b); border: 1px solid rgba(217, 70, 239, 0.2); border-radius: 28px; text-align:center; position: relative; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.5); cursor: pointer;" onclick="' + alertCodeQuote + '">';
         act += '<div style="font-size:2.8rem; margin-bottom:12px; filter:drop-shadow(0 0 15px rgba(217,70,239,0.4));">🗺️</div>';
         act += '<h3 style="color:#d946ef; margin:0 0 8px 0; font-size:1.15rem; font-weight:900; text-transform:uppercase; letter-spacing:1px;">Mapa AI & Import Tras</h3>';
         act += '<p style="color:rgba(255,255,255,0.5); font-size:0.85rem; margin:0; font-weight:600; line-height:1.5;">Zwiększ zyski i oszczędź czas - tylko w wersji PRO! Kliknij po info.</p>';
         act += '</div>';
+
+        act += '</div>'; // koniec padding 15px globalnego kontenera
 
         appContainer.innerHTML = hdr + act + '<div style="height:140px; width:100%; clear:both;"></div>' + nav;
 
@@ -89,7 +92,7 @@ window.rDrvQuote = function(d, t, nav, hdr) {
     }
 };
 
-// --- LOGIKA WYZNACZANIA TRASY ZE SMART KONTEKSTEM (OSRM + NOMINATIM) ---
+// --- LOGIKA WYZNACZANIA TRASY (SMART GEOCODING 2.0) ---
 window.qFindRoute = async function() {
     let startAddr = document.getElementById('qa-start').value.trim();
     let endAddr = document.getElementById('qa-end').value.trim();
@@ -104,37 +107,19 @@ window.qFindRoute = async function() {
     btn.disabled = true;
 
     try {
-        // Pobieramy domyślne miasto dla kontekstu geolokacji
         let defCity = (window.db && window.db.drv && window.db.drv.cfg && window.db.drv.cfg.defCity) ? window.db.drv.cfg.defCity : 'Warszawa';
 
-        // FUNKCJA: Inteligentne formatowanie adresu
-        let formatAddr = function(addr) {
-            let aLow = addr.toLowerCase();
-            // Jeśli użytkownik sam użył przecinka (np. "Wojska Polskiego 12, Stargard"), zostawiamy tak jak jest
-            if (aLow.indexOf(',') !== -1) {
-                return addr + ", Polska";
-            }
-            // Jeśli użytkownik zapomniał wpisać miasta, doklejamy domyślne miasto z ustawień
-            if (!aLow.includes(defCity.toLowerCase())) {
-                return addr + ", " + defCity + ", Polska";
-            }
-            return addr + ", Polska";
-        };
-
-        // Przygotowujemy "sprytne" zapytania do satelity
-        let queryStart = formatAddr(startAddr);
-        let queryEnd = formatAddr(endAddr);
-
-        let startCoords = await window.qGeocode(queryStart);
-        let endCoords = await window.qGeocode(queryEnd);
+        // Inteligentne Geokodowanie (tylko Polska)
+        let startCoords = await window.qGeocode(startAddr, defCity);
+        let endCoords = await window.qGeocode(endAddr, defCity);
 
         if(!startCoords || !endCoords) {
-            throw new Error("Nie znaleziono adresu! Upewnij się, że ulica istnieje w mieście: " + defCity + " (lub dodaj inne miasto po przecinku).");
+            throw new Error("Nie znaleziono adresu! Upewnij się, że wpisałeś poprawną ulicę.");
         }
 
         let routeData = await window.qRoute(startCoords, endCoords);
         if(!routeData || !routeData.routes || routeData.routes.length === 0) {
-            throw new Error("Nie udało się wyznaczyć trasy dla tych adresów.");
+            throw new Error("Nie udało się wyznaczyć trasy drogowej dla tych adresów.");
         }
 
         let route = routeData.routes[0];
@@ -142,12 +127,18 @@ window.qFindRoute = async function() {
         window.qCurrentTime = route.duration / 60; 
         let geometry = route.geometry;
 
-        // Pokazanie panelu
-        document.getElementById('q-results').style.display = 'block';
+        // Pokaż wyniki i zrób auto-scroll
+        let resultsDiv = document.getElementById('q-results');
+        resultsDiv.style.display = 'block';
+        
+        // Płynne zjechanie do mapy
+        setTimeout(() => {
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+
         document.getElementById('qr-dist').innerHTML = window.qCurrentDist.toFixed(1) + ' km';
         document.getElementById('qr-time').innerHTML = Math.round(window.qCurrentTime) + ' min';
 
-        // Odświeżanie mapy
         if(!window.qMapInstance) {
             window.qMapInstance = L.map('q-map', {zoomControl: false, attributionControl: false});
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(window.qMapInstance);
@@ -160,7 +151,7 @@ window.qFindRoute = async function() {
             let geojsonFeature = { "type": "LineString", "coordinates": geometry.coordinates };
             window.qRouteLayer = L.geoJSON(geojsonFeature, { style: { color: '#d946ef', weight: 6, opacity: 0.9 } }).addTo(window.qMapInstance);
             window.qMapInstance.fitBounds(window.qRouteLayer.getBounds(), {padding: [20, 20]});
-        }, 200);
+        }, 300);
 
         window.qUpdatePrice();
 
@@ -175,12 +166,27 @@ window.qFindRoute = async function() {
     }
 };
 
-window.qGeocode = async function(address) {
-    let url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(address) + "&limit=1";
-    let response = await fetch(url);
-    let data = await response.json();
-    if(data && data.length > 0) { return [parseFloat(data[0].lon), parseFloat(data[0].lat)]; }
-    return null;
+window.qGeocode = async function(address, city) {
+    // Funkcja wysyłająca zapytanie do API (z blokadą na Polskę)
+    let trySearch = async (query) => {
+        let url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(query) + "&countrycodes=pl&limit=1";
+        let res = await fetch(url);
+        let data = await res.json();
+        if(data && data.length > 0) return [parseFloat(data[0].lon), parseFloat(data[0].lat)];
+        return null;
+    };
+
+    // Jeśli adres już zawiera przecinek (np. użytkownik wpisał miasto ręcznie)
+    if (address.indexOf(',') !== -1) {
+        return await trySearch(address);
+    } else {
+        // Próba 1: Ulica + Domyślne Miasto
+        let res = await trySearch(address + ", " + city);
+        if (res) return res;
+        
+        // Próba 2 (Awaryjna): Sama ulica w Polsce
+        return await trySearch(address);
+    }
 };
 
 window.qRoute = async function(start, end) {
@@ -219,9 +225,8 @@ window.qUpdatePrice = function() {
     let rateCity = window.qTariffMode === 'day' ? q.t1 : q.t2;
     let rateOutside = window.qTariffMode === 'day' ? q.t3 : q.t4;
 
+    // CZYSTA MATEMATYKA: Start + Dystans Miejski + Dystans Poza Miastem
     let price = q.s + (distCity * rateCity) + (distOutside * rateOutside);
-    let estWaitTime = window.qCurrentTime * 0.2; // zakladamy drobne opoznienia
-    price += estWaitTime * (q.w / 60);
 
     document.getElementById('q-final-price').innerHTML = price.toFixed(2) + ' <span style="font-size:1.5rem; color:rgba(217,70,239,0.5);">zł</span>';
 };
