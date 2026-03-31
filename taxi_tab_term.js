@@ -1,5 +1,6 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Kompaktowy Terminal Premium (Auto-Taksometr + Taryfy)
+// PLIK: taxi_tab_term.js - Kompaktowy Terminal Premium (Prawdziwy Auto-Taksometr + Multitaryfa)
+// Wersja Rozszerzona (Pełna)
 // ==========================================
 
 // --- BEZPIECZNE FUNKCJE POMOCNICZE ---
@@ -22,7 +23,17 @@ window.dStartS = function() {
     }
     if(!window.db.drv) window.db.drv = {};
     window.db.drv.odo = o;
-    window.db.drv.sh = {on:true, o:o, t:Date.now(), shiftStart:Date.now(), sPT:0, sPS:null, tr:[]};
+    window.db.drv.sh = {
+        on: true, 
+        o: o, 
+        t: Date.now(), 
+        shiftStart: Date.now(), 
+        sPT: 0, 
+        sPS: null, 
+        rWT: 0, 
+        rWS: null, 
+        tr: []
+    };
     window.db.drv.liveRideStart = null;
     if(typeof window.save === 'function') window.save(); 
     if(typeof window.render === 'function') window.render();
@@ -39,11 +50,13 @@ window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
     return R * c;
 };
 
-// --- ZMIANA TARYFY W LOCIE ---
+// --- LOGIKA ZMIANY TARYFY W LOCIE (JEDEN PRZYCISK) ---
 window.toggleLiveTariff = function() {
-    if(window.db && window.db.drv && window.db.drv.sh) {
+    if(window.db && window.db.drv && window.db.drv.sh && window.db.drv.liveRideStart) {
         let current = window.db.drv.sh.liveTariff || 't1';
         let next = 't1';
+        
+        // Pętla przełączania: T1 -> T2 -> T3 -> T4 -> T1
         if(current === 't1') next = 't2';
         else if(current === 't2') next = 't3';
         else if(current === 't3') next = 't4';
@@ -65,24 +78,31 @@ window.updateLiveRideUI = function() {
     let elPrice = document.getElementById('live-ride-price'); 
     let elStatus = document.getElementById('live-ride-status'); 
 
+    let isWaiting = d.sh.rWS !== null;
     let now = Date.now();
     let diffMs = now - d.liveRideStart;
+    
+    if(d.sh.rWT) diffMs -= d.sh.rWT;
+    if(isWaiting) diffMs -= (now - d.sh.rWS);
 
     // Precyzyjne odmierzanie czasu do Auto-Postoju
     if (!d.sh.lastTick) d.sh.lastTick = now;
     let deltaTick = now - d.sh.lastTick;
     d.sh.lastTick = now;
 
-    // Zabezpieczenie braku GPS
-    if (now - (d.sh.lastGpsTime || now) > 5000) {
-        d.sh.currentSpeed = 0;
-    }
-    
-    // AUTO-TAKSOMETR: Naliczamy czas postoju, gdy jedziemy <= 20 km/h lub stoimy.
-    if ((d.sh.currentSpeed || 0) <= 20) {
-        d.sh.autoWaitMs = (d.sh.autoWaitMs || 0) + deltaTick;
+    if (!isWaiting) {
+        // Zabezpieczenie przed brakiem zasięgu GPS
+        if (now - (d.sh.lastGpsTime || now) > 5000) {
+            d.sh.currentSpeed = 0;
+        }
+        
+        // AUTO-TAKSOMETR: Naliczamy czas postoju, gdy jedziemy <= 20 km/h lub stoimy
+        if ((d.sh.currentSpeed || 0) <= 20) {
+            d.sh.autoWaitMs = (d.sh.autoWaitMs || 0) + deltaTick;
+        }
     }
 
+    // Aktualizacja zegara na ekranie
     if (elTime) {
         let totalSecs = Math.floor(diffMs / 1000);
         let m = Math.floor(totalSecs / 60);
@@ -90,29 +110,38 @@ window.updateLiveRideUI = function() {
         elTime.innerHTML = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
     }
     
+    // Aktualizacja dystansu
     let currentDist = d.sh.gpsDist || 0;
     if (elDist && currentDist !== undefined) {
         elDist.innerHTML = Number(currentDist).toFixed(2);
     }
 
     let activeTariff = d.sh.liveTariff || 't1';
-    let isAutoWaitActive = ((d.sh.currentSpeed || 0) <= 20);
-
+    let isAutoWaitActive = (!isWaiting && (d.sh.currentSpeed || 0) <= 20);
+    
+    // Aktualizacja statusu (Korek / Normalna jazda)
     if (elStatus) {
-        if (isAutoWaitActive) {
-            elStatus.innerHTML = '<span style="font-size:0.7rem; color:#ef4444; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); padding:4px 12px; border-radius:12px; font-weight:900; letter-spacing:1px; box-shadow:0 0 10px rgba(239,68,68,0.2); animation: glowPulse 2s infinite;">⏱️ NALICZANIE KORKÓW (<20km/h)</span>';
+        if (isWaiting) {
+            elStatus.innerHTML = '<span style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px;">POSTÓJ RĘCZNY</span>';
+        } else if (isAutoWaitActive) {
+            elStatus.innerHTML = '<span style="font-size:0.65rem; color:#ef4444; background:rgba(239,68,68,0.2); padding:3px 8px; border-radius:8px; font-weight:900; letter-spacing:1px; animation: glowPulse 2s infinite;">⏱️ NALICZANIE POSTOJU (<20km/h)</span>';
         } else {
-            elStatus.innerHTML = '<span style="font-size:0.7rem; color:var(--muted); font-weight:800; letter-spacing:1px;">SUGEROWANA CENA (' + activeTariff.toUpperCase() + ')</span>';
+            elStatus.innerHTML = '<span style="font-size:0.65rem; color:var(--muted); font-weight:800; letter-spacing:1px;">SUGEROWANA CENA (' + activeTariff.toUpperCase() + ')</span>';
         }
     }
 
-    // MATEMATYKA TAKSOMETRU NA ŻYWO Z DYNAMICZNĄ TARYFĄ
+    // MATEMATYKA TAKSOMETRU NA ŻYWO (Z Auto-Korkiem i Skumulowanym Dystansem z różnych taryf)
     if (elPrice) {
         let q = d.q || {s:9, w:39, t1:3.2, t2:4.0, t3:6.4, t4:8.0};
-        let currentRate = q[activeTariff] || q.t1 || 3.2;
-        let totalWaitMins = (d.sh.autoWaitMs || 0) / 60000;
         
-        let livePrice = q.s + (currentDist * currentRate) + (totalWaitMins * (q.w / 60));
+        let manualWaitMs = d.sh.rWT || 0;
+        if(isWaiting) manualWaitMs += (now - d.sh.rWS);
+        
+        let totalWaitMins = ((d.sh.autoWaitMs || 0) + manualWaitMs) / 60000;
+        
+        // Suma całkowita = Opłata startowa + Pieniądze ze wszystkich przebytych stref taryfowych + Koszt postojów
+        let livePrice = q.s + (d.sh.gpsMoney || 0) + (totalWaitMins * (q.w / 60));
+        
         if(livePrice < q.s) livePrice = q.s;
         
         elPrice.innerHTML = livePrice.toFixed(2);
@@ -122,21 +151,31 @@ window.updateLiveRideUI = function() {
 window.startLiveRide = function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
         window.db.drv.liveRideStart = Date.now();
+        window.db.drv.sh.rWS = null;
+        window.db.drv.sh.rWT = 0;
         window.db.drv.sh.gpsDist = 0;
+        window.db.drv.sh.gpsMoney = 0;
         window.db.drv.sh.lastPos = null;
+        window.db.drv.sh.liveTariff = 't1';
         
-        // Reset Auto-Postoju i domyślna taryfa
+        // Reset Auto-Postoju
         window.db.drv.sh.autoWaitMs = 0;
         window.db.drv.sh.currentSpeed = 0;
         window.db.drv.sh.lastTick = Date.now();
         window.db.drv.sh.lastGpsTime = Date.now();
-        window.db.drv.sh.liveTariff = 't1';
 
         if ('geolocation' in navigator) {
             window.db.drv.sh.watchId = navigator.geolocation.watchPosition(function(position) {
+                if (window.db.drv.sh.rWS !== null) {
+                    window.db.drv.sh.lastGpsTime = Date.now(); 
+                    return; 
+                }
+                
                 let lat = position.coords.latitude;
                 let lng = position.coords.longitude;
                 let now = Date.now();
+                let timeDelta = now - (window.db.drv.sh.lastGpsTime || now);
+                let q = window.db.drv.q || {s:9, w:39, t1:3.2, t2:4.0, t3:6.4, t4:8.0};
                 
                 if (window.db.drv.sh.lastPos) {
                     let dist = window.getDistanceFromLatLonInKm(window.db.drv.sh.lastPos.lat, window.db.drv.sh.lastPos.lng, lat, lng);
@@ -144,17 +183,22 @@ window.startLiveRide = function() {
                     if (position.coords.speed !== null && position.coords.speed !== undefined) {
                         window.db.drv.sh.currentSpeed = position.coords.speed * 3.6; 
                     } else {
-                        let timeDelta = now - window.db.drv.sh.lastGpsTime;
-                        if (timeDelta > 0) window.db.drv.sh.currentSpeed = (dist / (timeDelta / 3600000));
+                        if (timeDelta > 0) {
+                            window.db.drv.sh.currentSpeed = (dist / (timeDelta / 3600000));
+                        }
                     }
 
-                    // Precyzyjny licznik już od 2 metrów
-                    if (dist > 0.002) window.db.drv.sh.gpsDist += dist;
+                    // Czułość na jazdę w korku - od 2 metrów rejestrujemy dystans
+                    if (dist > 0.002) { 
+                        window.db.drv.sh.gpsDist += dist;
+                        // Skumulowane wyliczenie kwoty za bieżący odcinek trasy w aktualnej taryfie:
+                        let currentRate = q[window.db.drv.sh.liveTariff || 't1'] || 3.2;
+                        window.db.drv.sh.gpsMoney += (dist * currentRate);
+                    }
+                    window.updateLiveRideUI();
                 }
                 window.db.drv.sh.lastPos = {lat: lat, lng: lng};
                 window.db.drv.sh.lastGpsTime = now;
-                window.updateLiveRideUI();
-                
             }, function(error) {
                 console.error('GPS Error', error);
             }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 });
@@ -170,34 +214,55 @@ window.startLiveRide = function() {
 
 window.stopLiveRide = function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
-        if (window.db.drv.sh.watchId) { navigator.geolocation.clearWatch(window.db.drv.sh.watchId); window.db.drv.sh.watchId = null; }
-        if(window.liveRideTimer) { clearInterval(window.liveRideTimer); window.liveRideTimer = null; }
+        if (window.db.drv.sh.watchId) {
+            navigator.geolocation.clearWatch(window.db.drv.sh.watchId);
+            window.db.drv.sh.watchId = null;
+        }
+        if(window.liveRideTimer) {
+            clearInterval(window.liveRideTimer);
+            window.liveRideTimer = null;
+        }
         
         let diffMs = Date.now() - window.db.drv.liveRideStart;
+        if (window.db.drv.sh.rWT) diffMs -= window.db.drv.sh.rWT;
         let finalMins = Math.max(0, Math.round(diffMs / 60000));
         let finalDist = window.db.drv.sh.gpsDist || 0;
 
-        // Przelicz cenę dla taryfy i korków
-        let q = window.db.drv.q || {s:9, w:39, t1:3.2, t2:4.0, t3:6.4, t4:8.0};
-        let activeTariff = window.db.drv.sh.liveTariff || 't1';
-        let currentRate = q[activeTariff] || q.t1 || 3.2;
-        let totalWaitMins = (window.db.drv.sh.autoWaitMs || 0) / 60000;
+        // Przelicz cenę uwzględniającą wszystkie zliczone kwoty
+        let q = window.db.drv.q || {s:9, w:39, t1:3.2};
+        let manualWaitMs = window.db.drv.sh.rWT || 0;
+        let totalWaitMins = ((window.db.drv.sh.autoWaitMs || 0) + manualWaitMs) / 60000;
         
-        let finalPrice = q.s + (finalDist * currentRate) + (totalWaitMins * (q.w / 60));
+        let finalPrice = q.s + (window.db.drv.sh.gpsMoney || 0) + (totalWaitMins * (q.w / 60));
 
         window.db.drv.sh.tempAutoMins = finalMins;
         window.db.drv.sh.tempAutoKm = finalDist.toFixed(2);
         window.db.drv.sh.tempAutoPrice = Math.max(q.s, finalPrice).toFixed(2);
 
         window.db.drv.liveRideStart = null;
+        window.db.drv.sh.rWS = null;
         window.db.drv.sh.lastPos = null;
 
         if(typeof window.save === 'function') window.save();
         if(typeof window.render === 'function') window.render();
 
         setTimeout(function() {
-            if(window.sysAlert) window.sysAlert('Trasa Zakończona!', 'Zastosowano ' + activeTariff.toUpperCase() + '. Czas, Dystans i Kwota z taksometru GPS zostały uzupełnione.', 'success');
+            if(window.sysAlert) window.sysAlert('Trasa Zakończona!', 'Czas, Dystans i Kwota z taksometru GPS zostały uzupełnione.', 'success');
         }, 100);
+    }
+};
+
+window.toggleRideWait = function() {
+    if(window.db && window.db.drv && window.db.drv.sh) {
+        if(window.db.drv.sh.rWS) {
+            window.db.drv.sh.rWT += (Date.now() - window.db.drv.sh.rWS);
+            window.db.drv.sh.rWS = null;
+        } else {
+            window.db.drv.sh.rWS = Date.now();
+        }
+        window.updateLiveRideUI();
+        if(typeof window.save === 'function') window.save();
+        if(typeof window.render === 'function') window.render();
     }
 };
 
@@ -215,24 +280,45 @@ window.toggleShiftPause = function() {
 };
 
 window.dAddOfflineWeekly = function() {
-    let dFrom = document.getElementById('dw-d-from') ? document.getElementById('dw-d-from').value : '';
-    let dTo = document.getElementById('dw-d-to') ? document.getElementById('dw-d-to').value : '';
-    let oS = parseFloat(document.getElementById('dw-odo-s') ? document.getElementById('dw-odo-s').value : 0) || 0;
-    let oE = parseFloat(document.getElementById('dw-odo-e') ? document.getElementById('dw-odo-e').value : 0) || 0;
-    let pk = parseFloat(document.getElementById('dw-pk') ? document.getElementById('dw-pk').value : 0) || 0; 
-    let h = parseFloat(document.getElementById('dw-h') ? document.getElementById('dw-h').value : 0) || 0; 
+    let elFrom = document.getElementById('dw-d-from');
+    let dFrom = elFrom ? elFrom.value : '';
     
-    let d = window.db.drv; let plat = d.plat; let sumV = 0; let trList = [];
+    let elTo = document.getElementById('dw-d-to');
+    let dTo = elTo ? elTo.value : '';
+    
+    let elOdoS = document.getElementById('dw-odo-s');
+    let oS = elOdoS ? parseFloat(elOdoS.value) : 0;
+    if (isNaN(oS)) oS = 0;
+    
+    let elOdoE = document.getElementById('dw-odo-e');
+    let oE = elOdoE ? parseFloat(elOdoE.value) : 0;
+    if (isNaN(oE)) oE = 0;
+    
+    let elPk = document.getElementById('dw-pk');
+    let pk = elPk ? parseFloat(elPk.value) : 0;
+    if (isNaN(pk)) pk = 0;
+    
+    let elH = document.getElementById('dw-h');
+    let h = elH ? parseFloat(elH.value) : 0;
+    if (isNaN(h)) h = 0;
+    
+    let d = window.db.drv;
+    let plat = d.plat;
+    let sumV = 0;
+    let trList = [];
+    
     let rDateStr = dTo || (window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0]);
-    let rDateObj = new Date(rDateStr); rDateObj.setHours(12,0,0,0);
+    let rDateObj = new Date(rDateStr);
+    rDateObj.setHours(12,0,0,0);
+    
     let cf = 0, vf = 0;
     
     if (plat === 'apps') {
-        let vUber = parseFloat(document.getElementById('dw-v-uber').value) || 0;
-        let vBolt = parseFloat(document.getElementById('dw-v-bolt').value) || 0;
-        let vFree = parseFloat(document.getElementById('dw-v-freenow').value) || 0;
-        let vInna = parseFloat(document.getElementById('dw-v-inna').value) || 0;
-        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
+        let vUber = parseFloat(document.getElementById('dw-v-uber') ? document.getElementById('dw-v-uber').value : 0) || 0;
+        let vBolt = parseFloat(document.getElementById('dw-v-bolt') ? document.getElementById('dw-v-bolt').value : 0) || 0;
+        let vFree = parseFloat(document.getElementById('dw-v-freenow') ? document.getElementById('dw-v-freenow').value : 0) || 0;
+        let vInna = parseFloat(document.getElementById('dw-v-inna') ? document.getElementById('dw-v-inna').value : 0) || 0;
+        let vCash = parseFloat(document.getElementById('dw-v-cash') ? document.getElementById('dw-v-cash').value : 0) || 0;
         
         if (vUber > 0) trList.push({id: Date.now()+1, p: 'Aplikacja', s: 'Uber', v: vUber, k: 0, time: '--:--'});
         if (vBolt > 0) trList.push({id: Date.now()+2, p: 'Aplikacja', s: 'Bolt', v: vBolt, k: 0, time: '--:--'});
@@ -241,19 +327,31 @@ window.dAddOfflineWeekly = function() {
         if (vCash > 0) trList.push({id: Date.now()+5, p: 'Gotówka', s: 'Aplikacja', v: vCash, k: 0, time: '--:--'});
         sumV = vUber + vBolt + vFree + vInna + vCash;
     } else {
-        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
-        let vKarta = parseFloat(document.getElementById('dw-v-karta').value) || 0;
-        let vVouch = parseFloat(document.getElementById('dw-v-voucher').value) || 0;
+        let vCash = parseFloat(document.getElementById('dw-v-cash') ? document.getElementById('dw-v-cash').value : 0) || 0;
+        let vKarta = parseFloat(document.getElementById('dw-v-karta') ? document.getElementById('dw-v-karta').value : 0) || 0;
+        let vVouch = parseFloat(document.getElementById('dw-v-voucher') ? document.getElementById('dw-v-voucher').value : 0) || 0;
         
         if (vCash > 0) trList.push({id: Date.now()+1, p: 'Gotówka', s: 'Postój/Centrala', v: vCash, k: 0, time: '--:--'});
         if (vKarta > 0) trList.push({id: Date.now()+2, p: 'Karta', s: 'Terminal', v: vKarta, k: 0, time: '--:--'});
         if (vVouch > 0) trList.push({id: Date.now()+3, p: 'Voucher', s: 'Korporacja', v: vVouch, k: 0, time: '--:--'});
         sumV = vCash + vKarta + vVouch;
-        cf = vKarta * (d.cfg.cardF || 0); vf = vVouch * (d.cfg.voucherF || 0);
+        
+        let cardF = (d.cfg && d.cfg.cardF) ? d.cfg.cardF : 0;
+        let vouchF = (d.cfg && d.cfg.voucherF) ? d.cfg.voucherF : 0;
+        cf = vKarta * cardF;
+        vf = vVouch * vouchF;
     }
     
-    if (sumV <= 0 && oS === 0 && oE === 0) { if(window.sysAlert) window.sysAlert('Błąd', 'Wprowadź chociaż jedną kwotę utargu lub stan licznika!', 'error'); return; }
-    let distTotal = 0; if (oE > 0 && oS > 0 && oE >= oS) { distTotal = oE - oS; window.db.drv.odo = oE; }
+    if (sumV <= 0 && oS === 0 && oE === 0) {
+        if(window.sysAlert) window.sysAlert('Błąd', 'Wprowadź chociaż jedną kwotę utargu lub stan licznika!', 'error');
+        return;
+    }
+    
+    let distTotal = 0;
+    if (oE > 0 && oS > 0 && oE >= oS) {
+        distTotal = oE - oS;
+        window.db.drv.odo = oE; 
+    }
     
     let emptyK = distTotal > pk ? (distTotal - pk) : 0;
     let taxRate = (d.cfg && d.cfg.tax) ? d.cfg.tax : 0;
@@ -261,18 +359,38 @@ window.dAddOfflineWeekly = function() {
     let isPct = (d.cfg && d.cfg.eType === 'pct');
     let ePct = (d.cfg && d.cfg.ePct) ? d.cfg.ePct : 0;
     
-    let tax = sumV * taxRate; let pFee = isPct ? sumV * ePct : 0; let fc = distTotal * fuelPx; 
+    let tax = sumV * taxRate;
+    let pFee = isPct ? sumV * ePct : 0;
+    let fc = distTotal * fuelPx; 
     let n = sumV - fc - tax - pFee - cf - vf;
     
     let periodStr = dFrom === dTo ? dFrom : (dFrom + ' do ' + dTo);
     if (!periodStr) periodStr = window.getLocalYMD ? window.getLocalYMD() : 'Zaległa Zmiana';
     
     if (!window.db.drv.h) window.db.drv.h = [];
-    window.db.drv.h.push({ id: Date.now(), dt: periodStr, rD: rDateObj.toISOString(), g: sumV, n: n, k: distTotal, pk: pk, emptyK: emptyK, hW: h, fc: fc, tx: tax, pF: pFee, cF: cf, vF: vf, tr: trList });
+    window.db.drv.h.push({
+        id: Date.now(), 
+        dt: periodStr, 
+        rD: rDateObj.toISOString(),
+        g: sumV, 
+        n: n, 
+        k: distTotal, 
+        pk: pk, 
+        emptyK: emptyK,
+        hW: h, 
+        fc: fc, 
+        tx: tax, 
+        pF: pFee, 
+        cF: cf, 
+        vF: vf, 
+        tr: trList
+    });
+    
     window.db.drv.h.sort(function(a,b) { return new Date(b.rD) - new Date(a.rD); });
     window.dShowOff = false;
     
-    if(typeof window.save === 'function') window.save(); if(typeof window.render === 'function') window.render();
+    if(typeof window.save === 'function') window.save();
+    if(typeof window.render === 'function') window.render();
     if(window.sysAlert) window.sysAlert('Zaksięgowano!', 'Rozliczenie dodane do P&L.', 'success');
 };
 
@@ -286,7 +404,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         let html = [];
         html.push(hdr);
 
-        // STYLE LUXURY KOMPAKT
+        // STYLE LUXURY KOMPAKT (Rozszerzone dla czytelności kodu)
         html.push('<style>');
         html.push('.glass-card { background: rgba(20, 20, 25, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); position: relative; overflow: hidden; padding: 20px; }');
         html.push('.compact-inp { background: rgba(0,0,0,0.4); border: 1px inset rgba(255,255,255,0.05); color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-size: 1.1rem; font-weight: 700; outline: none; width: 100%; box-sizing: border-box; }');
@@ -295,32 +413,55 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         html.push('.chip.active.green { background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.4); }');
         html.push('.chip.idle { background: transparent; color: rgba(255,255,255,0.4); }');
         html.push('@keyframes glowPulse { 0% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(239,68,68,0.6); } 100% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } }');
+        
+        // Prawdziwy mechaniczny przycisk 3D dla zmiany taryfy!
+        html.push('.btn-taryfa { width:100%; height:100%; border-radius:10px; font-weight:900; font-size:1.1rem; background: linear-gradient(to bottom, #333, #111); box-shadow: 0 4px 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); cursor:pointer; outline:none; transition:all 0.1s; }');
+        html.push('.btn-taryfa:active { transform: translateY(4px); box-shadow: 0 0 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); }');
         html.push('</style>');
 
         let panelProBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.sysAlert) window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
             '<div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px rgba(217,70,239,0.5));">🚕</div>' +
             '<div><h4 style="color:#d946ef; margin:0 0 2px 0; font-size:0.85rem; font-weight:900;">Auto-Zlecenia (PRO)</h4><div style="font-size:0.65rem; color:var(--muted);">Integracja z APKAMI i GPS w tle.</div></div></div>';
 
-        if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; }
-        if(!window.dTPay) { window.dTPay = d.plat === 'apps' ? 'Aplikacja' : 'Gotówka'; }
+        if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { 
+            window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; 
+        }
+        if(!window.dTPay) { 
+            window.dTPay = d.plat === 'apps' ? 'Aplikacja' : 'Gotówka'; 
+        }
         
-        let cSrc = function(name) { return window.dTSrc === name ? 'chip active blue' : 'chip idle'; };
-        let cPay = function(name, cl) { return window.dTPay === name ? 'chip active '+cl : 'chip idle'; };
+        let cSrc = function(name) { 
+            return window.dTSrc === name ? 'chip active blue' : 'chip idle'; 
+        };
+        let cPay = function(name, cl) { 
+            return window.dTPay === name ? 'chip active '+cl : 'chip idle'; 
+        };
         
         let ch1 = '';
         if(d.plat === 'apps') {
-            ch1 = '<div class="'+cSrc('Uber')+'" onclick="window.dTC(\'s\',\'Uber\')">Uber</div><div class="'+cSrc('Bolt')+'" onclick="window.dTC(\'s\',\'Bolt\')">Bolt</div><div class="'+cSrc('FreeNow')+'" onclick="window.dTC(\'s\',\'FreeNow\')">FreeNow</div><div class="'+cSrc('Inna')+'" onclick="window.dTC(\'s\',\'Inna\')">Inna</div>';
+            ch1 = '<div class="'+cSrc('Uber')+'" onclick="window.dTC(\'s\',\'Uber\')">Uber</div>' +
+                  '<div class="'+cSrc('Bolt')+'" onclick="window.dTC(\'s\',\'Bolt\')">Bolt</div>' +
+                  '<div class="'+cSrc('FreeNow')+'" onclick="window.dTC(\'s\',\'FreeNow\')">FreeNow</div>' +
+                  '<div class="'+cSrc('Inna')+'" onclick="window.dTC(\'s\',\'Inna\')">Inna</div>';
         } else {
-            ch1 = '<div class="'+cSrc('Centrala')+'" onclick="window.dTC(\'s\',\'Centrala\')">Centrala</div><div class="'+cSrc('Postój')+'" onclick="window.dTC(\'s\',\'Postój\')">Postój</div><div class="'+cSrc('Prywatny')+'" onclick="window.dTC(\'s\',\'Prywatny\')">Prywatny</div>';
+            ch1 = '<div class="'+cSrc('Centrala')+'" onclick="window.dTC(\'s\',\'Centrala\')">Centrala</div>' +
+                  '<div class="'+cSrc('Postój')+'" onclick="window.dTC(\'s\',\'Postój\')">Postój</div>' +
+                  '<div class="'+cSrc('Prywatny')+'" onclick="window.dTC(\'s\',\'Prywatny\')">Prywatny</div>';
         }
         
-        let otherSrcHtml = (d.plat === 'apps' && window.dTSrc === 'Inna') ? '<div style="margin-bottom:10px;"><input type="text" id="dt-other-src" placeholder="Nazwa apki..." class="compact-inp" value="'+(window.dOtherSrc||'')+'" onchange="window.dOtherSrc=this.value"></div>' : '';
+        let otherSrcHtml = '';
+        if(d.plat === 'apps' && window.dTSrc === 'Inna') {
+            otherSrcHtml = '<div style="margin-bottom:10px;"><input type="text" id="dt-other-src" placeholder="Nazwa apki..." class="compact-inp" value="'+(window.dOtherSrc||'')+'" onchange="window.dOtherSrc=this.value"></div>';
+        }
         
         let ch2 = '';
         if(d.plat === 'apps') {
-            ch2 = '<div class="'+cPay('Aplikacja','blue')+'" onclick="window.dTC(\'p\',\'Aplikacja\')">Aplikacja</div><div class="'+cPay('Gotówka','green')+'" onclick="window.dTC(\'p\',\'Gotówka\')">Gotówka</div>';
+            ch2 = '<div class="'+cPay('Aplikacja','blue')+'" onclick="window.dTC(\'p\',\'Aplikacja\')">Aplikacja</div>' +
+                  '<div class="'+cPay('Gotówka','green')+'" onclick="window.dTC(\'p\',\'Gotówka\')">Gotówka</div>';
         } else {
-            ch2 = '<div class="'+cPay('Gotówka','green')+'" onclick="window.dTC(\'p\',\'Gotówka\')">Gotówka</div><div class="'+cPay('Karta','blue')+'" onclick="window.dTC(\'p\',\'Karta\')">Karta</div><div class="'+cPay('Voucher','blue')+'" style="'+(window.dTPay==='Voucher'?'color:#a855f7; border-color:rgba(168,85,247,0.4); background:rgba(168,85,247,0.15);':'')+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
+            ch2 = '<div class="'+cPay('Gotówka','green')+'" onclick="window.dTC(\'p\',\'Gotówka\')">Gotówka</div>' +
+                  '<div class="'+cPay('Karta','blue')+'" onclick="window.dTC(\'p\',\'Karta\')">Karta</div>' +
+                  '<div class="'+cPay('Voucher','blue')+'" style="'+(window.dTPay==='Voucher'?'color:#a855f7; border-color:rgba(168,85,247,0.4); background:rgba(168,85,247,0.15);':'')+'" onclick="window.dTC(\'p\',\'Voucher\')">Voucher</div>';
         }
 
         let clientOpts = '';
@@ -358,11 +499,11 @@ window.rDrvTerm = function(d, t, nav, hdr) {
 
         if (d.sh && d.sh.on) {
             // ==========================================
-            // W TRASIE (KOMPAKTOWE ELEMENTY)
+            // W TRASIE (EKRAN ZMIANY)
             // ==========================================
             html.push('<div style="padding:0 15px; margin-top:15px;">');
             
-            // 1. Zwarty Pasek Informacyjny
+            // Zwarty Pasek Informacyjny
             html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">');
             html.push('<div class="glass-card" style="padding:15px; text-align:center; border-color:rgba(16,185,129,0.2);"><div style="font-size:0.6rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">UTARG BRUTTO</div><div style="font-size:1.4rem; font-weight:900; color:#10b981;">'+Number(g).toFixed(2)+' zł</div></div>');
             html.push('<div class="glass-card" style="padding:15px; text-align:center; border-color:rgba(14,165,233,0.2);"><div style="font-size:0.6rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">CZAS ZMIANY</div><div style="font-size:1.4rem; font-weight:900; color:#0ea5e9;">'+diffHrs+'h '+diffMins+'m</div></div>');
@@ -373,13 +514,14 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('<button style="flex:1; padding:14px; border-radius:14px; font-weight:800; font-size:0.8rem; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);" onclick="if(window.openEndShiftModal) window.openEndShiftModal()">🔴 ZAKOŃCZ ZMIANĘ</button>');
             html.push('</div>');
             
-            // 2. Moduł GPS (Live Taksometr)
+            // ==========================================
+            // MODUŁ GPS (LIVE TAKSOMETR MULTITARYFOWY)
+            // ==========================================
             if(d.liveRideStart) {
                 let cTime = '00:00'; 
                 let startPrice = (d.q && d.q.s) ? d.q.s : 9.0;
                 let activeTariff = d.sh.liveTariff || 't1';
                 
-                // Określamy kolor taryfy dla pięknego Apple Style
                 let tColor = '#10b981';
                 if(activeTariff==='t2') tColor = '#3b82f6';
                 if(activeTariff==='t3') tColor = '#f59e0b';
@@ -394,7 +536,6 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 html.push('<div id="live-ride-time" style="font-size: 1.1rem; font-weight: 900; color: #0ea5e9; font-family: monospace;">'+cTime+'</div>');
                 html.push('</div>');
 
-                // Live Price z Dynamicznym Statusem
                 html.push('<div style="text-align:center; margin-bottom:15px; display:flex; flex-direction:column; align-items:center;">');
                 html.push('<div id="live-ride-status" style="min-height:22px; margin-bottom:8px;"><span style="font-size:0.65rem; color:var(--muted); font-weight:800; letter-spacing:1px;">SUGEROWANA CENA ('+activeTariff.toUpperCase()+')</span></div>');
                 
@@ -407,9 +548,9 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">');
                 html.push('<div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center;"><span style="font-size:0.6rem; color:var(--muted); display:block; margin-bottom:4px;">DYSTANS (GPS)</span><strong id="live-ride-dist" style="font-size:1.6rem; font-weight:900; color:#fff; font-family:monospace;">'+Number(d.sh.gpsDist||0).toFixed(2)+'</strong></div>');
                 
-                // Przycisk Zmiany Taryfy zamiast Postoju Ręcznego
+                // PRZYCISK ZMIANY TARYFY W LOCIE
                 html.push('<div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center; display:flex; align-items:center; justify-content:center;">');
-                html.push('<button style="width:100%; height:100%; border-radius:10px; font-weight:900; font-size:0.95rem; background: rgba(255,255,255,0.05); color: '+tColor+'; border: 1px solid rgba(255,255,255,0.1); cursor:pointer; outline:none; transition:all 0.2s;" onclick="if(window.toggleLiveTariff) window.toggleLiveTariff()">🔄 TARYFA: ' + activeTariff.toUpperCase() + '</button></div>');
+                html.push('<button class="btn-taryfa" style="color: '+tColor+'; border: 2px solid '+tColor+'; text-shadow: 0 0 10px '+tColor+';" onclick="if(window.toggleLiveTariff) window.toggleLiveTariff()">🔄 TARYFA: ' + activeTariff.toUpperCase() + '</button></div>');
                 html.push('</div>');
 
                 html.push('<button style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; font-size: 0.95rem; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); cursor: pointer; outline:none;" onclick="if(window.stopLiveRide) window.stopLiveRide()">🛑 ZAKOŃCZ KURS</button>');
@@ -418,7 +559,6 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 html.push('<button style="width:100%; padding:18px; border-radius:16px; margin-bottom:15px; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(16,185,129,0.3);" onclick="if(window.startLiveRide) window.startLiveRide()">🛰️ ROZPOCZNIJ KURS (GPS)</button>');
             }
             
-            // Auto uzupełnianie z GPS
             let autoM = window.db.drv.sh.tempAutoMins !== undefined ? window.db.drv.sh.tempAutoMins : '';
             let autoK = window.db.drv.sh.tempAutoKm !== undefined ? window.db.drv.sh.tempAutoKm : '';
             let autoP = window.db.drv.sh.tempAutoPrice !== undefined ? window.db.drv.sh.tempAutoPrice : '';
@@ -428,7 +568,9 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             window.db.drv.sh.tempAutoKm = undefined;
             window.db.drv.sh.tempAutoPrice = undefined;
 
-            // 3. Kompaktowy Kreator Kursu
+            // ==========================================
+            // KREATOR KURSU (Kompaktowy)
+            // ==========================================
             html.push('<div class="glass-card" style="padding: 20px 15px; margin-bottom: 20px;">');
             html.push('<div style="font-size: 0.7rem; color: #0ea5e9; font-weight: 900; text-transform: uppercase; margin-bottom: 12px; text-align: center;">Dodaj Kurs</div>');
             
@@ -450,7 +592,9 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             
             html.push('<button style="width:100%; padding:16px; border-radius:14px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); outline:none;" onclick="if(window.dAddT) window.dAddT()">ZAPISZ KURS</button></div>');
             
-            // 4. Dziennik
+            // ==========================================
+            // DZIENNIK ZAROBKÓW
+            // ==========================================
             html.push('<div style="margin: 30px 15px 10px 15px; text-align: center;"><span style="font-size:0.7rem; color:var(--muted); font-weight:900; text-transform:uppercase;">DZIENNIK ZAROBKÓW</span></div>');
                 
             let trsList = d.sh.tr || [];
@@ -473,10 +617,10 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             } else {
                 html.push('<div style="text-align:center; color:var(--muted); padding:20px 0; font-size:0.8rem; background:rgba(0,0,0,0.3); border-radius:16px; font-weight:700;">Brak wpisów w tej zmianie.</div>');
             }
-            html.push('</div>'); // Koniec paddingu 15px
+            html.push('</div>'); 
         } else {
             // ==========================================
-            // EKRAN STARTOWY (KOMPAKTOWY)
+            // EKRAN STARTOWY
             // ==========================================
             html.push('<div style="padding: 30px 20px; text-align: center;">');
             html.push('<div style="width:60px; height:60px; background:rgba(245,158,11,0.1); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2rem;">🚕</div>');
@@ -494,7 +638,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 html.push(panelProBanner);
             } else {
                 // ==========================================
-                // PEŁNY FORMULARZ OFFLINE (ZALEGŁA ZMIANA)
+                // PEŁNY FORMULARZ OFFLINE (ZALEGŁA ZMIANA) - ROZWINIĘTY DLA PEWNOŚCI!
                 // ==========================================
                 html.push('<div style="color:#0ea5e9; margin-top:10px; font-size:0.75rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:15px;">⚡ ZALEGŁA ZMIANA / RAPORT Z KASY</div>');
                 html.push('<div class="glass-card" style="padding:25px 15px; border-color: rgba(14,165,233,0.3); margin-bottom:20px;">');
