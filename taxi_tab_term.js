@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Kompaktowy Terminal Premium (Prawdziwy Auto-Taksometr)
+// PLIK: taxi_tab_term.js - Główny Panel (Terminal), GPS i Dodawanie Kursów [Kompaktowy Premium]
 // ==========================================
 
 // --- BEZPIECZNE FUNKCJE POMOCNICZE ---
@@ -39,7 +39,6 @@ window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
     return R * c;
 };
 
-// --- SILNIK PRAWDZIWEGO TAKSOMETRU (AUTO-KOREK) ---
 window.updateLiveRideUI = function() {
     if (!window.db || !window.db.drv || !window.db.drv.liveRideStart) return;
     let d = window.db.drv;
@@ -60,12 +59,8 @@ window.updateLiveRideUI = function() {
     d.sh.lastTick = now;
 
     if (!isWaiting) {
-        // Zabezpieczenie: jeśli GPS nie odpowiada > 5 sek, zakładamy że stoimy na światłach
-        if (now - (d.sh.lastGpsTime || now) > 5000) {
-            d.sh.currentSpeed = 0;
-        }
-        
-        // AUTO-TAKSOMETR: Naliczamy czas postoju, gdy jedziemy <= 20 km/h lub stoimy
+        // AUTO-TAKSOMETR: Naliczamy czas postoju, gdy jedziemy <= 20 km/h lub stoimy.
+        // Nawet jak jedziesz 15km/h w korku, dystans też się dodaje w startLiveRide!
         if ((d.sh.currentSpeed || 0) <= 20) {
             d.sh.autoWaitMs = (d.sh.autoWaitMs || 0) + deltaTick;
         }
@@ -89,11 +84,11 @@ window.updateLiveRideUI = function() {
     let isAutoWaitActive = (!isWaiting && (d.sh.currentSpeed || 0) <= 20);
     if (elStatus) {
         if (isWaiting) {
-            elStatus.innerHTML = '<span style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px;">POSTÓJ RĘCZNY</span>';
+            elStatus.innerHTML = '<span style="font-size:0.7rem; color:#f59e0b; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); padding:4px 12px; border-radius:12px; font-weight:900; letter-spacing:1px; box-shadow:0 0 10px rgba(245,158,11,0.2);">⏸️ POSTÓJ RĘCZNY</span>';
         } else if (isAutoWaitActive) {
-            elStatus.innerHTML = '<span style="font-size:0.65rem; color:#ef4444; background:rgba(239,68,68,0.2); padding:4px 8px; border-radius:8px; font-weight:900; letter-spacing:1px; animation: glowPulse 2s infinite;">⏱️ NALICZANIE POSTOJU (<20km/h)</span>';
+            elStatus.innerHTML = '<span style="font-size:0.7rem; color:#ef4444; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); padding:4px 12px; border-radius:12px; font-weight:900; letter-spacing:1px; box-shadow:0 0 10px rgba(239,68,68,0.2); animation: glowPulse 2s infinite;">⏱️ NALICZANIE KORKÓW (<20km/h)</span>';
         } else {
-            elStatus.innerHTML = '<span style="font-size:0.65rem; color:var(--muted); font-weight:800; letter-spacing:1px;">SUGEROWANA CENA (T1)</span>';
+            elStatus.innerHTML = '<span style="font-size:0.7rem; color:var(--muted); font-weight:800; letter-spacing:1px;">SUGEROWANA CENA (T1)</span>';
         }
     }
 
@@ -104,13 +99,14 @@ window.updateLiveRideUI = function() {
         let manualWaitMs = d.sh.rWT || 0;
         if(isWaiting) manualWaitMs += (now - d.sh.rWS);
         
-        // Sumujemy postój z korków i postój kliknięty ręcznie przez Ciebie
+        // Sumujemy postój z korków i postój kliknięty ręcznie
         let totalWaitMins = ((d.sh.autoWaitMs || 0) + manualWaitMs) / 60000;
         
         let livePrice = q.s + (currentDist * q.t1) + (totalWaitMins * (q.w / 60));
         if(livePrice < q.s) livePrice = q.s;
         
-        elPrice.innerHTML = livePrice.toFixed(2) + ' <span style="font-size:1.2rem; color:rgba(255,255,255,0.4); font-weight:600;">zł</span>';
+        // Zaktualizowana linijka - bez dublowania "zł"! Sam numer podmieniamy w spanie.
+        elPrice.innerHTML = livePrice.toFixed(2);
     }
 };
 
@@ -142,19 +138,19 @@ window.startLiveRide = function() {
                 if (window.db.drv.sh.lastPos) {
                     let dist = window.getDistanceFromLatLonInKm(window.db.drv.sh.lastPos.lat, window.db.drv.sh.lastPos.lng, lat, lng);
                     
-                    // Używamy precyzyjnej prędkości odczytanej z urządzenia (natywne API)
+                    // Używamy precyzyjnej prędkości odczytanej z urządzenia
                     if (position.coords.speed !== null && position.coords.speed !== undefined) {
-                        window.db.drv.sh.currentSpeed = position.coords.speed * 3.6; // m/s na km/h
+                        window.db.drv.sh.currentSpeed = position.coords.speed * 3.6; // z m/s na km/h
                     } else {
-                        // Opcja zapasowa, gdy telefon nie wysyła prędkości
+                        // Opcja zapasowa z dystansu
                         let timeDelta = now - window.db.drv.sh.lastGpsTime;
                         if (timeDelta > 0) {
                             window.db.drv.sh.currentSpeed = (dist / (timeDelta / 3600000));
                         }
                     }
 
-                    // Precyzyjny filtr niedokładności GPS - liczymy dystans już powyżej 1 metra ruchu
-                    if (dist > 0.001) { 
+                    // Filtr czułości - liczymy ruch już od 2 metrów! Idealne do pełzania w korku.
+                    if (dist > 0.002) { 
                         window.db.drv.sh.gpsDist += dist;
                     }
                 }
@@ -164,7 +160,7 @@ window.startLiveRide = function() {
                 
             }, function(error) {
                 console.error('GPS Error', error);
-            }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 }); // Szybsze odświeżanie
+            }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 });
         }
 
         if(window.liveRideTimer) clearInterval(window.liveRideTimer);
@@ -346,7 +342,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         html.push('.chip.idle { background: transparent; color: rgba(255,255,255,0.4); }');
         html.push('@keyframes radarPulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }');
         html.push('@keyframes waitPulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }');
-        html.push('@keyframes glowPulse { 0% { opacity: 0.4; box-shadow:0 0 5px rgba(239,68,68,0.2); } 50% { opacity: 1; box-shadow:0 0 20px rgba(239,68,68,0.8); } 100% { opacity: 0.4; box-shadow:0 0 5px rgba(239,68,68,0.2); } }');
+        html.push('@keyframes glowPulse { 0% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(239,68,68,0.6); } 100% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } }');
         html.push('</style>');
 
         let panelProBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.sysAlert) window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
@@ -416,13 +412,13 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             
             // 1. Zwarty Pasek Informacyjny
             html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">');
-            html.push('<div class="glass-card" style="padding:15px; text-align:center; border-color:rgba(16,185,129,0.2);"><div style="font-size:0.6rem; color:var(--muted); font-weight:800;">UTARG</div><div style="font-size:1.4rem; font-weight:900; color:#10b981;">'+Number(g).toFixed(2)+' zł</div></div>');
-            html.push('<div class="glass-card" style="padding:15px; text-align:center; border-color:rgba(14,165,233,0.2);"><div style="font-size:0.6rem; color:var(--muted); font-weight:800;">CZAS ZMIANY</div><div style="font-size:1.4rem; font-weight:900; color:#0ea5e9;">'+diffHrs+'h '+diffMins+'m</div></div>');
+            html.push('<div class="glass-card" style="padding:15px; text-align:center; border-color:rgba(16,185,129,0.2);"><div style="font-size:0.6rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">UTARG BRUTTO</div><div style="font-size:1.4rem; font-weight:900; color:#10b981;">'+Number(g).toFixed(2)+' zł</div></div>');
+            html.push('<div class="glass-card" style="padding:15px; text-align:center; border-color:rgba(14,165,233,0.2);"><div style="font-size:0.6rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">CZAS ZMIANY</div><div style="font-size:1.4rem; font-weight:900; color:#0ea5e9;">'+diffHrs+'h '+diffMins+'m</div></div>');
             html.push('</div>');
 
             html.push('<div style="display:flex; gap:10px; margin-bottom:15px;">');
-            html.push('<button style="flex:1; padding:12px; border-radius:12px; font-weight:800; font-size:0.8rem; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1);" onclick="window.toggleShiftPause()">'+(d.sh.sPS ? '▶ WZNÓW PRACĘ' : '☕ PRZERWA')+'</button>');
-            html.push('<button style="flex:1; padding:12px; border-radius:12px; font-weight:800; font-size:0.8rem; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);" onclick="if(window.openEndShiftModal) window.openEndShiftModal()">🔴 ZAKOŃCZ ZMIANĘ</button>');
+            html.push('<button style="flex:1; padding:14px; border-radius:14px; font-weight:800; font-size:0.8rem; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1);" onclick="window.toggleShiftPause()">'+(d.sh.sPS ? '▶ WZNÓW PRACĘ' : '☕ PRZERWA')+'</button>');
+            html.push('<button style="flex:1; padding:14px; border-radius:14px; font-weight:800; font-size:0.8rem; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);" onclick="if(window.openEndShiftModal) window.openEndShiftModal()">🔴 ZAKOŃCZ ZMIANĘ</button>');
             html.push('</div>');
             
             // 2. Moduł GPS (Live Taksometr)
@@ -440,14 +436,18 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 html.push('<div id="live-ride-time" style="font-size: 1.1rem; font-weight: 900; color: #0ea5e9; font-family: monospace;">'+cTime+'</div>');
                 html.push('</div>');
 
-                // Live Price z Dynamicznym Statusem Postoju
-                html.push('<div style="text-align:center; margin-bottom:15px;">');
-                html.push('<div id="live-ride-status" style="margin-bottom:6px; min-height:18px;"><span style="font-size:0.65rem; color:var(--muted); font-weight:800; letter-spacing:1px;">SUGEROWANA CENA (T1)</span></div>');
-                html.push('<div style="font-size:3.5rem; font-weight:900; color:#10b981; font-family:monospace; line-height:1; text-shadow:0 0 15px rgba(16,185,129,0.3);"><span id="live-ride-price">'+startPrice.toFixed(2)+'</span> <span style="font-size:1.2rem; color:rgba(255,255,255,0.4); font-weight:600;">zł</span></div>');
+                // Live Price z poprawionym "zł" i statusem
+                html.push('<div style="text-align:center; margin-bottom:15px; display:flex; flex-direction:column; align-items:center;">');
+                html.push('<div id="live-ride-status" style="min-height:22px; margin-bottom:8px;"><span style="font-size:0.65rem; color:var(--muted); font-weight:800; letter-spacing:1px;">SUGEROWANA CENA (T1)</span></div>');
+                
+                html.push('<div style="display:flex; align-items:baseline; justify-content:center; gap:6px;">');
+                html.push('<span id="live-ride-price" style="font-size:4.2rem; font-weight:900; color:#10b981; font-family:monospace; line-height:1; text-shadow:0 0 25px rgba(16,185,129,0.4);">'+startPrice.toFixed(2)+'</span>');
+                html.push('<span style="font-size:1.4rem; color:rgba(16,185,129,0.6); font-weight:800;">zł</span>');
+                html.push('</div>');
                 html.push('</div>');
 
                 html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">');
-                html.push('<div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center;"><span style="font-size:0.6rem; color:var(--muted); display:block; margin-bottom:4px;">DYSTANS (GPS)</span><strong id="live-ride-dist" style="font-size:1.4rem; color:#fff;">'+Number(d.sh.gpsDist||0).toFixed(2)+'</strong></div>');
+                html.push('<div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center;"><span style="font-size:0.6rem; color:var(--muted); display:block; margin-bottom:4px;">DYSTANS (GPS)</span><strong id="live-ride-dist" style="font-size:1.6rem; font-weight:900; color:#fff; font-family:monospace;">'+Number(d.sh.gpsDist||0).toFixed(2)+'</strong></div>');
                 html.push('<div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center; display:flex; align-items:center; justify-content:center;">');
                 html.push('<button style="width:100%; height:100%; border-radius:8px; font-weight:800; font-size:0.8rem; background: '+(isWaiting?'#f59e0b':'rgba(255,255,255,0.05)')+'; color: '+(isWaiting?'#000':'#fff')+'; border:none; cursor:pointer;" onclick="if(window.toggleRideWait) window.toggleRideWait()">'+(isWaiting?'▶ WZNÓW':'⏳ POSTÓJ RĘCZNY')+'</button></div>');
                 html.push('</div>');
@@ -455,7 +455,9 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 html.push('<button style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; font-size: 0.95rem; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); cursor: pointer; outline:none;" onclick="if(window.stopLiveRide) window.stopLiveRide()">🛑 ZAKOŃCZ KURS</button>');
                 html.push('</div>');
             } else {
-                html.push('<button style="width:100%; padding:18px; border-radius:16px; margin-bottom:15px; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(16,185,129,0.3);" onclick="if(window.startLiveRide) window.startLiveRide()">🛰️ ROZPOCZNIJ KURS (GPS)</button>');
+                html.push('<div style="background:rgba(0,0,0,0.3); border:1px dashed rgba(255,255,255,0.1); padding:20px; border-radius:24px; margin-bottom:20px; text-align:center;">');
+                html.push('<div style="font-size: 0.75rem; color: var(--muted); font-weight: 700; line-height:1.5;">⚠️ PWA usypia moduł GPS, gdy zablokujesz ekran telefonu.<br><span style="color:#d946ef; font-weight:900; font-size:0.8rem; display:block; margin-top:5px;">Pełen GPS w tle dostaniesz w wersji PRO.</span></div></div>');
+                html.push('<button class="btn neon-btn-green" style="width:100%; font-size:1.1rem; padding:22px; border-radius:24px; margin-bottom:30px;" onclick="if(window.startLiveRide) window.startLiveRide()"><span style="font-size:1.4rem;">🛰️</span> ROZPOCZNIJ KURS (GPS)</button>');
             }
             
             // Auto uzupełnianie z GPS
