@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Terminal Premium (Smart Goal, Global GPS Tracker, Multitaryfa)
+// PLIK: taxi_tab_term.js - Niezawodny Terminal (Global Tracker, Auto-Resume, Smart Netto)
 // ==========================================
 
 // --- BEZPIECZNE FUNKCJE POMOCNICZE ---
@@ -32,11 +32,11 @@ window.dStartS = function() {
         rWT: 0, 
         rWS: null, 
         tr: [],
-        shiftDist: 0 // GLOBALNY DYSTANS ZMIANY
+        shiftDist: 0 // Inicjalizacja dystansu całkowitego zmiany
     };
     window.db.drv.liveRideStart = null;
     
-    // Inicjalizacja Globalnego Trackera
+    // Inicjalizacja Globalnego Śledzenia Zmiany
     window.initGlobalTracker();
 
     if(typeof window.save === 'function') window.save(); 
@@ -50,67 +50,72 @@ window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
     let a = Math.sin(dLat/2) * Math.sin(dLat/2) +
             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
             Math.sin(dLon/2) * Math.sin(dLon/2);
-    let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 };
 
-// --- GLOBALNY TRACKER (Bije przez całą zmianę!) ---
+// --- NIEZAWODNY GLOBAL TRACKER (Dystans Zmiany) ---
 window.initGlobalTracker = function() {
     if (!('geolocation' in navigator)) return;
     let s = window.db.drv.sh;
     if (!s || !s.on) return;
-    
-    if (s.globalWatchId) return; // Zapobiega dublowaniu
+    if (s.globalWatchId) return; // Zabezpieczenie przed dublowaniem
 
     s.shiftDist = s.shiftDist || 0;
-    s.autoWaitMs = s.autoWaitMs || 0;
-    s.gpsMoney = s.gpsMoney || 0;
     
     s.globalWatchId = navigator.geolocation.watchPosition(function(position) {
         let lat = position.coords.latitude;
         let lng = position.coords.longitude;
-        let now = Date.now();
-        let q = window.db.drv.q || {s:9, w:39, t1:3.2, t2:4.0, t3:6.4, t4:8.0};
-
-        // 1. OBLICZANIE CAŁKOWITEJ ZMIANY (Globalny Przebieg)
-        if (!s.sPS) { // Gdy zmiana NIE jest zapauzowana
+        
+        if (!s.sPS) { // Gdy nie jesteśmy na pauzie
             if (s.lastShiftPos) {
                 let distTotal = window.getDistanceFromLatLonInKm(s.lastShiftPos.lat, s.lastShiftPos.lng, lat, lng);
-                if (distTotal > 0.005) { // Filtr szumu 5m na tle miasta
+                if (distTotal > 0.005) { // Filtr (5 metrów)
                     s.shiftDist += distTotal;
-                    // Auto update UI z ominięciem pełnego render()
                     let elShiftDist = document.getElementById('shift-total-dist');
                     if(elShiftDist) elShiftDist.innerHTML = s.shiftDist.toFixed(1) + ' km';
+                    if(typeof window.save === 'function') window.save();
                 }
             }
             s.lastShiftPos = {lat: lat, lng: lng};
         }
+    }, function(err) { console.warn('Global GPS:', err); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 });
+};
 
-        // 2. OBLICZANIE TAKSOMETRU (Kurs) - tylko jak wciśnięto startLiveRide
-        if (window.db.drv.liveRideStart && s.rWS === null) {
-            let timeDelta = now - (s.lastGpsTime || now);
+// --- NIEZAWODNE WZNOWIENIE TAKSOMETRU (Auto-Resume po odświeżeniu) ---
+window.resumeLiveRide = function() {
+    let s = window.db.drv.sh;
+    if (!s || !window.db.drv.liveRideStart) return;
+    
+    if ('geolocation' in navigator && !s.watchId) {
+        s.watchId = navigator.geolocation.watchPosition(function(position) {
+            if (s.rWS !== null) { s.lastGpsTime = Date.now(); return; }
+            let lat = position.coords.latitude;
+            let lng = position.coords.longitude;
+            let now = Date.now();
+            let q = window.db.drv.q || {s:9, w:39, t1:3.2, t2:4.0, t3:6.4, t4:8.0};
+            
             if (s.lastPos) {
-                let rDist = window.getDistanceFromLatLonInKm(s.lastPos.lat, s.lastPos.lng, lat, lng);
-                
+                let dist = window.getDistanceFromLatLonInKm(s.lastPos.lat, s.lastPos.lng, lat, lng);
                 if (position.coords.speed !== null && position.coords.speed !== undefined) {
                     s.currentSpeed = position.coords.speed * 3.6; 
                 } else {
-                    if (timeDelta > 0) s.currentSpeed = (rDist / (timeDelta / 3600000));
+                    let timeDelta = now - (s.lastGpsTime || now);
+                    if (timeDelta > 0) s.currentSpeed = (dist / (timeDelta / 3600000));
                 }
 
-                if (rDist > 0.002) { 
-                    s.gpsDist += rDist;
+                // Filtracja "pływania" i naliczanie dystansu (powyżej 2 metrów ruchu)
+                if (dist > 0.002) { 
+                    s.gpsDist += dist;
                     let currentRate = q[s.liveTariff || 't1'] || 3.2;
-                    s.gpsMoney += (rDist * currentRate);
+                    s.gpsMoney = (s.gpsMoney || 0) + (dist * currentRate);
                 }
-                window.updateLiveRideUI();
             }
             s.lastPos = {lat: lat, lng: lng};
             s.lastGpsTime = now;
-        }
-    }, function(error) {
-        console.warn('GPS Warning:', error);
-    }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 });
+            window.updateLiveRideUI();
+        }, function(error) { console.error('Ride GPS:', error); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 });
+    }
+    if(!window.liveRideTimer) window.liveRideTimer = setInterval(window.updateLiveRideUI, 1000);
 };
 
 // --- LOGIKA CELU DZIENNEGO (SMART GOAL) ---
@@ -133,7 +138,6 @@ window.dSetGoal = function() {
     }
 };
 
-// --- LOGIKA ZMIANY TARYFY W LOCIE ---
 window.toggleLiveTariff = function() {
     if(window.db && window.db.drv && window.db.drv.sh && window.db.drv.liveRideStart) {
         let current = window.db.drv.sh.liveTariff || 't1';
@@ -154,45 +158,47 @@ window.toggleLiveTariff = function() {
 window.updateLiveRideUI = function() {
     if (!window.db || !window.db.drv || !window.db.drv.liveRideStart) return;
     let d = window.db.drv;
+    let s = d.sh;
     let elTime = document.getElementById('live-ride-time');
     let elDist = document.getElementById('live-ride-dist');
     let elPrice = document.getElementById('live-ride-price'); 
     let elStatus = document.getElementById('live-ride-status'); 
 
-    let isWaiting = d.sh.rWS !== null;
+    let isWaiting = s.rWS !== null;
     let now = Date.now();
     let diffMs = now - d.liveRideStart;
-    if(d.sh.rWT) diffMs -= d.sh.rWT;
-    if(isWaiting) diffMs -= (now - d.sh.rWS);
+    if(s.rWT) diffMs -= s.rWT;
+    if(isWaiting) diffMs -= (now - s.rWS);
 
-    if (!d.sh.lastTick) d.sh.lastTick = now;
-    let deltaTick = now - d.sh.lastTick;
-    d.sh.lastTick = now;
+    if (!s.lastTick) s.lastTick = now;
+    let deltaTick = now - s.lastTick;
+    s.lastTick = now;
 
     if (!isWaiting) {
-        if (now - (d.sh.lastGpsTime || now) > 5000) d.sh.currentSpeed = 0;
-        if ((d.sh.currentSpeed || 0) <= 20) {
-            d.sh.autoWaitMs = (d.sh.autoWaitMs || 0) + deltaTick;
+        if (now - (s.lastGpsTime || now) > 5000) s.currentSpeed = 0;
+        // AUTO-POSTÓJ (<20 km/h)
+        if ((s.currentSpeed || 0) <= 20) {
+            s.autoWaitMs = (s.autoWaitMs || 0) + deltaTick;
         }
     }
 
     if (elTime) {
         let totalSecs = Math.floor(diffMs / 1000);
         let m = Math.floor(totalSecs / 60);
-        let s = totalSecs % 60;
-        elTime.innerHTML = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+        let sec = totalSecs % 60;
+        elTime.innerHTML = (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
     }
     
-    if (elDist && d.sh.gpsDist !== undefined) elDist.innerHTML = Number(d.sh.gpsDist).toFixed(2);
+    if (elDist && s.gpsDist !== undefined) elDist.innerHTML = Number(s.gpsDist).toFixed(2);
 
-    let activeTariff = d.sh.liveTariff || 't1';
-    let isAutoWaitActive = (!isWaiting && (d.sh.currentSpeed || 0) <= 20);
+    let activeTariff = s.liveTariff || 't1';
+    let isAutoWaitActive = (!isWaiting && (s.currentSpeed || 0) <= 20);
     
     if (elStatus) {
         if (isWaiting) {
-            elStatus.innerHTML = '<span style="font-size:0.65rem; color:#f59e0b; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); padding:3px 8px; border-radius:8px; font-weight:900; letter-spacing:1px;">⏸️ POSTÓJ RĘCZNY</span>';
+            elStatus.innerHTML = '<span style="font-size:0.65rem; color:#f59e0b; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); padding:4px 12px; border-radius:12px; font-weight:900; letter-spacing:1px;">⏸️ POSTÓJ RĘCZNY</span>';
         } else if (isAutoWaitActive) {
-            elStatus.innerHTML = '<span style="font-size:0.65rem; color:#ef4444; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); padding:3px 8px; border-radius:8px; font-weight:900; letter-spacing:1px; animation: glowPulse 2s infinite;">⏱️ NALICZANIE POSTOJU (<20km/h)</span>';
+            elStatus.innerHTML = '<span style="font-size:0.65rem; color:#ef4444; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); padding:4px 12px; border-radius:12px; font-weight:900; letter-spacing:1px; animation: glowPulse 2s infinite;">⏱️ NALICZANIE POSTOJU (<20km/h)</span>';
         } else {
             elStatus.innerHTML = '<span style="font-size:0.65rem; color:var(--muted); font-weight:800; letter-spacing:1px;">SUGEROWANA CENA (' + activeTariff.toUpperCase() + ')</span>';
         }
@@ -200,29 +206,25 @@ window.updateLiveRideUI = function() {
 
     if (elPrice) {
         let q = d.q || {s:9, w:39, t1:3.2, t2:4.0, t3:6.4, t4:8.0};
-        let manualWaitMs = d.sh.rWT || 0;
-        if(isWaiting) manualWaitMs += (now - d.sh.rWS);
-        let totalWaitMins = ((d.sh.autoWaitMs || 0) + manualWaitMs) / 60000;
+        let manualWaitMs = s.rWT || 0;
+        if(isWaiting) manualWaitMs += (now - s.rWS);
+        let totalWaitMins = ((s.autoWaitMs || 0) + manualWaitMs) / 60000;
         
-        let livePrice = q.s + (d.sh.gpsMoney || 0) + (totalWaitMins * (q.w / 60));
+        let livePrice = q.s + (s.gpsMoney || 0) + (totalWaitMins * (q.w / 60));
         if(livePrice < q.s) livePrice = q.s;
+        
         elPrice.innerHTML = livePrice.toFixed(2);
     }
 };
 
 window.startLiveRide = function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
-        let s = window.db.drv.sh;
         window.db.drv.liveRideStart = Date.now();
+        let s = window.db.drv.sh;
         s.rWS = null; s.rWT = 0; s.gpsDist = 0; s.gpsMoney = 0; s.lastPos = null;
         s.liveTariff = 't1'; s.autoWaitMs = 0; s.currentSpeed = 0; s.lastTick = Date.now(); s.lastGpsTime = Date.now();
-
-        // Upewniamy się, że global tracker działa w tle
-        if (!s.globalWatchId) window.initGlobalTracker();
-
-        if(window.liveRideTimer) clearInterval(window.liveRideTimer);
-        window.liveRideTimer = setInterval(window.updateLiveRideUI, 1000);
-
+        
+        window.resumeLiveRide();
         if(typeof window.save === 'function') window.save();
         if(typeof window.render === 'function') window.render();
     }
@@ -231,6 +233,7 @@ window.startLiveRide = function() {
 window.stopLiveRide = function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
         let s = window.db.drv.sh;
+        if (s.watchId) { navigator.geolocation.clearWatch(s.watchId); s.watchId = null; }
         if(window.liveRideTimer) { clearInterval(window.liveRideTimer); window.liveRideTimer = null; }
         
         let diffMs = Date.now() - window.db.drv.liveRideStart;
@@ -241,6 +244,7 @@ window.stopLiveRide = function() {
         let q = window.db.drv.q || {s:9, w:39, t1:3.2};
         let manualWaitMs = s.rWT || 0;
         let totalWaitMins = ((s.autoWaitMs || 0) + manualWaitMs) / 60000;
+        
         let finalPrice = q.s + (s.gpsMoney || 0) + (totalWaitMins * (q.w / 60));
 
         s.tempAutoMins = finalMins;
@@ -286,7 +290,7 @@ window.toggleShiftPause = function() {
     }
 };
 
-// --- NADPISANIE MODALA ZAMYKANIA ZMIANY (Smart ODO) ---
+// --- NOWY MODAL ZAMYKANIA ZMIANY (Podpowiada ODO i Kasuje Tracker) ---
 window.openEndShiftModal = function() {
     let s = window.db.drv.sh || {};
     let startOdo = s.o ? parseFloat(s.o) : 0;
@@ -312,28 +316,28 @@ window.openEndShiftModal = function() {
                 '<div style="display:flex; justify-content:space-between; margin-top:15px; background:rgba(0,0,0,0.5); padding:10px; border-radius:12px; border:1px inset rgba(255,255,255,0.05);">' +
                     '<div style="text-align:center; flex:1;"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Czas</span><br><strong style="color:#0ea5e9;">'+diffHrs+'h '+diffMins+'m</strong></div>' +
                     '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Utarg</span><br><strong style="color:#10b981;">'+g.toFixed(2)+' zł</strong></div>' +
-                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Przebieg (GPS)</span><br><strong style="color:#f59e0b;">'+shiftDist.toFixed(1)+' km</strong></div>' +
+                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Dystans</span><br><strong style="color:#f59e0b;">'+shiftDist.toFixed(1)+' km</strong></div>' +
                 '</div>' +
             '</div>' +
             
             '<div style="background:#000; border-radius:20px; padding:20px; text-align:center; border:1px inset rgba(255,255,255,0.05); margin-bottom:20px; box-shadow:inset 0 4px 15px rgba(0,0,0,0.5);">' +
                 '<label style="font-size:0.65rem; color:#ef4444; font-weight:800; display:block; margin-bottom:10px; letter-spacing:1px;">STAN LICZNIKA POJAZDU (KONIEC)</label>' +
                 '<input type="number" id="de-o" value="'+predictedEndOdo+'" style="width:100%; background:transparent; border:none; color:#ef4444; font-size:3.5rem; font-weight:900; text-align:center; outline:none; padding:0; font-family:monospace; text-shadow: 0 0 15px rgba(239,68,68,0.4);">' +
-                '<div style="font-size:0.65rem; color:rgba(255,255,255,0.4); margin-top:5px; font-weight:700;">Start: '+startOdo+' km | Przejechano: ok. '+shiftDist.toFixed(1)+' km</div>' +
+                '<div style="font-size:0.65rem; color:rgba(255,255,255,0.4); margin-top:5px; font-weight:700;">Start: '+startOdo+' km | Przejechano (GPS): '+shiftDist.toFixed(1)+' km</div>' +
             '</div>' +
 
             '<div style="margin-bottom:20px;">' +
                 '<label style="font-size:0.65rem; color:rgba(255,255,255,0.6); font-weight:800; margin-bottom:8px; display:block; text-transform:uppercase;">Płatny Dystans z Aplikacji (KM)</label>' +
-                '<input type="number" step="0.1" id="dw-m-pk" placeholder="np. 85.5" class="compact-inp">' +
+                '<input type="number" step="0.1" id="dw-m-pk" placeholder="np. 85.5" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:12px; padding:12px; text-align:center; font-size:1.1rem; font-weight:700; outline:none; width:100%; box-sizing:border-box;">' +
             '</div>' +
             
-            '<button class="btn" style="background:linear-gradient(135deg, #ef4444, #b91c1c); color:#fff; font-weight:900; padding:18px; border-radius:20px; border:none; width:100%; font-size:1.1rem; box-shadow:0 8px 25px rgba(239,68,68,0.4);" onclick="window.dEndS()">ROZLICZ ZMIANĘ</button>' +
-            '<button class="btn" style="background:transparent; color:rgba(255,255,255,0.4); margin-top:10px; border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:20px; width:100%; font-weight:bold;" onclick="document.getElementById(\'m-end-shift\').remove()">ANULUJ</button>' +
+            '<button style="background:linear-gradient(135deg, #ef4444, #b91c1c); color:#fff; font-weight:900; padding:18px; border-radius:20px; border:none; width:100%; font-size:1.1rem; box-shadow:0 8px 25px rgba(239,68,68,0.4); cursor:pointer;" onclick="window.dEndS()">ROZLICZ ZMIANĘ</button>' +
+            '<button style="background:transparent; color:rgba(255,255,255,0.4); margin-top:10px; border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:20px; width:100%; font-weight:bold; cursor:pointer;" onclick="document.getElementById(\'m-end-shift\').remove()">ANULUJ</button>' +
         '</div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
 };
 
-// Override by wyczyścić globalny watchId przy końcu zmiany
+// Nadpisanie dEndS z taxi_modal_shifts.js aby wyczyścić Global Tracker
 let origDEndS = window.dEndS;
 window.dEndS = function() {
     if(window.db && window.db.drv && window.db.drv.sh && window.db.drv.sh.globalWatchId) {
@@ -344,7 +348,6 @@ window.dEndS = function() {
 };
 
 window.dAddOfflineWeekly = function() {
-    // ... [Funkcja offline nienaruszona, zachowana z poprzedniego pełnego listingu] ...
     let dFrom = document.getElementById('dw-d-from') ? document.getElementById('dw-d-from').value : '';
     let dTo = document.getElementById('dw-d-to') ? document.getElementById('dw-d-to').value : '';
     let oS = parseFloat(document.getElementById('dw-odo-s') ? document.getElementById('dw-odo-s').value : 0) || 0;
@@ -384,12 +387,13 @@ window.dAddOfflineWeekly = function() {
     
     if (sumV <= 0 && oS === 0 && oE === 0) { if(window.sysAlert) window.sysAlert('Błąd', 'Wprowadź chociaż jedną kwotę utargu lub stan licznika!', 'error'); return; }
     let distTotal = 0; if (oE > 0 && oS > 0 && oE >= oS) { distTotal = oE - oS; window.db.drv.odo = oE; }
-    let emptyK = distTotal > pk ? (distTotal - pk) : 0;
-    let taxRate = (d.cfg && d.cfg.tax) ? d.cfg.tax : 0;
-    let fuelPx = (d.cfg && d.cfg.fuelPx) ? d.cfg.fuelPx : 0;
-    let ePct = (d.cfg && d.cfg.eType === 'pct') ? (d.cfg.ePct || 0) : 0;
     
-    let tax = sumV * taxRate; let pFee = isPct ? sumV * ePct : 0; let fc = distTotal * fuelPx; 
+    let emptyK = distTotal > pk ? (distTotal - pk) : 0;
+    let taxRate = (d.cfg && d.cfg.tax) ? parseFloat(d.cfg.tax) : 0;
+    let fuelPx = (d.cfg && d.cfg.fuelPx) ? parseFloat(d.cfg.fuelPx) : 0;
+    let ePct = (d.cfg && d.cfg.eType === 'pct') ? (parseFloat(d.cfg.ePct) || 0) : 0;
+    
+    let tax = sumV * taxRate; let pFee = sumV * ePct; let fc = distTotal * fuelPx; 
     let n = sumV - fc - tax - pFee - cf - vf;
     
     let periodStr = dFrom === dTo ? dFrom : (dFrom + ' do ' + dTo);
@@ -469,7 +473,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             diffMins = Math.floor((aMs % 3600000) / 60000);
         }
 
-        // --- INICJALIZACJA GLOBAL TRACKERA, JEŚLI NIE DZIAŁA ---
+        // AUTO-INICJALIZACJA GLOBAL TRACKERA (Jeśli nie działa, a zmiana trwa)
         if(d.sh && d.sh.on && !d.sh.globalWatchId) {
             window.initGlobalTracker();
         }
@@ -478,11 +482,12 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('<div style="padding:0 15px; margin-top:15px;">');
             
             // ==========================================
-            // MODUŁ CELU DZIENNEGO (SMART GOAL ETA)
+            // MODUŁ CELU DZIENNEGO (SMART GOAL ETA & NETTO)
             // ==========================================
             let isNetto = window.dGoalMode === 'netto';
             let goal = (d.cfg && d.cfg.dailyGoal) ? parseFloat(d.cfg.dailyGoal) : 400;
             
+            // Prawdziwe Netto (Odlicza wszystkie koszty z Ustawień)
             let totalKm = (d.sh.shiftDist || 0) + manualKm;
             let taxRate = (d.cfg && d.cfg.tax) ? parseFloat(d.cfg.tax) : 0;
             let fuelPx = (d.cfg && d.cfg.fuelPx) ? parseFloat(d.cfg.fuelPx) : 0;
@@ -498,11 +503,12 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             let pct = Math.min(Math.max((currProg / goal) * 100, 0), 100);
 
             let etaStr = '--:--';
+            // Przewidywanie działa po co najmniej 15 minutach (0.25h)
             if(activeHrs > 0.25 && currProg > 0 && currProg < goal) { 
                 let mLeft = Math.round(((goal - currProg) / (currProg / activeHrs)) * 60);
                 etaStr = Math.floor(mLeft / 60) + 'h ' + (mLeft % 60) + 'm';
             } else if (currProg >= goal) etaStr = 'Osiągnięto! 🎉';
-            else etaStr = 'Kalibracja AI...';
+            else etaStr = 'Czekam na dane...';
 
             html.push('<div class="glass-card" style="padding:15px 20px; margin-bottom:15px; border-color:rgba(14,165,233,0.3);">');
             html.push('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">');
@@ -515,9 +521,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('<div style="height:10px; background:rgba(0,0,0,0.5); border-radius:5px; border:1px inset rgba(255,255,255,0.05); margin-bottom:12px;"><div style="height:100%; width:'+pct+'%; background:linear-gradient(90deg, #f59e0b, #10b981); border-radius:5px; box-shadow:0 0 10px rgba(16,185,129,0.5); transition:width 0.5s ease;"></div></div>');
             html.push('<div style="display:flex; justify-content:space-between; font-size:0.7rem; font-weight:800;"><span style="color:var(--muted);">EFEKTYWNOŚĆ: '+(activeHrs>0 ? (currProg/activeHrs).toFixed(2) : '0.00')+' zł/h</span><span style="color:#0ea5e9;">ETA DO CELU: '+etaStr+'</span></div></div>');
 
-            // ==========================================
-            // ZWARTY PASEK INFORMACYJNY (W TRASIE)
-            // ==========================================
+            // Zwarty Pasek Informacyjny
             html.push('<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:15px;">');
             html.push('<div class="glass-card" style="padding:12px 10px; text-align:center; border-color:rgba(16,185,129,0.2);"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">UTARG BRUTTO</div><div style="font-size:1.2rem; font-weight:900; color:#10b981;">'+Number(g).toFixed(2)+' zł</div></div>');
             html.push('<div class="glass-card" style="padding:12px 10px; text-align:center; border-color:rgba(14,165,233,0.2);"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">CZAS ZMIANY</div><div style="font-size:1.2rem; font-weight:900; color:#0ea5e9;">'+diffHrs+'h '+diffMins+'m</div></div>');
@@ -529,9 +533,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('<button style="flex:1; padding:14px; border-radius:14px; font-weight:800; font-size:0.8rem; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);" onclick="if(window.openEndShiftModal) window.openEndShiftModal()">🔴 ZAKOŃCZ ZMIANĘ</button>');
             html.push('</div>');
             
-            // ==========================================
             // MODUŁ GPS (LIVE TAKSOMETR MULTITARYFOWY)
-            // ==========================================
             if(d.liveRideStart) {
                 let cTime = '00:00'; 
                 let startPrice = (d.q && d.q.s) ? d.q.s : 9.0;
@@ -546,36 +548,36 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 html.push('<div style="display:flex; align-items:baseline; justify-content:center; gap:6px;"><span id="live-ride-price" style="font-size:4.2rem; font-weight:900; color:#10b981; font-family:monospace; line-height:1; text-shadow:0 0 25px rgba(16,185,129,0.4);">'+startPrice.toFixed(2)+'</span><span style="font-size:1.4rem; color:rgba(255,255,255,0.3);">zł</span></div></div>');
 
                 html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">');
-                html.push('<div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center;"><span style="font-size:0.6rem; color:var(--muted); display:block;">DYSTANS</span><strong id="live-ride-dist" style="font-size:1.5rem; color:#fff;">0.00</strong></div>');
-                html.push('<div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center; display:flex; align-items:center; justify-content:center;"><button class="btn-taryfa" style="color: '+tColor+'; border: 1px solid '+tColor+'; text-shadow: 0 0 10px rgba(255,255,255,0.2);" onclick="window.toggleLiveTariff()">🔄 TARYFA: ' + activeTariff.toUpperCase() + '</button></div></div>');
+                html.push('<div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center;"><span style="font-size:0.6rem; color:var(--muted); display:block;">DYSTANS (GPS)</span><strong id="live-ride-dist" style="font-size:1.5rem; color:#fff;">0.00</strong></div>');
+                html.push('<div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center; display:flex; align-items:center; justify-content:center;"><button class="btn-taryfa" style="color: '+tColor+'; border: 1px solid '+tColor+'; text-shadow: 0 0 10px rgba(255,255,255,0.2);" onclick="if(window.toggleLiveTariff) window.toggleLiveTariff()">🔄 TARYFA: ' + activeTariff.toUpperCase() + '</button></div></div>');
 
                 html.push('<button style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; font-size: 0.95rem; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); cursor: pointer; outline:none;" onclick="if(window.stopLiveRide) window.stopLiveRide()">🛑 ZAKOŃCZ KURS</button></div>');
             } else {
-                html.push('<button style="width:100%; padding:18px; border-radius:16px; margin-bottom:15px; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-weight:900; border:none;" onclick="window.startLiveRide()">🛰️ ROZPOCZNIJ KURS (GPS)</button>');
+                html.push('<button style="width:100%; padding:18px; border-radius:16px; margin-bottom:15px; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(16,185,129,0.3);" onclick="window.startLiveRide()">🛰️ ROZPOCZNIJ KURS (GPS)</button>');
             }
+            
+            let autoM = d.sh.tempAutoMins !== undefined ? d.sh.tempAutoMins : '';
+            let autoK = d.sh.tempAutoKm !== undefined ? d.sh.tempAutoKm : '';
+            let autoP = d.sh.tempAutoPrice !== undefined ? d.sh.tempAutoPrice : '';
+            let isHighlight = autoM !== '' ? 'border-color:#10b981; color:#10b981;' : '';
+            d.sh.tempAutoMins = undefined; d.sh.tempAutoKm = undefined; d.sh.tempAutoPrice = undefined;
 
-            // ==========================================
-            // KREATOR KURSU
-            // ==========================================
-            let autoM = d.sh.tempAutoMins || '';
-            let autoK = d.sh.tempAutoKm || '';
-            let autoP = d.sh.tempAutoPrice || '';
-            html.push('<div class="glass-card">');
+            // KREATOR
+            html.push('<div class="glass-card" style="padding: 20px 15px; margin-bottom: 20px;">');
             html.push('<div style="font-size: 0.7rem; color: #0ea5e9; font-weight: 900; text-transform: uppercase; margin-bottom: 12px; text-align: center;">Dodaj Kurs</div>');
-            html.push('<div style="display:flex; overflow-x:auto; margin-bottom:10px;">'+ch1+'</div>');
+            html.push('<div style="display:flex; overflow-x:auto; padding-bottom:5px; margin-bottom:5px; white-space:nowrap;">'+ch1+'</div>');
             html.push(otherSrcHtml);
-            html.push('<div style="display:flex; overflow-x:auto; margin-bottom:15px;">'+ch2+'</div>');
+            html.push('<div style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom:15px; white-space:nowrap;">'+ch2+'</div>');
+            
             html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">');
             html.push('<div style="grid-column: span 2; background:rgba(0,0,0,0.6); border-radius:14px; padding:15px; display:flex; justify-content:center; align-items:center; border:1px inset rgba(255,255,255,0.05);"><input type="number" id="dt-v" placeholder="0.00" value="'+autoP+'" style="background:transparent; border:none; color:#0ea5e9; font-size:2.8rem; font-weight:900; text-align:center; outline:none; width:150px;"><span style="font-size:1.2rem; color:var(--muted); font-weight:700;">zł</span></div>');
-            html.push('<div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px;">CZAS (MIN)</label><input type="number" id="dt-m" placeholder="0" value="'+autoM+'" class="compact-inp"></div>');
-            html.push('<div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px;">DYSTANS (KM)</label><input type="number" step="0.1" id="dt-k" placeholder="0.0" value="'+autoK+'" class="compact-inp"></div>');
+            html.push('<div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px;">CZAS (MIN)</label><input type="number" id="dt-m" placeholder="0" value="'+autoM+'" class="compact-inp" style="'+isHighlight+'"></div>');
+            html.push('<div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px;">DYSTANS (KM)</label><input type="number" step="0.1" id="dt-k" placeholder="0.0" value="'+autoK+'" class="compact-inp" style="'+isHighlight+'"></div>');
             html.push('</div>');
             html.push('<div class="inp-group" style="margin-bottom:15px;"><select id="dt-cid" class="compact-inp" style="appearance:none;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select></div>');
             html.push('<button style="width:100%; padding:16px; border-radius:14px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); outline:none;" onclick="if(window.dAddT) window.dAddT()">ZAPISZ KURS</button></div>');
             
-            // ==========================================
-            // DZIENNIK ZAROBKÓW
-            // ==========================================
+            // DZIENNIK
             html.push('<div style="margin: 30px 15px 10px 15px; text-align: center;"><span style="font-size:0.7rem; color:var(--muted); font-weight:900; text-transform:uppercase;">DZIENNIK ZAROBKÓW</span></div>');
             let trsList = d.sh.tr || [];
             if(trsList.length > 0) {
@@ -622,8 +624,9 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         
         appContainer.innerHTML = html.join('') + '<div style="height:150px;"></div>' + nav;
 
+        // --- AUTO WZNOWIENIE (Jeśli strona była odświeżona podczas kursu) ---
         if (d.liveRideStart && (!d.sh || !d.sh.rWS)) {
-            if(!window.liveRideTimer) window.startLiveRide(); // Auto wznawianie z satelity!
+            if (!window.liveRideTimer) window.resumeLiveRide();
             setTimeout(window.updateLiveRideUI, 50);
         }
     } catch(err) { console.error(err); }
