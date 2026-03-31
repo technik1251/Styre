@@ -1,10 +1,35 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Główny Panel (Terminal) i GPS
+// PLIK: taxi_tab_term.js - Główny Panel (Terminal), GPS i Dodawanie Kursów
 // ==========================================
 
-// --- SILNIK MATEMATYCZNY GPS (Krzywizna Ziemi - Wzór Haversine) ---
+// --- BEZPIECZNE FUNKCJE POMOCNICZE ---
+window.dTC = function(type, val) {
+    if(type === 's') window.dTSrc = val;
+    if(type === 'p') window.dTPay = val;
+    if(typeof window.render === 'function') window.render();
+};
+
+window.dStartS = function() {
+    let el = document.getElementById('ds-o');
+    if(!el || el.value === '') { 
+        if(window.sysAlert) window.sysAlert('Błąd', 'Wpisz aktualny stan licznika (KM).', 'error'); 
+        return; 
+    }
+    let o = parseFloat(el.value);
+    if(isNaN(o) || o <= 0) { 
+        if(window.sysAlert) window.sysAlert('Błąd', 'Stan licznika musi być poprawną liczbą!', 'error'); 
+        return; 
+    }
+    if(!window.db.drv) window.db.drv = {};
+    window.db.drv.odo = o;
+    window.db.drv.sh = {on:true, o:o, t:Date.now(), shiftStart:Date.now(), sPT:0, sPS:null, rWT:0, rWS:null, tr:[]};
+    window.db.drv.liveRideStart = null;
+    if(typeof window.save === 'function') window.save(); 
+    if(typeof window.render === 'function') window.render();
+};
+
 window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
-    let R = 6371; // Promień Ziemi w km
+    let R = 6371; 
     let dLat = (lat2 - lat1) * Math.PI / 180;
     let dLon = (lon2 - lon1) * Math.PI / 180;
     let a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -14,7 +39,6 @@ window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
     return R * c;
 };
 
-// --- SILNIK AKTUALIZACJI ZEGARA NA ŻYWO ---
 window.updateLiveRideUI = function() {
     if (!window.db || !window.db.drv || !window.db.drv.liveRideStart) return;
     let d = window.db.drv;
@@ -30,121 +54,14 @@ window.updateLiveRideUI = function() {
         let totalSecs = Math.floor(diffMs / 1000);
         let m = Math.floor(totalSecs / 60);
         let s = totalSecs % 60;
-        elTime.innerHTML = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+        elTime.innerHTML = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
     }
     if (elDist && d.sh.gpsDist !== undefined) {
         elDist.innerHTML = Number(d.sh.gpsDist).toFixed(2);
     }
 };
 
-// --- SILNIK KSIĘGOWANIA ZBIORCZEGO (OFFLINE) ---
-window.dAddOfflineWeekly = function() {
-    let dFrom = document.getElementById('dw-d-from') ? document.getElementById('dw-d-from').value : '';
-    let dTo = document.getElementById('dw-d-to') ? document.getElementById('dw-d-to').value : '';
-    
-    let oS = parseFloat(document.getElementById('dw-odo-s') ? document.getElementById('dw-odo-s').value : 0) || 0;
-    let oE = parseFloat(document.getElementById('dw-odo-e') ? document.getElementById('dw-odo-e').value : 0) || 0;
-    
-    let pk = parseFloat(document.getElementById('dw-pk') ? document.getElementById('dw-pk').value : 0) || 0; 
-    let h = parseFloat(document.getElementById('dw-h') ? document.getElementById('dw-h').value : 0) || 0; 
-    
-    let d = window.db.drv;
-    let plat = d.plat;
-    
-    let sumV = 0;
-    let trList = [];
-    
-    let rDateStr = dTo || (window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0]);
-    let rDateObj = new Date(rDateStr);
-    rDateObj.setHours(12,0,0,0);
-    
-    let cf = 0, vf = 0;
-    
-    if (plat === 'apps') {
-        let vUber = parseFloat(document.getElementById('dw-v-uber').value) || 0;
-        let vBolt = parseFloat(document.getElementById('dw-v-bolt').value) || 0;
-        let vFree = parseFloat(document.getElementById('dw-v-freenow').value) || 0;
-        let vInna = parseFloat(document.getElementById('dw-v-inna').value) || 0;
-        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
-        
-        if (vUber > 0) trList.push({id: Date.now()+1, p: 'Aplikacja', s: 'Uber', v: vUber, k: 0, time: '--:--'});
-        if (vBolt > 0) trList.push({id: Date.now()+2, p: 'Aplikacja', s: 'Bolt', v: vBolt, k: 0, time: '--:--'});
-        if (vFree > 0) trList.push({id: Date.now()+3, p: 'Aplikacja', s: 'FreeNow', v: vFree, k: 0, time: '--:--'});
-        if (vInna > 0) trList.push({id: Date.now()+4, p: 'Aplikacja', s: 'Inna', v: vInna, k: 0, time: '--:--'});
-        if (vCash > 0) trList.push({id: Date.now()+5, p: 'Gotówka', s: 'Aplikacja', v: vCash, k: 0, time: '--:--'});
-        
-        sumV = vUber + vBolt + vFree + vInna + vCash;
-    } else {
-        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
-        let vKarta = parseFloat(document.getElementById('dw-v-karta').value) || 0;
-        let vVouch = parseFloat(document.getElementById('dw-v-voucher').value) || 0;
-        
-        if (vCash > 0) trList.push({id: Date.now()+1, p: 'Gotówka', s: 'Postój/Centrala', v: vCash, k: 0, time: '--:--'});
-        if (vKarta > 0) trList.push({id: Date.now()+2, p: 'Karta', s: 'Terminal', v: vKarta, k: 0, time: '--:--'});
-        if (vVouch > 0) trList.push({id: Date.now()+3, p: 'Voucher', s: 'Korporacja', v: vVouch, k: 0, time: '--:--'});
-        
-        sumV = vCash + vKarta + vVouch;
-        
-        cf = vKarta * (d.cfg.cardF || 0);
-        vf = vVouch * (d.cfg.voucherF || 0);
-    }
-    
-    if (sumV <= 0 && oS === 0 && oE === 0) {
-        if(window.sysAlert) window.sysAlert("Błąd", "Wprowadź chociaż jedną kwotę utargu lub stan licznika!", "error");
-        return;
-    }
-    
-    let distTotal = 0;
-    if (oE > 0 && oS > 0 && oE >= oS) {
-        distTotal = oE - oS;
-        window.db.drv.odo = oE; 
-    }
-    
-    let emptyK = distTotal > pk ? (distTotal - pk) : 0;
-    
-    let taxRate = (d.cfg && d.cfg.tax) ? d.cfg.tax : 0;
-    let fuelPx = (d.cfg && d.cfg.fuelPx) ? d.cfg.fuelPx : 0;
-    let isPct = (d.cfg && d.cfg.eType === 'pct');
-    let ePct = (d.cfg && d.cfg.ePct) ? d.cfg.ePct : 0;
-    
-    let tax = sumV * taxRate;
-    let pFee = isPct ? sumV * ePct : 0;
-    let fc = distTotal * fuelPx; 
-    
-    let n = sumV - fc - tax - pFee - cf - vf;
-    
-    let periodStr = dFrom === dTo ? dFrom : (dFrom + ' do ' + dTo);
-    if (!periodStr) periodStr = window.getLocalYMD ? window.getLocalYMD() : 'Zaległa Zmiana';
-    
-    if (!window.db.drv.h) window.db.drv.h = [];
-    window.db.drv.h.push({
-        id: Date.now(),
-        dt: periodStr,
-        rD: rDateObj.toISOString(),
-        g: sumV,
-        n: n,
-        k: distTotal,
-        pk: pk,
-        emptyK: emptyK,
-        hW: h,
-        fc: fc,
-        tx: tax,
-        pF: pFee,
-        cF: cf,
-        vF: vf,
-        tr: trList
-    });
-    
-    window.db.drv.h.sort((a,b) => new Date(b.rD) - new Date(a.rD));
-    window.dShowOff = false;
-    
-    if(typeof window.save === 'function') window.save();
-    if(typeof window.render === 'function') window.render();
-    if(window.sysAlert) window.sysAlert("Zaksięgowano!", "Rozliczenie dodane. Puste kilometry zostały wyliczone.", "success");
-};
-
-// --- LOGIKA STOPERA I GPS ---
-window.startLiveRide = window.startLiveRide || function() {
+window.startLiveRide = function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
         window.db.drv.liveRideStart = Date.now();
         window.db.drv.sh.rWS = null;
@@ -152,7 +69,7 @@ window.startLiveRide = window.startLiveRide || function() {
         window.db.drv.sh.gpsDist = 0;
         window.db.drv.sh.lastPos = null;
 
-        if ("geolocation" in navigator) {
+        if ('geolocation' in navigator) {
             window.db.drv.sh.watchId = navigator.geolocation.watchPosition(function(position) {
                 if (window.db.drv.sh.rWS !== null) return; 
                 
@@ -168,7 +85,7 @@ window.startLiveRide = window.startLiveRide || function() {
                 }
                 window.db.drv.sh.lastPos = {lat: lat, lng: lng};
             }, function(error) {
-                console.error("GPS Error", error);
+                console.error('GPS Error', error);
             }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 });
         }
 
@@ -180,7 +97,7 @@ window.startLiveRide = window.startLiveRide || function() {
     }
 };
 
-window.stopLiveRide = window.stopLiveRide || function() {
+window.stopLiveRide = function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
         if (window.db.drv.sh.watchId) {
             navigator.geolocation.clearWatch(window.db.drv.sh.watchId);
@@ -207,12 +124,12 @@ window.stopLiveRide = window.stopLiveRide || function() {
         if(typeof window.render === 'function') window.render();
 
         setTimeout(function() {
-            if(window.sysAlert) window.sysAlert("Trasa Zakończona!", "Czas i Dystans z GPS wpisane do formularza.", "success");
+            if(window.sysAlert) window.sysAlert('Trasa Zakończona!', 'Czas i Dystans z GPS zostały automatycznie wpisane. Podaj kwotę utargu i zapisz kurs.', 'success');
         }, 100);
     }
 };
 
-window.toggleRideWait = window.toggleRideWait || function() {
+window.toggleRideWait = function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
         if(window.db.drv.sh.rWS) {
             window.db.drv.sh.rWT += (Date.now() - window.db.drv.sh.rWS);
@@ -226,7 +143,7 @@ window.toggleRideWait = window.toggleRideWait || function() {
     }
 };
 
-window.toggleShiftPause = window.toggleShiftPause || function() {
+window.toggleShiftPause = function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
         if(window.db.drv.sh.sPS) {
             window.db.drv.sh.sPT += (Date.now() - window.db.drv.sh.sPS);
@@ -239,20 +156,117 @@ window.toggleShiftPause = window.toggleShiftPause || function() {
     }
 };
 
-// --- GŁÓWNY RENDER PANELU (TAB: TERM) ---
+window.dAddOfflineWeekly = function() {
+    let dFrom = document.getElementById('dw-d-from') ? document.getElementById('dw-d-from').value : '';
+    let dTo = document.getElementById('dw-d-to') ? document.getElementById('dw-d-to').value : '';
+    let oS = parseFloat(document.getElementById('dw-odo-s') ? document.getElementById('dw-odo-s').value : 0) || 0;
+    let oE = parseFloat(document.getElementById('dw-odo-e') ? document.getElementById('dw-odo-e').value : 0) || 0;
+    let pk = parseFloat(document.getElementById('dw-pk') ? document.getElementById('dw-pk').value : 0) || 0; 
+    let h = parseFloat(document.getElementById('dw-h') ? document.getElementById('dw-h').value : 0) || 0; 
+    
+    let d = window.db.drv;
+    let plat = d.plat;
+    let sumV = 0;
+    let trList = [];
+    
+    let rDateStr = dTo || (window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0]);
+    let rDateObj = new Date(rDateStr);
+    rDateObj.setHours(12,0,0,0);
+    
+    let cf = 0, vf = 0;
+    
+    if (plat === 'apps') {
+        let vUber = parseFloat(document.getElementById('dw-v-uber').value) || 0;
+        let vBolt = parseFloat(document.getElementById('dw-v-bolt').value) || 0;
+        let vFree = parseFloat(document.getElementById('dw-v-freenow').value) || 0;
+        let vInna = parseFloat(document.getElementById('dw-v-inna').value) || 0;
+        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
+        
+        if (vUber > 0) trList.push({id: Date.now()+1, p: 'Aplikacja', s: 'Uber', v: vUber, k: 0, time: '--:--'});
+        if (vBolt > 0) trList.push({id: Date.now()+2, p: 'Aplikacja', s: 'Bolt', v: vBolt, k: 0, time: '--:--'});
+        if (vFree > 0) trList.push({id: Date.now()+3, p: 'Aplikacja', s: 'FreeNow', v: vFree, k: 0, time: '--:--'});
+        if (vInna > 0) trList.push({id: Date.now()+4, p: 'Aplikacja', s: 'Inna', v: vInna, k: 0, time: '--:--'});
+        if (vCash > 0) trList.push({id: Date.now()+5, p: 'Gotówka', s: 'Aplikacja', v: vCash, k: 0, time: '--:--'});
+        sumV = vUber + vBolt + vFree + vInna + vCash;
+    } else {
+        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
+        let vKarta = parseFloat(document.getElementById('dw-v-karta').value) || 0;
+        let vVouch = parseFloat(document.getElementById('dw-v-voucher').value) || 0;
+        
+        if (vCash > 0) trList.push({id: Date.now()+1, p: 'Gotówka', s: 'Postój/Centrala', v: vCash, k: 0, time: '--:--'});
+        if (vKarta > 0) trList.push({id: Date.now()+2, p: 'Karta', s: 'Terminal', v: vKarta, k: 0, time: '--:--'});
+        if (vVouch > 0) trList.push({id: Date.now()+3, p: 'Voucher', s: 'Korporacja', v: vVouch, k: 0, time: '--:--'});
+        sumV = vCash + vKarta + vVouch;
+        cf = vKarta * (d.cfg.cardF || 0);
+        vf = vVouch * (d.cfg.voucherF || 0);
+    }
+    
+    if (sumV <= 0 && oS === 0 && oE === 0) {
+        if(window.sysAlert) window.sysAlert('Błąd', 'Wprowadź chociaż jedną kwotę utargu lub stan licznika!', 'error');
+        return;
+    }
+    
+    let distTotal = 0;
+    if (oE > 0 && oS > 0 && oE >= oS) {
+        distTotal = oE - oS;
+        window.db.drv.odo = oE; 
+    }
+    
+    let emptyK = distTotal > pk ? (distTotal - pk) : 0;
+    let taxRate = (d.cfg && d.cfg.tax) ? d.cfg.tax : 0;
+    let fuelPx = (d.cfg && d.cfg.fuelPx) ? d.cfg.fuelPx : 0;
+    let isPct = (d.cfg && d.cfg.eType === 'pct');
+    let ePct = (d.cfg && d.cfg.ePct) ? d.cfg.ePct : 0;
+    
+    let tax = sumV * taxRate;
+    let pFee = isPct ? sumV * ePct : 0;
+    let fc = distTotal * fuelPx; 
+    let n = sumV - fc - tax - pFee - cf - vf;
+    
+    let periodStr = dFrom === dTo ? dFrom : (dFrom + ' do ' + dTo);
+    if (!periodStr) periodStr = window.getLocalYMD ? window.getLocalYMD() : 'Zaległa Zmiana';
+    
+    if (!window.db.drv.h) window.db.drv.h = [];
+    window.db.drv.h.push({
+        id: Date.now(), dt: periodStr, rD: rDateObj.toISOString(),
+        g: sumV, n: n, k: distTotal, pk: pk, emptyK: emptyK,
+        hW: h, fc: fc, tx: tax, pF: pFee, cF: cf, vF: vf, tr: trList
+    });
+    
+    window.db.drv.h.sort(function(a,b) { return new Date(b.rD) - new Date(a.rD); });
+    window.dShowOff = false;
+    
+    if(typeof window.save === 'function') window.save();
+    if(typeof window.render === 'function') window.render();
+    if(window.sysAlert) window.sysAlert('Zaksięgowano!', 'Rozliczenie dodane do P&L.', 'success');
+};
+
+
+// --- RENDER GŁÓWNY (UI) ---
 window.rDrvTerm = function(d, t, nav, hdr) {
     try {
         let appContainer = document.getElementById('app');
         if(!appContainer) return;
         
-        let act = ''; 
+        let html = [];
+        html.push(hdr);
 
-        let animStyle = '<style>' +
-            '@keyframes radarPulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }' +
-            '@keyframes waitPulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(245, 158, 11, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }' +
-        '</style>';
+        html.push('<style>');
+        html.push('@keyframes radarPulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }');
+        html.push('@keyframes waitPulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(245, 158, 11, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }');
+        html.push('</style>');
 
-        act += animStyle;
+        let panelProBanner = '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(window.sysAlert) window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
+            '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+            '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+            '<div style="display: flex; align-items: center; gap: 15px;">' +
+                '<div style="font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(217,70,239,0.4));">🚕✨</div>' +
+                '<div style="text-align: left;">' +
+                    '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Usługi Taxi</h4>' +
+                    '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Automatyczne Zlecenia:</b> Kursy wpadają same.<br>✅ <b>Pełen GPS w Tle:</b> Prawdziwy Tracker tras!</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
 
         if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; }
         if(!window.dTPay) { window.dTPay = d.plat === 'apps' ? 'Aplikacja' : 'Gotówka'; }
@@ -274,7 +288,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                   '<div class="chip '+(window.dTSrc==='Prywatny'?'active':'')+'" style="'+chipStyle+(window.dTSrc==='Prywatny'?chipActBlue:chipIdle)+'" onclick="window.dTC(\'s\',\'Prywatny\')">Prywatny</div>';
         }
         
-        let otherSrcHtml = (d.plat === 'apps' && window.dTSrc === 'Inna') ? '<div class="inp-group" style="margin-top:10px;"><input type="text" id="dt-other-src" placeholder="Wpisz nazwę aplikacji..." style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:14px; color:#fff; padding:14px; font-size:0.85rem; width:100%; box-sizing:border-box;" value="'+(window.dOtherSrc||'')+'" onchange="window.dOtherSrc=this.value"></div>' : '';
+        let otherSrcHtml = (d.plat === 'apps' && window.dTSrc === 'Inna') ? '<div class="inp-group" style="margin-top:10px;"><input type="text" id="dt-other-src" placeholder="Nazwa aplikacji..." style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:14px; color:#fff; padding:14px; font-size:0.85rem; width:100%; box-sizing:border-box;" value="'+(window.dOtherSrc||'')+'" onchange="window.dOtherSrc=this.value"></div>' : '';
         
         let ch2 = '';
         if(d.plat === 'apps') {
@@ -293,16 +307,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             }
         }
         
-        let now = new Date();
-        let dim = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-        let getDaily = function(val, p, dim) { let v = parseFloat(val)||0; if(p==='week') return v/7; if(p==='year') return v/365; return v/dim; };
-        
-        let cfg = d.cfg || {};
-        let dailyFix = getDaily(cfg.bC, cfg.bPeriod, dim) + getDaily(cfg.iC, cfg.iPeriod, dim) + getDaily(cfg.cC, cfg.cType, dim) + getDaily(cfg.uC, cfg.uType, dim) + (cfg.eType === 'flat' ? getDaily(cfg.eC, cfg.ePeriod, dim) : 0);
-        
         let g=0, sumCash=0, sumCard=0, sumVouch=0, sumApp=0, sumUber=0, sumBolt=0;
-        let n = 0; 
-        
         if(d.sh && d.sh.on && d.sh.tr) {
             for(let i=0; i<d.sh.tr.length; i++) {
                 let x = d.sh.tr[i];
@@ -310,8 +315,8 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 g += val; 
                 
                 if(x.p === 'Gotówka') sumCash += val;
-                else if(x.p === 'Karta') { sumCard += val; }
-                else if(x.p === 'Voucher') { sumVouch += val; }
+                else if(x.p === 'Karta') sumCard += val;
+                else if(x.p === 'Voucher') sumVouch += val;
                 else {
                     sumApp += val;
                     if(x.s === 'Uber') sumUber += val;
@@ -320,15 +325,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             }
         }
 
-        let tax = g * (cfg.tax || 0);
-        let pFee = cfg.eType === 'pct' ? g * (cfg.ePct || 0) : 0;
-        n = g - tax - pFee - dailyFix;
-        
         let diffHrs = 0, diffMins = 0;
-        let showGross = window.db.drv.panelMode === 'gross';
-        let displayVal = showGross ? g : n;
-        let displayLabel = showGross ? 'PRZYCHÓD BRUTTO' : 'ZYSK NETTO (SZACUNEK)';
-        
         if(d.sh && d.sh.shiftStart) {
             let activeShiftMs = Date.now() - d.sh.shiftStart;
             if(d.sh.sPT) activeShiftMs -= d.sh.sPT;
@@ -336,57 +333,35 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             diffMins = Math.floor((activeShiftMs%3600000)/60000);
         }
 
-        let panelProBanner = '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
-            '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
-            '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
-            '<div style="display: flex; align-items: center; gap: 15px;">' +
-                '<div style="font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(217,70,239,0.4));">🚕✨</div>' +
-                '<div style="text-align: left;">' +
-                    '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Usługi Taxi</h4>' +
-                    '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Automatyczne Zlecenia:</b> Kursy wpadają same.<br>✅ <b>Pełen GPS w Tle:</b> Prawdziwy Tracker tras!</div>' +
-                '</div>' +
-            '</div>' +
-        '</div>';
-
         if (d.sh && d.sh.on) {
-            act += '<div style="background: linear-gradient(145deg, #13131a, #0a0a0f); border: 1px solid rgba(255,255,255,0.05); border-radius: 24px; padding: 25px 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); margin-bottom: 20px; position: relative; overflow: hidden;">' +
-                '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">' +
-                    '<div style="display:flex; align-items:center; gap: 8px;">' +
-                        '<div style="width: 10px; height: 10px; border-radius: 50%; background: '+(d.sh.sPS ? '#f59e0b' : '#10b981')+'; box-shadow: 0 0 10px '+(d.sh.sPS ? 'rgba(245,158,11,0.5)' : 'rgba(16,185,129,0.5)')+';"></div>' +
-                        '<span style="font-size: 0.7rem; font-weight: 800; color: #a1a1aa; text-transform: uppercase; letter-spacing: 1px;">'+(d.sh.sPS ? 'Pauza' : 'Zalogowany')+'</span>' +
-                    '</div>' +
-                    '<div style="font-size: 0.85rem; font-weight: 800; color: #0ea5e9; background: rgba(14,165,233,0.1); padding: 6px 12px; border-radius: 12px; border: 1px solid rgba(14,165,233,0.2);">⏱️ '+diffHrs+'h '+diffMins+'m</div>' +
-                '</div>' +
-                '<div style="text-align: center; margin-bottom: 25px; cursor:pointer;" onclick="window.db.drv.panelMode = window.db.drv.panelMode === \'gross\' ? \'net\' : \'gross\'; window.render()">' +
-                    '<div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px; display:flex; justify-content:center; align-items:center; gap:6px;">' +
-                        displayLabel + ' <span style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:6px; font-size:0.55rem;">🔁</span>' +
-                    '</div>' +
-                    '<div style="font-size: 3.5rem; font-weight: 900; color: '+(displayVal>=0?'#10b981':'#ef4444')+'; letter-spacing: -2px; line-height: 1; text-shadow: 0 0 20px '+(displayVal>=0?'rgba(16,185,129,0.3)':'rgba(239,68,68,0.3)')+';">' + Number(displayVal||0).toFixed(2) + ' zł</div>' +
-                '</div>';
+            html.push('<div style="background: linear-gradient(145deg, #13131a, #0a0a0f); border: 1px solid rgba(255,255,255,0.05); border-radius: 24px; padding: 25px 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); margin: 0 15px 20px 15px; position: relative; overflow: hidden;">');
+            html.push('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">');
+            html.push('<div style="display:flex; align-items:center; gap: 8px;">');
+            html.push('<div style="width: 10px; height: 10px; border-radius: 50%; background: '+(d.sh.sPS ? '#f59e0b' : '#10b981')+'; box-shadow: 0 0 10px '+(d.sh.sPS ? 'rgba(245,158,11,0.5)' : 'rgba(16,185,129,0.5)')+';"></div>');
+            html.push('<span style="font-size: 0.7rem; font-weight: 800; color: #a1a1aa; text-transform: uppercase; letter-spacing: 1px;">'+(d.sh.sPS ? 'Pauza' : 'Zalogowany')+'</span></div>');
+            html.push('<div style="font-size: 0.85rem; font-weight: 800; color: #0ea5e9; background: rgba(14,165,233,0.1); padding: 6px 12px; border-radius: 12px; border: 1px solid rgba(14,165,233,0.2);">⏱️ '+diffHrs+'h '+diffMins+'m</div></div>');
+            html.push('<div style="text-align: center; margin-bottom: 25px;">');
+            html.push('<div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px;">PRZYCHÓD BRUTTO ZMIANY</div>');
+            html.push('<div style="font-size: 3.5rem; font-weight: 900; color: #10b981; letter-spacing: -2px; line-height: 1; text-shadow: 0 0 20px rgba(16,185,129,0.3);">'+Number(g||0).toFixed(2)+' zł</div></div>');
             
             if(d.plat === 'apps') {
-                act += '<div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 25px;">' +
-                    '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #10b981;">💵 '+Number(sumCash).toFixed(2)+'</div>' +
-                    '<div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #fff;">Uber: '+Number(sumUber).toFixed(2)+'</div>' +
-                    '<div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #fff;">Bolt: '+Number(sumBolt).toFixed(2)+'</div>' +
-                '</div>';
+                html.push('<div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 25px;">');
+                html.push('<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #10b981;">💵 '+Number(sumCash).toFixed(2)+'</div>');
+                html.push('<div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #fff;">Uber: '+Number(sumUber).toFixed(2)+'</div>');
+                html.push('<div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #fff;">Bolt: '+Number(sumBolt).toFixed(2)+'</div></div>');
             } else {
-                act += '<div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 25px;">' +
-                    '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #10b981;">💵 '+Number(sumCash).toFixed(2)+'</div>' +
-                    '<div style="background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #0ea5e9;">💳 '+Number(sumCard).toFixed(2)+'</div>' +
-                    '<div style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #a855f7;">🎫 '+Number(sumVouch).toFixed(2)+'</div>' +
-                '</div>';
+                html.push('<div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 25px;">');
+                html.push('<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #10b981;">💵 '+Number(sumCash).toFixed(2)+'</div>');
+                html.push('<div style="background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #0ea5e9;">💳 '+Number(sumCard).toFixed(2)+'</div>');
+                html.push('<div style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2); padding: 8px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; color: #a855f7;">🎫 '+Number(sumVouch).toFixed(2)+'</div></div>');
             }
 
-            act += '<div style="display: flex; gap: 12px;">' +
-                '<button style="flex: 1; background: '+(d.sh.sPS ? '#10b981' : 'rgba(255,255,255,0.05)')+'; color: '+(d.sh.sPS ? '#000' : '#fff')+'; border: 1px solid '+(d.sh.sPS ? '#10b981' : 'rgba(255,255,255,0.1)')+'; padding: 16px; border-radius: 18px; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; box-shadow: '+(d.sh.sPS ? '0 4px 15px rgba(16,185,129,0.3)' : 'none')+'; outline:none;" onclick="if(typeof window.toggleShiftPause===\'function\') window.toggleShiftPause()">' +
-                    (d.sh.sPS ? '▶ WZNÓW PRACĘ' : '☕ PRZERWA') +
-                '</button>' +
-                '<button style="flex: 1; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); padding: 16px; border-radius: 18px; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; outline:none;" onclick="if(typeof window.openEndShiftModal===\'function\') window.openEndShiftModal()">' +
-                    '🔴 ZAKOŃCZ' +
-                '</button>' +
-            '</div></div>';
+            html.push('<div style="display: flex; gap: 12px;">');
+            html.push('<button style="flex: 1; background: '+(d.sh.sPS ? '#10b981' : 'rgba(255,255,255,0.05)')+'; color: '+(d.sh.sPS ? '#000' : '#fff')+'; border: 1px solid '+(d.sh.sPS ? '#10b981' : 'rgba(255,255,255,0.1)')+'; padding: 16px; border-radius: 18px; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; box-shadow: '+(d.sh.sPS ? '0 4px 15px rgba(16,185,129,0.3)' : 'none')+'; outline:none;" onclick="if(window.toggleShiftPause) window.toggleShiftPause()">'+(d.sh.sPS ? '▶ WZNÓW PRACĘ' : '☕ PRZERWA')+'</button>');
+            html.push('<button style="flex: 1; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); padding: 16px; border-radius: 18px; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; outline:none;" onclick="if(window.openEndShiftModal) window.openEndShiftModal()">🔴 ZAKOŃCZ</button>');
+            html.push('</div></div>');
             
+            // --- KURS W TOKU (PREMIUM PANEL) ---
             if(d.liveRideStart) {
                 let isWaiting = d.sh.rWS !== null;
                 let diffRideMs = Date.now() - d.liveRideStart;
@@ -395,69 +370,70 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 
                 let rMins = Math.floor(diffRideMs/60000);
                 let rSecs = Math.floor((diffRideMs%60000)/1000);
-                let timeFmt = (rMins < 10 ? "0"+rMins : rMins) + ":" + (rSecs < 10 ? "0"+rSecs : rSecs);
+                let timeFmt = (rMins < 10 ? '0'+rMins : rMins) + ':' + (rSecs < 10 ? '0'+rSecs : rSecs);
 
-                act += '<div style="background: linear-gradient(145deg, #09090b, #111116); border: 1px solid '+(isWaiting?'rgba(245,158,11,0.3)':'rgba(16,185,129,0.3)')+'; padding: 25px 20px; border-radius: 24px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position:relative; overflow:hidden;">' +
-                    '<div style="position:absolute; top:-30px; left:50%; transform:translateX(-50%); width:150px; height:150px; background:'+(isWaiting?'rgba(245,158,11,0.1)':'rgba(16,185,129,0.1)')+'; border-radius:50%; filter:blur(40px);"></div>' +
-                    
-                    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; position:relative; z-index:2;">' +
-                        '<div style="display:flex; align-items:center; gap:8px;">' +
-                            '<div style="width:14px; height:14px; border-radius:50%; background:'+(isWaiting?'#f59e0b':'#10b981')+'; animation: '+(isWaiting?'waitPulse':'radarPulse')+' 2s infinite;"></div>' +
-                            '<span style="font-size:0.75rem; font-weight:900; color:'+(isWaiting?'#f59e0b':'#10b981')+'; text-transform:uppercase; letter-spacing:1px;">'+(isWaiting?'Oczekiwanie':'W Trasie')+'</span>' +
-                        '</div>' +
-                        '<div style="font-size:1rem; font-weight:900; color:#fff; font-family:monospace; background:rgba(255,255,255,0.1); padding:6px 12px; border-radius:12px; border:1px inset rgba(255,255,255,0.1);">⏱️ <span id="live-ride-time">'+timeFmt+'</span></div>' +
-                    '</div>' +
+                html.push('<div style="background: rgba(15,15,20,0.8); backdrop-filter: blur(20px); border-radius: 28px; border: 1px solid '+(isWaiting?'rgba(245,158,11,0.4)':'rgba(16,185,129,0.4)')+'; padding: 30px 20px; text-align: center; margin: 0 15px 25px 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; overflow: hidden;">');
+                html.push('<div style="position: absolute; top: -50px; left: 50%; transform: translateX(-50%); width: 200px; height: 200px; background: '+(isWaiting?'rgba(245,158,11,0.15)':'rgba(16,185,129,0.15)')+'; filter: blur(50px); border-radius: 50%; pointer-events: none;"></div>');
+                
+                html.push('<div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; position: relative; z-index: 2;">');
+                html.push('<div style="width: 18px; height: 18px; border-radius: 50%; background: '+(isWaiting?'#f59e0b':'#10b981')+'; box-shadow: 0 0 15px '+(isWaiting?'#f59e0b':'#10b981')+'; animation: '+(isWaiting?'waitPulse':'radarPulse')+' 2s infinite;"></div>');
+                html.push('<h3 style="margin: 0; color: '+(isWaiting?'#f59e0b':'#10b981')+'; font-size: 1.1rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 900;">'+(isWaiting?'Postój':'Kurs Aktywny')+'</h3></div>');
 
-                    '<div style="position:relative; z-index:2; margin: 25px 0;">' +
-                        '<div style="font-size:4rem; font-weight:900; color:#fff; font-family:monospace; text-shadow:0 0 20px '+(isWaiting?'rgba(245,158,11,0.4)':'rgba(16,185,129,0.4)')+'; line-height:1;"><span id="live-ride-dist">'+Number(d.sh.gpsDist||0).toFixed(2)+'</span></div>' +
-                        '<div style="font-size:0.8rem; color:var(--muted); font-weight:800; letter-spacing:2px; text-transform:uppercase; margin-top:5px;">Kilometrów (GPS)</div>' +
-                    '</div>' +
+                html.push('<div style="font-size: 4.5rem; font-weight: 900; color: #fff; font-family: monospace; line-height: 1; margin-bottom: 5px; position: relative; z-index: 2; text-shadow: 0 0 25px '+(isWaiting?'rgba(245,158,11,0.5)':'rgba(16,185,129,0.5)')+';"><span id="live-ride-dist">'+Number(d.sh.gpsDist||0).toFixed(2)+'</span></div>');
+                html.push('<div style="font-size: 0.85rem; color: var(--muted); font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 25px; position: relative; z-index: 2;">KILOMETRÓW (GPS)</div>');
 
-                    '<div style="font-size: 0.6rem; color: rgba(255,255,255,0.3); margin-bottom: 20px; font-weight: 700; text-transform:uppercase;">Ekran musi być włączony, by zliczać trasę</div>' +
+                html.push('<div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 25px; position: relative; z-index: 2;">');
+                html.push('<div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 10px 20px;">');
+                html.push('<span style="font-size: 0.65rem; color: var(--muted); text-transform: uppercase; font-weight: 800; display: block; margin-bottom: 4px;">Czas trwania</span>');
+                html.push('<span id="live-ride-time" style="font-size: 1.3rem; font-weight: 900; color: #0ea5e9; font-family: monospace;">'+timeFmt+'</span></div></div>');
 
-                    '<div style="display:flex; gap:12px; position:relative; z-index:2;">' +
-                        '<button style="flex:1; padding:18px; font-size:0.9rem; border-radius:18px; font-weight:900; letter-spacing:0.5px; background:'+(isWaiting?'#f59e0b':'rgba(245,158,11,0.15)')+'; color:'+(isWaiting?'#000':'#f59e0b')+'; border:none; outline:none; box-shadow:'+(isWaiting?'0 6px 20px rgba(245,158,11,0.4)':'none')+';" onclick="if(typeof window.toggleRideWait===\'function\') window.toggleRideWait()">'+(isWaiting?'▶ WZNÓW':'⏳ POSTÓJ')+'</button>' +
-                        '<button style="flex:1; padding:18px; border-radius:18px; font-size:0.9rem; font-weight:900; letter-spacing:0.5px; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); outline:none;" onclick="if(typeof window.stopLiveRide===\'function\') window.stopLiveRide()">🔴 ZAKOŃCZ</button>' +
-                    '</div></div>';
+                html.push('<div style="display: flex; gap: 15px; position: relative; z-index: 2;">');
+                html.push('<button style="flex: 1; padding: 18px; border-radius: 20px; font-weight: 900; font-size: 0.95rem; letter-spacing: 1px; background: '+(isWaiting?'linear-gradient(135deg, #10b981, #059669)':'rgba(245,158,11,0.15)')+'; color: '+(isWaiting?'#000':'#f59e0b')+'; border: '+(isWaiting?'none':'1px solid rgba(245,158,11,0.3)')+'; outline: none; box-shadow: '+(isWaiting?'0 8px 25px rgba(16,185,129,0.4)':'none')+'; cursor: pointer; transition: all 0.2s;" onclick="if(window.toggleRideWait) window.toggleRideWait()">'+(isWaiting?'▶ WZNÓW':'⏳ POSTÓJ')+'</button>');
+                html.push('<button style="flex: 1; padding: 18px; border-radius: 20px; font-weight: 900; font-size: 0.95rem; letter-spacing: 1px; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); outline: none; cursor: pointer; transition: all 0.2s;" onclick="if(window.stopLiveRide) window.stopLiveRide()">🔴 ZAKOŃCZ</button>');
+                html.push('</div></div>');
             } else {
-                act += '<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:20px; margin-bottom:15px; text-align:center;">' +
-                       '<div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; line-height:1.5;">⚠️ PWA usypia moduł GPS, gdy wyłączysz ekran.<br><span style="color:#d946ef; font-weight:900;">Pełen GPS działający w tle tylko w aplikacji PRO.</span></div>' +
-                       '</div>' +
-                       '<button style="width:100%; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-size:1rem; font-weight:900; letter-spacing:1px; padding:20px; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(16,185,129,0.3); margin-bottom:20px; outline:none; display:flex; align-items:center; justify-content:center; gap:10px;" onclick="if(typeof window.startLiveRide===\'function\') window.startLiveRide()"><span style="font-size:1.4rem;">🛰️</span> ROZPOCZNIJ KURS (GPS)</button>';
+                html.push('<div style="padding:0 15px;">');
+                html.push('<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:20px; margin-bottom:15px; text-align:center;">');
+                html.push('<div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; line-height:1.5;">⚠️ PWA usypia moduł GPS, gdy wyłączysz ekran.<br><span style="color:#d946ef; font-weight:900;">Pełen GPS działający w tle tylko w aplikacji PRO.</span></div></div>');
+                html.push('<button style="width:100%; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-size:1rem; font-weight:900; letter-spacing:1px; padding:20px; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(16,185,129,0.3); margin-bottom:25px; outline:none; display:flex; align-items:center; justify-content:center; gap:10px;" onclick="if(window.startLiveRide) window.startLiveRide()"><span style="font-size:1.4rem;">🛰️</span> ROZPOCZNIJ KURS (GPS)</button>');
+                html.push('</div>');
             }
             
+            // Auto uzupełnianie danych
             let autoM = window.db.drv.sh.tempAutoMins !== undefined ? window.db.drv.sh.tempAutoMins : '';
             let autoK = window.db.drv.sh.tempAutoKm !== undefined ? window.db.drv.sh.tempAutoKm : '';
-            
             let highlightM = autoM !== '' ? 'border-color:#10b981; color:#10b981;' : 'border-color:rgba(255,255,255,0.08); color:#fff;';
             let highlightK = autoK !== '' ? 'border-color:#10b981; color:#10b981;' : 'border-color:rgba(255,255,255,0.08); color:#fff;';
             
             window.db.drv.sh.tempAutoMins = undefined;
             window.db.drv.sh.tempAutoKm = undefined;
 
-            act += '<div style="background: #111116; border: 1px solid #2a2a35; border-radius: 24px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px;">' +
-                '<div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; text-align: center;">Dodaj pojedynczy kurs</div>' +
-                '<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 5px;">'+ch1+'</div>' +
-                otherSrcHtml +
-                '<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px;">'+ch2+'</div>' +
-                '<div style="background: #000; border: 1px inset rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">' +
-                    '<input type="number" id="dt-v" placeholder="0.00" style="color: #0ea5e9; border: none; background: transparent; font-size: 3rem; font-weight: 900; text-align: center; width: 160px; outline: none; font-family: monospace; text-shadow: 0 0 15px rgba(14,165,233,0.3);">' +
-                    '<span style="font-size: 1.4rem; font-weight: 700; color: rgba(255,255,255,0.3); margin-top: 10px; margin-left: 5px;">zł</span>' +
-                '</div>' +
-                '<div class="inp-row" style="margin-bottom:15px; gap:10px;">' +
-                    '<div class="inp-group" style="margin:0;"><input type="number" id="dt-m" placeholder="Czas (min)" value="'+autoM+'" style="background:rgba(255,255,255,0.03); border:1px solid; '+highlightM+' border-radius:14px; padding:16px; text-align:center; font-size:0.95rem; font-weight:600; outline:none; width:100%; box-sizing:border-box; transition:all 0.3s;"></div>' +
-                    '<div class="inp-group" style="margin:0;"><input type="number" id="dt-k" placeholder="Dystans (km)" value="'+autoK+'" style="background:rgba(255,255,255,0.03); border:1px solid; '+highlightK+' border-radius:14px; padding:16px; text-align:center; font-size:0.95rem; font-weight:600; outline:none; width:100%; box-sizing:border-box; transition:all 0.3s;"></div>' +
-                '</div>' +
-                '<div class="inp-group" style="margin-bottom:15px;">' +
-                    '<select id="dt-cid" style="background:rgba(0,0,0,0.3); border-radius:14px; padding:16px; font-size:0.85rem; color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.08); outline:none; width:100%; box-sizing:border-box;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select>' +
-                '</div>' +
-                '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; padding:18px; border-radius:16px; font-weight:900; font-size:1.05rem; letter-spacing:1px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.35); width:100%; outline:none;" onclick="if(typeof window.dAddT===\'function\') window.dAddT()">DODAJ KURS DO ZMIANY</button>' +
-            '</div>';
+            // --- KREATOR KURSU ---
+            html.push('<div style="background: rgba(15,15,20,0.8); backdrop-filter: blur(20px); border-radius: 28px; padding: 25px 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); margin: 0 15px 25px 15px;">');
+            html.push('<div style="font-size: 0.75rem; color: #0ea5e9; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 20px; text-align: center;">KREATOR KURSU</div>');
             
-            act += '<div style="margin: 30px 5px 15px 5px; text-align: center;"><span style="font-size:0.7rem; color:rgba(255,255,255,0.4); font-weight:800; letter-spacing:1px; text-transform:uppercase;">DZIENNIK ZAROBKÓW</span></div>';
+            html.push('<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 5px;">'+ch1+'</div>');
+            html.push(otherSrcHtml);
+            html.push('<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px;">'+ch2+'</div>');
+            
+            html.push('<div style="background: #000; border: 1px inset rgba(255,255,255,0.05); border-radius: 20px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">');
+            html.push('<input type="number" id="dt-v" placeholder="0.00" style="color: #0ea5e9; border: none; background: transparent; font-size: 3.5rem; font-weight: 900; text-align: center; width: 180px; outline: none; font-family: monospace; text-shadow: 0 0 15px rgba(14,165,233,0.3);">');
+            html.push('<span style="font-size: 1.4rem; font-weight: 700; color: rgba(255,255,255,0.3); margin-top: 10px; margin-left: 5px;">zł</span></div>');
+            
+            html.push('<div class="inp-row" style="margin-bottom:15px; gap:12px;">');
+            html.push('<div class="inp-group" style="margin:0;"><label style="font-size:0.6rem; color:var(--muted); font-weight:800; margin-bottom:6px; display:block; text-transform:uppercase;">Czas (min)</label><input type="number" id="dt-m" placeholder="0" value="'+autoM+'" style="background:rgba(255,255,255,0.03); border:1px solid; '+highlightM+' border-radius:16px; padding:18px; text-align:center; font-size:1.1rem; font-weight:700; outline:none; width:100%; box-sizing:border-box;"></div>');
+            html.push('<div class="inp-group" style="margin:0;"><label style="font-size:0.6rem; color:var(--muted); font-weight:800; margin-bottom:6px; display:block; text-transform:uppercase;">Dystans (km)</label><input type="number" step="0.1" id="dt-k" placeholder="0.0" value="'+autoK+'" style="background:rgba(255,255,255,0.03); border:1px solid; '+highlightK+' border-radius:16px; padding:18px; text-align:center; font-size:1.1rem; font-weight:700; outline:none; width:100%; box-sizing:border-box;"></div></div>');
+            
+            html.push('<div class="inp-group" style="margin-bottom:20px;">');
+            html.push('<select id="dt-cid" style="background:rgba(0,0,0,0.3); border-radius:16px; padding:18px; font-size:0.9rem; color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.08); outline:none; width:100%; box-sizing:border-box; appearance:none;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select></div>');
+            
+            html.push('<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; padding:20px; border-radius:20px; font-weight:900; font-size:1.1rem; letter-spacing:1px; border:none; box-shadow:0 10px 30px rgba(14,165,233,0.4); width:100%; outline:none;" onclick="if(window.dAddT) window.dAddT()">DODAJ KURS</button></div>');
+            
+            html.push('<div style="margin: 30px 15px 15px 15px; text-align: center;"><span style="font-size:0.75rem; color:rgba(255,255,255,0.3); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">DZIENNIK ZAROBKÓW</span></div>');
                 
             let trsList = d.sh.tr || [];
             if(trsList.length > 0) {
+                html.push('<div style="padding: 0 15px;">');
                 for(let i=0; i<trsList.length; i++) {
                     let x = trsList[i];
                     let icon='🚕', color='rgba(255,255,255,0.2)', bg='rgba(255,255,255,0.02)';
@@ -465,105 +441,98 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                     else if(x.p==='Karta') { icon='💳'; color='#0ea5e9'; bg='rgba(14,165,233,0.05)'; }
                     else if(x.p==='Voucher') { icon='🎫'; color='#a855f7'; bg='rgba(168,85,247,0.05)'; }
                     
-                    act += '<div class="log-item" style="border:none; padding:15px; margin-bottom:10px; background:'+bg+'; border-radius:16px; border-left:3px solid '+color+';">' +
-                        '<div style="display:flex; align-items:center; gap:15px; flex:1;">' +
-                            '<div style="font-size:1.5rem; width:45px; height:45px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:12px; display:flex; align-items:center; justify-content:center;">'+icon+'</div>' +
-                            '<div style="flex:1;">' +
-                                '<strong style="font-size:1.1rem; color:#fff; display:block; margin-bottom:4px; font-weight:800;">'+Number(x.v||0).toFixed(2)+' zł</strong>' +
-                                '<div style="display:flex; gap:6px; font-size:0.7rem; color:rgba(255,255,255,0.5); align-items:center; font-weight:600;">' +
-                                    '<span>'+(x.time||'--:--')+'</span><span style="opacity:0.3">•</span><span style="color:'+color+';">'+x.p+'</span><span style="opacity:0.3">•</span><span>'+x.s+'</span>' +
-                                    (x.k>0 ? '<span style="opacity:0.3">•</span><span>'+Number(x.k).toFixed(1)+' km</span>' : '') +
-                                '</div>' +
-                            '</div>' +
-                        '</div>' +
-                        '<div style="display:flex; flex-direction:column; gap:8px;">' +
-                            '<button style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px 12px; cursor:pointer; font-size:0.75rem; outline:none;" onclick="if(typeof window.dEditT===\'function\') window.dEditT('+x.id+')">✏️</button>' +
-                            '<button style="background:rgba(239,68,68,0.15); color:#ef4444; border:none; border-radius:10px; padding:8px 12px; cursor:pointer; font-size:0.75rem; outline:none;" onclick="if(typeof window.dDelT===\'function\') window.dDelT('+x.id+')">🗑️</button>' +
-                        '</div>' +
-                    '</div>';
+                    html.push('<div class="log-item" style="border:none; padding:15px; margin-bottom:10px; background:'+bg+'; border-radius:16px; border-left:4px solid '+color+'; display:flex; gap:15px; align-items:center;">');
+                    html.push('<div style="font-size:1.5rem; width:45px; height:45px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">'+icon+'</div>');
+                    html.push('<div style="flex:1;">');
+                    html.push('<strong style="font-size:1.1rem; color:#fff; display:block; margin-bottom:4px; font-weight:800;">'+Number(x.v||0).toFixed(2)+' zł</strong>');
+                    html.push('<div style="display:flex; gap:6px; font-size:0.7rem; color:rgba(255,255,255,0.5); align-items:center; font-weight:600;">');
+                    html.push('<span>'+(x.time||'--:--')+'</span><span style="opacity:0.3">•</span><span style="color:'+color+';">'+x.p+'</span><span style="opacity:0.3">•</span><span>'+x.s+'</span>');
+                    if(x.k>0) html.push('<span style="opacity:0.3">•</span><span>'+Number(x.k).toFixed(1)+' km</span>');
+                    html.push('</div></div>');
+                    html.push('<div style="display:flex; flex-direction:column; gap:8px;">');
+                    html.push('<button style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px 12px; cursor:pointer; font-size:0.75rem; outline:none;" onclick="if(window.dEditT) window.dEditT('+x.id+')">✏️</button>');
+                    html.push('<button style="background:rgba(239,68,68,0.15); color:#ef4444; border:none; border-radius:10px; padding:8px 12px; cursor:pointer; font-size:0.75rem; outline:none;" onclick="if(window.dDelT) window.dDelT('+x.id+')">🗑️</button>');
+                    html.push('</div></div>');
                 }
+                html.push('</div>');
             } else {
-                act += '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:30px 0;font-size:0.85rem; background:rgba(0,0,0,0.2); border-radius:20px; border:1px dashed rgba(255,255,255,0.05); font-weight:600;">Brak zarejestrowanych kursów na tej zmianie.</div>';
+                html.push('<div style="margin: 0 15px;"><div style="text-align:center;color:rgba(255,255,255,0.3);padding:30px 0;font-size:0.85rem; background:rgba(0,0,0,0.2); border-radius:20px; border:1px dashed rgba(255,255,255,0.05); font-weight:600;">Brak zarejestrowanych kursów na tej zmianie.</div></div>');
             }
         } else {
-            act += '<div class="dash-hero" style="padding-top:30px; padding-bottom:20px;">' +
-                '<div style="width:70px; height:70px; background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2.2rem; box-shadow:0 8px 25px rgba(245,158,11,0.15);">🚕</div>' +
-                '<h1 style="font-size:2.2rem; font-weight:900; letter-spacing:-1px; margin-bottom:5px; color:#fff;">Cześć, '+(window.db.userName || 'Kierowco')+'!</h1>' +
-                '<p style="margin-top:5px; font-size:0.75rem; color:rgba(255,255,255,0.5); font-weight:800; text-transform:uppercase; letter-spacing:1px;">Potwierdź stan licznika przed jazdą</p>' +
-            '</div>' +
-            '<div style="padding:0 15px;">' +
-                '<div style="background:#111116; border-radius:24px; padding:25px; text-align:center; border:1px solid #2a2a35; box-shadow:inset 0 4px 20px rgba(0,0,0,0.5), 0 8px 30px rgba(0,0,0,0.4); margin-bottom:20px;">' +
-                    '<div style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">STAN LICZNIKA POJAZDU (START)</div>' +
-                    '<input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="000000" style="width:100%; background:transparent; border:none; color:#f59e0b; font-size:3.5rem; font-weight:900; text-align:center; outline:none; padding:0; text-shadow:0 0 15px rgba(245,158,11,0.4); letter-spacing:2px; font-family:monospace;">' +
-                '</div>' +
-                '<button class="btn" style="background:linear-gradient(135deg, #10b981, #059669); color:#000; font-size:1.1rem; font-weight:900; letter-spacing:1px; padding:20px; border-radius:24px; border:none; box-shadow:0 10px 30px rgba(16,185,129,0.3); width:100%; text-transform:uppercase; outline:none;" onclick="if(typeof window.dStartS===\'function\') window.dStartS()">ROZPOCZNIJ PRACĘ</button>' +
-            '</div>';
+            // EKRAN STARTOWY
+            html.push('<div class="dash-hero" style="padding-top:30px; padding-bottom:20px;">');
+            html.push('<div style="width:70px; height:70px; background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2.2rem; box-shadow:0 8px 25px rgba(245,158,11,0.15);">🚕</div>');
+            html.push('<h1 style="font-size:2.2rem; font-weight:900; letter-spacing:-1px; margin-bottom:5px; color:#fff;">Cześć, '+(window.db.userName || 'Kierowco')+'!</h1>');
+            html.push('<p style="margin-top:5px; font-size:0.75rem; color:rgba(255,255,255,0.5); font-weight:800; text-transform:uppercase; letter-spacing:1px;">Potwierdź stan licznika przed jazdą</p></div>');
+            
+            html.push('<div style="padding:0 15px;">');
+            html.push('<div style="background:#111116; border-radius:28px; padding:30px 20px; text-align:center; border:1px solid #2a2a35; box-shadow:inset 0 4px 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.4); margin-bottom:25px;">');
+            html.push('<div style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">STAN LICZNIKA POJAZDU (START)</div>');
+            html.push('<input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="000000" style="width:100%; background:transparent; border:none; color:#f59e0b; font-size:3.5rem; font-weight:900; text-align:center; outline:none; padding:0; text-shadow:0 0 15px rgba(245,158,11,0.4); letter-spacing:2px; font-family:monospace;"></div>');
+            
+            html.push('<button class="btn" style="background:linear-gradient(135deg, #10b981, #059669); color:#000; font-size:1.1rem; font-weight:900; letter-spacing:1px; padding:20px; border-radius:24px; border:none; box-shadow:0 10px 30px rgba(16,185,129,0.3); width:100%; text-transform:uppercase; outline:none;" onclick="if(window.dStartS) window.dStartS()">ROZPOCZNIJ PRACĘ</button></div>');
             
             if(!window.dShowOff) {
-                act += '<div style="padding:0 15px; margin-top:15px;">' +
-                    '<button class="btn" style="background:#1a1a22; color:#888; border:1px solid #2a2a35; font-size:0.8rem; font-weight:700; box-shadow:none; width:100%; padding:16px; border-radius:20px; outline:none;" onclick="window.dShowOff=true; window.render()">📥 ZAKSIĘGUJ ZALEGŁĄ ZMIANĘ</button>' +
-                '</div>';
-                act += panelProBanner;
+                html.push('<div style="padding:0 15px; margin-top:20px; margin-bottom:25px;">');
+                html.push('<button class="btn" style="background:#1a1a22; color:#888; border:1px solid #2a2a35; font-size:0.8rem; font-weight:700; box-shadow:none; width:100%; padding:16px; border-radius:20px; outline:none;" onclick="window.dShowOff=true; window.render()">📥 ZAKSIĘGUJ ZALEGŁĄ ZMIANĘ</button></div>');
+                html.push(panelProBanner);
             } else {
-                let offlineInputsHtml = '';
+                // ... Kod dla manualnej zmiany offline ...
+                html.push('<div style="padding:0 15px; margin-top:20px;">');
+                html.push('<div class="section-lbl" style="color:#0ea5e9; border-color:#0ea5e9; margin-top:10px; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase;">⚡ ZALEGŁA ZMIANA / RAPORT Z KASY</div>');
+                html.push('<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #0f172a, #09090b); border-radius:24px; padding:25px 20px; animation:fadeIn 0.3s; box-shadow:0 15px 40px rgba(0,0,0,0.6);">');
+                
+                html.push('<div class="inp-row" style="margin-bottom:15px; gap:12px;">');
+                html.push('<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:6px; display:block;">Data Startu</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>');
+                html.push('<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:6px; display:block;">Data Zakończenia</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>');
+                html.push('</div>');
+                
+                html.push('<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">');
+                html.push('<label style="font-size:0.65rem; color:#f59e0b; font-weight:800; text-align:center; display:block; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">STAN LICZNIKA POJAZDU</label>');
+                html.push('<div class="inp-row" style="margin:0; gap:12px;">');
+                html.push('<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>');
+                html.push('<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>');
+                html.push('</div></div>');
+
                 if(d.plat === 'apps') {
-                    offlineInputsHtml = 
-                        '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">' +
-                            '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;">ROZBICIE UTARGU (ZŁ)</label>' +
-                            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">' +
-                                '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
-                                '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
-                                '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
-                                '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>' +
-                                '<div class="inp-group" style="margin:0; grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma z portfela)" style="background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>' +
-                            '</div>' +
-                        '</div>';
+                    html.push('<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">');
+                    html.push('<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;">ROZBICIE UTARGU (ZŁ)</label>');
+                    html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">');
+                    html.push('<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>');
+                    html.push('<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>');
+                    html.push('<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>');
+                    html.push('<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:1rem; font-weight:700; outline:none;"></div>');
+                    html.push('<div class="inp-group" style="margin:0; grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma z portfela)" style="background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>');
+                    html.push('</div></div>');
                 } else {
-                    offlineInputsHtml = 
-                        '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">' +
-                            '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;">ROZBICIE UTARGU (ZŁ)</label>' +
-                            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">' +
-                                '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" style="background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>' +
-                                '<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-karta" placeholder="Karta/Terminal" style="background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.3); color:#0ea5e9; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>' +
-                                '<div class="inp-group" style="margin:0; grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" style="background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.3); color:#a855f7; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>' +
-                            '</div>' +
-                        '</div>';
+                    html.push('<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">');
+                    html.push('<label style="font-size:0.65rem; color:#0ea5e9; font-weight:800; text-align:center; display:block; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;">ROZBICIE UTARGU (ZŁ)</label>');
+                    html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">');
+                    html.push('<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" style="background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>');
+                    html.push('<div class="inp-group" style="margin:0;"><input type="number" step="0.01" id="dw-v-karta" placeholder="Karta/Terminal" style="background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.3); color:#0ea5e9; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>');
+                    html.push('<div class="inp-group" style="margin:0; grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" style="background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.3); color:#a855f7; border-radius:14px; padding:16px; text-align:center; font-size:1.15rem; font-weight:800; outline:none;"></div>');
+                    html.push('</div></div>');
                 }
 
-                act += '<div class="section-lbl" style="color:#0ea5e9; border-color:#0ea5e9; margin-top:30px; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase;">⚡ ZALEGŁA ZMIANA / RAPORT Z KASY</div>' +
-                '<div class="panel" style="border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #0f172a, #09090b); border-radius:24px; padding:25px 20px; margin:0 15px; animation:fadeIn 0.3s; box-shadow:0 15px 40px rgba(0,0,0,0.6);">' +
-                    
-                    '<div class="inp-row" style="margin-bottom:15px; gap:12px;">' +
-                        '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:6px; display:block;">Data Startu</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                        '<div class="inp-group" style="margin:0;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:6px; display:block;">Data Zakończenia</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px; color:#fff; font-size:0.85rem; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                    '</div>' +
-                    
-                    '<div style="background:rgba(0,0,0,0.3); border:1px inset rgba(255,255,255,0.05); border-radius:20px; padding:20px; margin-bottom:15px;">' +
-                        '<label style="font-size:0.65rem; color:#f59e0b; font-weight:800; text-align:center; display:block; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">STAN LICZNIKA POJAZDU</label>' +
-                        '<div class="inp-row" style="margin:0; gap:12px;">' +
-                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
-                            '<div class="inp-group" style="margin:0;"><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#fff; border-radius:14px; padding:14px; text-align:center; font-size:0.95rem; font-weight:700; outline:none;"></div>' +
-                        '</div>' +
-                    '</div>' +
-
-                    offlineInputsHtml +
-                    
-                    '<div class="inp-row" style="margin-bottom:25px; gap:12px;">' +
-                        '<div class="inp-group" style="margin:0;"><input type="number" id="dw-pk" placeholder="Dystans płatny (KM)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.85rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                        '<div class="inp-group" style="margin:0;"><input type="number" id="dw-h" placeholder="Czas pracy (h)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.85rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                    '</div>' +
-                    
-                    '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; padding:18px; font-size:1.05rem; letter-spacing:1px; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.35); width:100%; outline:none;" onclick="if(typeof window.dAddOfflineWeekly===\'function\') window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button>' +
-                    '<button class="btn" style="background:transparent; color:rgba(255,255,255,0.4); margin-top:10px; border:1px solid rgba(255,255,255,0.1); border-radius:20px; box-shadow:none; padding:16px; font-weight:700; font-size:0.9rem; width:100%; outline:none;" onclick="window.dShowOff=false; window.render()">ANULUJ</button>' +
-                '</div>';
+                html.push('<div class="inp-row" style="margin-bottom:25px; gap:12px;">');
+                html.push('<div class="inp-group" style="margin:0;"><input type="number" id="dw-pk" placeholder="Dystans płatny (KM)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.85rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>');
+                html.push('<div class="inp-group" style="margin:0;"><input type="number" id="dw-h" placeholder="Czas pracy (h)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.85rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>');
+                html.push('</div>');
+                
+                html.push('<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; padding:18px; font-size:1.05rem; letter-spacing:1px; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.35); width:100%; outline:none;" onclick="if(window.dAddOfflineWeekly) window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button>');
+                html.push('<button class="btn" style="background:transparent; color:rgba(255,255,255,0.4); margin-top:10px; border:1px solid rgba(255,255,255,0.1); border-radius:20px; box-shadow:none; padding:16px; font-weight:700; font-size:0.9rem; width:100%; outline:none;" onclick="window.dShowOff=false; window.render()">ANULUJ</button>');
+                html.push('</div></div>');
             }
         }
         
-        if (d.liveRideStart && (!d.sh || d.sh.rWS === null)) {
+        // Zabezpieczony ciąg znaków
+        let finalHtml = html.join('');
+        appContainer.innerHTML = finalHtml + '<div style="height:140px; width:100%; clear:both;"></div>' + nav;
+
+        // Uruchomienie update timera po wyrenderowaniu
+        if (d.liveRideStart && (!d.sh.rWS)) {
             setTimeout(window.updateLiveRideUI, 50);
         }
-
-        appContainer.innerHTML = hdr + act + '<div style="height:140px; width:100%; clear:both;"></div>' + nav;
 
     } catch(err) {
         console.error(err);
