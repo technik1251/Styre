@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Terminal Premium V9 (Ultra-Stabilny, Daily Sync, Smart Netto)
+// PLIK: taxi_tab_term.js - Terminal Premium (Smart Netto, Daily Sync, Enterprise UI)
 // ==========================================
 
 // --- 1. FUNKCJE POMOCNICZE I MATEMATYKA ---
@@ -31,11 +31,11 @@ window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 };
 
-// Automatyczne pobieranie podzielonych kosztów z Ustawień! (Tygodnie, Miesiące -> Dni)
+// DYNAMICZNY KALKULATOR KOSZTÓW (Wlicza dokładne dni miesiąca!)
 window.getFixedDailyCosts = function() {
     let c = window.db.drv.cfg || {};
     let now = new Date();
-    let daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(); // Wie ile dni ma miesiąc!
+    let daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
     let calc = function(val, period) {
         val = parseFloat(val) || 0;
@@ -65,7 +65,7 @@ window.dStartS = function() {
         return; 
     }
     
-    // PAMIĘĆ DNIA: Sprawdzamy czy już dzisiaj jeździłeś, żeby nie potrącić ZUSu/Wynajmu 2x!
+    // PAMIĘĆ DNIA: Sprawdzamy czy już dzisiaj startowałeś (żeby nie potrącić ZUSu/Wynajmu 2 razy!)
     let todayStr = window.getRealTodayYMD();
     let alreadyAppliedToday = false;
     if (window.db.drv.h && window.db.drv.h.length > 0) {
@@ -103,7 +103,7 @@ window.dStartS = function() {
 };
 
 window.dCancelShift = function() {
-    if(confirm('Czy na pewno chcesz anulować bieżącą zmianę? Wszystkie zebrane dziś dane i dystans przepadną bezpowrotnie.')) {
+    if(confirm('Czy na pewno chcesz usunąć bieżącą zmianę? Dane przepadną.')) {
         let s = window.db.drv.sh;
         if(s && s.watchId) navigator.geolocation.clearWatch(s.watchId);
         if(s && s.globalWatchId) navigator.geolocation.clearWatch(s.globalWatchId);
@@ -136,7 +136,8 @@ window.initGlobalTracker = function() {
                     let elShiftDist = document.getElementById('shift-total-dist');
                     if(elShiftDist) elShiftDist.innerHTML = s.shiftDist.toFixed(1) + ' km';
                     
-                    if (now - (s.lastGlobalSave || 0) > 60000) { // Zapis w tle by nie mulić telefonu
+                    // Zapis w tle (co 60 sekund, by nie zawieszać telefonu)
+                    if (now - (s.lastGlobalSave || 0) > 60000) { 
                         if(typeof window.save === 'function') window.save();
                         s.lastGlobalSave = now;
                     }
@@ -177,7 +178,7 @@ window.resumeLiveRide = function() {
             s.lastPos = {lat: lat, lng: lng};
             s.lastGpsTime = now;
             window.updateLiveRideUI();
-        }, function(error) { console.error('Ride GPS:', error); }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+        }, function(error) { console.error('Ride GPS Error:', error); }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
     }
     if(!window.liveRideTimer) window.liveRideTimer = setInterval(window.updateLiveRideUI, 1000);
 };
@@ -192,16 +193,15 @@ window.toggleGoalMode = function(mode) {
 window.dSetGoal = function() {
     let isNetto = window.dGoalMode === 'netto';
     let current = isNetto ? ((window.db.drv.cfg && window.db.drv.cfg.goalNetto) || 300) : ((window.db.drv.cfg && window.db.drv.cfg.goalBrutto) || 400);
-    let modeName = isNetto ? 'NETTO (na czysto do kieszeni)' : 'BRUTTO (cały utarg z apek)';
+    let modeName = isNetto ? 'NETTO (Do kieszeni)' : 'BRUTTO (Cały obrót)';
     
-    let ng = prompt("Zdefiniuj Cel Dzienny " + modeName + " (zł):", current);
+    let ng = prompt("Zdefiniuj Cel Dzienny " + modeName + " (PLN):", current);
     if(ng !== null && ng !== '') {
         let val = parseFloat(ng.replace(',','.'));
         if(!isNaN(val) && val > 0) {
             if(!window.db.drv.cfg) window.db.drv.cfg = {};
             if(isNetto) window.db.drv.cfg.goalNetto = val;
             else window.db.drv.cfg.goalBrutto = val;
-            
             if(typeof window.save === 'function') window.save();
             if(typeof window.render === 'function') window.render();
         }
@@ -320,7 +320,7 @@ window.stopLiveRide = function() {
         if(typeof window.render === 'function') window.render();
 
         setTimeout(function() {
-            if(window.sysAlert) window.sysAlert('Trasa Zakończona', 'Zastosowano odpowiednie stawki. Dane gotowe do zapisu.', 'success');
+            if(window.sysAlert) window.sysAlert('Trasa Zakończona', 'Zastosowano taryfę. Wynik w rejestratorze.', 'success');
         }, 100);
     }
 };
@@ -348,7 +348,7 @@ window.toggleShiftPause = function() {
     }
 };
 
-// --- 5. MODAL ZAMYKANIA ZMIANY I BEZPIECZNY ZAPIS ---
+// --- 5. MODAL ZAMYKANIA ZMIANY (RESPONSYWNY I STABILNY) ---
 window.openEndShiftModal = function() {
     let s = window.db.drv.sh || {};
     let startOdo = s.o ? parseFloat(s.o) : 0;
@@ -367,24 +367,35 @@ window.openEndShiftModal = function() {
     if(s.tr) s.tr.forEach(function(x) { g += (parseFloat(x.v)||0); });
     let isApps = (window.db.drv.plat === 'apps');
 
-    let html = '<div id="m-end-shift" class="modal-overlay" style="z-index:99999; position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(20px); overflow-y:auto; padding:20px 0; box-sizing:border-box; animation:fadeIn 0.2s ease;">' +
-        '<div class="glass-card" style="width:90%; max-width:400px; border:1px solid rgba(239,68,68,0.4); padding:25px 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); margin:auto;">' +
+    // Box-sizing i padding gwarantują piękny scroll
+    let html = '<div id="m-end-shift" class="modal-overlay" style="z-index:99999; position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:flex-start; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(20px); overflow-y:auto; padding:30px 0; box-sizing:border-box; animation:fadeIn 0.2s ease;">' +
+        '<div class="glass-card" style="width:90%; max-width:400px; border:1px solid rgba(239,68,68,0.4); padding:25px 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); margin:auto; flex-shrink:0;">' +
             '<div style="text-align:center; margin-bottom:20px;">' +
                 '<div style="font-size:3rem; margin-bottom:10px; filter:drop-shadow(0 0 10px rgba(239,68,68,0.5));">🏁</div>' +
                 '<h3 style="color:#ef4444; margin:0 0 5px 0; font-size:1.4rem; font-weight:900; text-transform:uppercase;">Zakończ Zmianę</h3>' +
                 '<p style="color:var(--muted); font-size:0.75rem; margin-bottom:15px;">Podsumuj swój dzień i zaktualizuj przebieg.</p>' +
                 '<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.6); padding:12px; border-radius:12px; border:1px inset rgba(255,255,255,0.05);">' +
                     '<div style="text-align:center; flex:1;"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Czas Pracy</span><br><strong style="color:#0ea5e9; font-size:1.1rem;">'+diffHrs+'h '+diffMins+'m</strong></div>' +
-                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Utarg</span><br><strong style="color:#10b981; font-size:1.1rem;">'+g.toFixed(2)+' zł</strong></div>' +
+                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Aktualny Utarg</span><br><strong style="color:#10b981; font-size:1.1rem;">'+g.toFixed(2)+' zł</strong></div>' +
                 '</div>' +
             '</div>' +
             
             '<div style="background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.2); border-radius:16px; padding:15px; margin-bottom:20px;">' +
-                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:900; display:block; margin-bottom:10px; text-transform:uppercase; text-align:center;">Dodatkowe Zarobki z Aplikacji</label>' +
+                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:900; display:block; margin-bottom:10px; text-transform:uppercase; text-align:center;">DODATKOWE ZAROBKI (Z APLIKACJI)</label>' +
                 (isApps ? 
-                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"><input type="number" step="0.01" id="me-v-uber" placeholder="Uber (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-bolt" placeholder="Bolt (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-freenow" placeholder="FreeNow" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-inna" placeholder="Inna Apka" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka (Całość)" style="grid-column:span 2; padding:12px; font-size:1rem; color:#10b981; border-color:rgba(16,185,129,0.3);" class="compact-inp"></div>' 
+                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">' +
+                        '<input type="number" step="0.01" id="me-v-uber" placeholder="Uber (PLN)" class="compact-inp" style="padding:12px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-bolt" placeholder="Bolt (PLN)" class="compact-inp" style="padding:12px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-freenow" placeholder="FreeNow (PLN)" class="compact-inp" style="padding:12px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-inna" placeholder="Inna Apka" class="compact-inp" style="padding:12px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka" style="grid-column:span 2; padding:15px; font-size:1.1rem; color:#10b981; border-color:rgba(16,185,129,0.3);" class="compact-inp">' +
+                    '</div>' 
                 : 
-                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"><input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-karta" placeholder="Terminal" class="compact-inp" style="color:#0ea5e9; padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-voucher" placeholder="Vouchery" style="grid-column:span 2; padding:10px; font-size:0.9rem; color:#a855f7;" class="compact-inp"></div>'
+                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">' +
+                        '<input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka (PLN)" class="compact-inp" style="color:#10b981; padding:12px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-karta" placeholder="Terminal (PLN)" class="compact-inp" style="color:#0ea5e9; padding:12px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-voucher" placeholder="Vouchery" style="grid-column:span 2; padding:12px; font-size:0.9rem; color:#a855f7;" class="compact-inp">' +
+                    '</div>'
                 ) +
             '</div>' +
 
@@ -475,7 +486,7 @@ window.submitPremiumEndShift = function() {
         
         if(typeof window.save === 'function') window.save(); 
         if(typeof window.render === 'function') window.render();
-        if(window.sysAlert) window.sysAlert('Zmiana Zakończona', 'Pomyślnie zsynchronizowano z chmurą.', 'success');
+        if(window.sysAlert) window.sysAlert('Zmiana Zakończona', 'Pomyślnie zapisano rozliczenie.', 'success');
     } catch(err) {
         if(window.sysAlert) window.sysAlert('Błąd Krytyczny', 'Błąd zapisu: ' + err.message, 'error');
         else alert('Błąd: ' + err.message);
@@ -490,7 +501,7 @@ window.getOfflineHTML = function(d) {
     html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#f59e0b; font-weight:900; text-align:center; display:block; margin-bottom:10px;">STAN LICZNIKA POJAZDU</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div><div><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div></div></div>';
     
     if(d.plat === 'apps') {
-        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" class="compact-inp"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma)" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3); font-size:1.2rem; padding:15px;"></div></div></div>';
+        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" class="compact-inp"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3); font-size:1.2rem; padding:15px;"></div></div></div>';
     } else {
         html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3);"></div><div><input type="number" step="0.01" id="dw-v-karta" placeholder="Terminal" class="compact-inp" style="color:#0ea5e9; border-color:rgba(14,165,233,0.3);"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" class="compact-inp" style="color:#a855f7; border-color:rgba(168,85,247,0.3);"></div></div></div>';
     }
@@ -506,8 +517,6 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         
         let html = [hdr];
         html.push('<style>.glass-card { background: rgba(20, 20, 25, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); position: relative; overflow: hidden; padding: 20px; } .compact-inp { background: rgba(0,0,0,0.4); border: 1px inset rgba(255,255,255,0.05); color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-size: 1.1rem; font-weight: 700; outline: none; width: 100%; box-sizing: border-box; } .chip { padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.05); } .chip.active.blue { background: rgba(14,165,233,0.15); color: #0ea5e9; border-color: rgba(14,165,233,0.4); box-shadow: 0 0 10px rgba(14,165,233,0.2); } .chip.active.green { background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.4); box-shadow: 0 0 10px rgba(16,185,129,0.2); } .chip.idle { background: rgba(255,255,255,0.02); color: rgba(255,255,255,0.4); } @keyframes glowPulse { 0% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(239,68,68,0.6); } 100% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } } .btn-taryfa { width:100%; height:100%; border-radius:10px; font-weight:900; font-size:1.1rem; background: linear-gradient(to bottom, #333, #111); box-shadow: 0 4px 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); cursor:pointer; outline:none; transition:all 0.1s; } .btn-taryfa:active { transform: translateY(4px); box-shadow: 0 0 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); }</style>');
-
-        let panelProBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.showProInfo) window.showProInfo()"><div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px rgba(217,70,239,0.5));">🚕</div><div><h4 style="color:#d946ef; margin:0 0 2px 0; font-size:0.85rem; font-weight:900;">Auto-Zlecenia (PRO)</h4><div style="font-size:0.65rem; color:var(--muted);">Integracja z APKAMI i GPS w tle.</div></div></div>';
 
         if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; }
         if(!window.dTPay) { window.dTPay = d.plat === 'apps' ? 'Aplikacja' : 'Gotówka'; }
@@ -547,6 +556,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             diffMins = Math.floor((aMs % 3600000) / 60000);
         }
 
+        // POBIERANIE WYNIKÓW Z CAŁEGO DNIA DLA PASKA CELU (Daily Sync)
         let todayStr = window.getRealTodayYMD();
         let todayPastGross = 0, todayPastNetto = 0, todayPastHrs = 0;
         if (d.h) {
@@ -576,6 +586,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             let cardF = (d.cfg && d.cfg.cardF) ? parseFloat(d.cfg.cardF) : 0;
             let vouchF = (d.cfg && d.cfg.voucherF) ? parseFloat(d.cfg.voucherF) : 0;
 
+            // Używamy zablokowanych kosztów, by uniknąć wariacji paska
             let fixedCosts = (d.sh.fixedCosts !== undefined) ? d.sh.fixedCosts : window.getFixedDailyCosts(); 
             let varCosts = (totalKm * fuelPx) + (g * taxRate) + (g * ePct) + (sumCard * cardF) + (sumVouch * vouchF);
 
@@ -590,9 +601,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             let goalNetto = (d.cfg && d.cfg.goalNetto) ? parseFloat(d.cfg.goalNetto) : 300;
             let activeGoal = isNetto ? goalNetto : goalBrutto;
             
-            // Logika: pasek rośnie od Minusów. 
-            // Jeśli fixedCosts zostało zrzucone na dziś, StartValue jest na minusie.
-            let dailyFixedCostsTotal = window.getFixedDailyCosts();
+            let dailyFixedCostsTotal = window.getFixedDailyCosts(); 
             let startValue = isNetto ? -dailyFixedCostsTotal : 0;
             let totalJourney = activeGoal - startValue;
             let covered = currProg - startValue;
@@ -618,8 +627,8 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             }
 
             html.push('<div class="glass-card" style="padding:25px 20px; margin-bottom:15px; border-color:rgba(14,165,233,0.3); text-align:center;">');
-            html.push('<div style="font-size:0.75rem; color:var(--muted); font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:5px;">'+(isNetto?'NETTO CAŁY DZIEŃ':'BRUTTO CAŁY DZIEŃ')+'</div>');
-            html.push('<div style="font-size:3.8rem; font-weight:900; color:'+(isNetto?'#10b981':'#0ea5e9')+'; line-height:1; margin-bottom:15px;"><span id="goal-current-val">'+currProg.toFixed(2)+'</span> <span style="font-size:1.2rem; color:rgba(255,255,255,0.4);">zł</span></div>');
+            html.push('<div style="font-size:0.75rem; color:var(--muted); font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:5px;">'+(isNetto?'NETTO (OPERACYJNE)':'UTARG BRUTTO')+'</div>');
+            html.push('<div style="font-size:3.8rem; font-weight:900; color:'+(isNetto?'#10b981':'#0ea5e9')+'; line-height:1; margin-bottom:15px;">'+currProg.toFixed(2)+' <span style="font-size:1.2rem; color:rgba(255,255,255,0.4);">zł</span></div>');
             
             html.push('<div style="display:inline-flex; background:rgba(0,0,0,0.5); border-radius:12px; border:1px solid rgba(255,255,255,0.05); overflow:hidden; margin-bottom:20px;">');
             html.push('<button style="padding:10px 15px; font-size:0.7rem; font-weight:900; border:none; cursor:pointer; ' + (isNetto ? 'background:rgba(255,255,255,0.15); color:#fff;' : 'background:transparent; color:var(--muted);') + '" onclick="window.toggleGoalMode(\'netto\')">Netto (Operacyjne)</button>');
@@ -627,13 +636,13 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('</div>');
 
             html.push('<div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:800; color:var(--muted); margin-bottom:6px;"><span style="cursor:pointer;" onclick="window.dSetGoal()">Cel: ' + activeGoal.toFixed(0) + ' zł ⚙️</span><span style="color:#fff;">'+Math.round(pct)+'%</span></div>');
-            html.push('<div style="height:8px; background:rgba(0,0,0,0.5); border-radius:4px; margin-bottom:10px;"><div id="goal-bar-fill" style="height:100%; width:'+pct+'%; background:'+(isNetto?'#10b981':'#0ea5e9')+'; border-radius:4px; box-shadow:0 0 10px '+(isNetto?'#10b981':'#0ea5e9')+'; transition:width 0.5s ease;"></div></div>');
-            html.push('<div style="font-size:0.7rem; color:var(--muted); font-weight:700; margin-bottom:5px;">Do celu: <span style="color:#fff;">~'+etaStr+'</span> ('+(speedPerHour).toFixed(0)+' zł/h)</div>');
+            html.push('<div style="height:8px; background:rgba(0,0,0,0.5); border-radius:4px; margin-bottom:10px;"><div style="height:100%; width:'+pct+'%; background:'+(isNetto?'#10b981':'#0ea5e9')+'; border-radius:4px; box-shadow:0 0 10px '+(isNetto?'#10b981':'#0ea5e9')+'; transition:width 0.5s ease;"></div></div>');
+            html.push('<div style="font-size:0.7rem; color:var(--muted); font-weight:700;">ETA DO CELU: <span style="color:#fff;">~'+etaStr+'</span> | EFEKTYWNOŚĆ: '+(speedPerHour).toFixed(0)+' zł/h</div>');
             html.push('</div>');
 
             html.push('<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:15px;">');
-            html.push('<div class="glass-card" style="padding:15px 10px; text-align:center;"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:5px;">GOTÓWKA BIEŻ.</div><div style="font-size:1.1rem; font-weight:900; color:#10b981;">'+Number(sumCash).toFixed(2)+'</div></div>');
-            html.push('<div class="glass-card" style="padding:15px 10px; text-align:center;"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:5px;">Aplikacja/Karta</div><div style="font-size:1.1rem; font-weight:900; color:#0ea5e9;">'+Number(g - sumCash - sumVouch).toFixed(2)+'</div></div>');
+            html.push('<div class="glass-card" style="padding:15px 10px; text-align:center;"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:5px;">GOTÓWKA ZMIANY</div><div style="font-size:1.1rem; font-weight:900; color:#10b981;">'+Number(sumCash).toFixed(2)+'</div></div>');
+            html.push('<div class="glass-card" style="padding:15px 10px; text-align:center;"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:5px;">APLIKACJA/KARTA</div><div style="font-size:1.1rem; font-weight:900; color:#0ea5e9;">'+Number(g - sumCash - sumVouch).toFixed(2)+'</div></div>');
             html.push('<div class="glass-card" style="padding:15px 10px; text-align:center;"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:5px;">VOUCHER</div><div style="font-size:1.1rem; font-weight:900; color:#a855f7;">'+Number(sumVouch).toFixed(2)+'</div></div>');
             html.push('</div>');
 
@@ -641,7 +650,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('<div class="glass-card" style="padding:15px 10px; text-align:center;"><div style="font-size:0.6rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:5px;">CZAS BIEŻĄCEJ ZMIANY</div><div style="font-size:1.2rem; font-weight:900; color:#0ea5e9;">'+diffHrs+'h '+diffMins+'m</div></div>');
             html.push('<div style="display:flex; flex-direction:column; gap:8px;">');
             html.push('<button style="flex:1; border-radius:12px; font-weight:800; font-size:0.8rem; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1);" onclick="window.toggleShiftPause()">'+(d.sh.sPS ? '▶ WZNÓW' : '☕ PRZERWA')+'</button>');
-            html.push('<button style="flex:1; border-radius:12px; font-weight:800; font-size:0.8rem; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);" onclick="if(window.openEndShiftModal) window.openEndShiftModal()">🔴 ZAKOŃCZ ZMIANĘ</button>');
+            html.push('<button style="flex:1; border-radius:12px; font-weight:800; font-size:0.8rem; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);" onclick="if(window.openEndShiftModal) window.openEndShiftModal()">🔴 ZAKOŃCZ</button>');
             html.push('</div></div>');
 
             html.push('<div style="text-align:center; margin-bottom:20px; font-size:0.75rem; font-weight:900; color:#f59e0b;"><span style="margin-right:10px;">🚕 Dystans całkowity bieżącej zmiany: <span id="shift-total-dist">'+Number(d.sh.shiftDist||0).toFixed(1)+'</span> km</span></div>');
@@ -675,7 +684,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             let isHighlight = autoM !== '' ? 'border-color:#10b981; color:#10b981;' : '';
             d.sh.tempAutoMins = undefined; d.sh.tempAutoKm = undefined; d.sh.tempAutoPrice = undefined;
 
-            // KREATOR
+            // KREATOR KURSU
             html.push('<div class="glass-card" style="padding: 20px 15px; margin-bottom: 20px;">');
             html.push('<div style="font-size: 0.7rem; color: var(--muted); font-weight: 900; text-transform: uppercase; margin-bottom: 12px; text-align: center; letter-spacing:1px;">REJESTRACJA KURSU</div>');
             html.push('<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:10px;">'+ch1+'</div>');
@@ -715,13 +724,14 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('</div>');
         } else {
             // EKRAN STARTOWY
+            let proBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.sysAlert) window.sysAlert(\'PRO\', \'Automatyczne Zlecenia z apek i Pełen GPS w tle.🚀\', \'info\')"><div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px rgba(217,70,239,0.5));">🚕</div><div><h4 style="color:#d946ef; margin:0 0 2px 0; font-size:0.85rem; font-weight:900;">Auto-Zlecenia (PRO)</h4><div style="font-size:0.65rem; color:var(--muted);">Integracja z APKAMI i GPS w tle.</div></div></div>';
             html.push('<div style="padding: 30px 20px; text-align: center;"><div style="width:60px; height:60px; background:rgba(245,158,11,0.1); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2rem;">🚕</div><h1 style="font-size:2.2rem; font-weight:900; color:#fff; margin:0 0 5px 0;">Witaj!</h1><p style="color:var(--muted); font-size:0.85rem; margin-bottom:30px; font-weight:600;">Potwierdź licznik, aby zacząć pracę.</p>');
             html.push('<div class="glass-card" style="padding:25px 20px; margin-bottom:20px; border-color: rgba(245,158,11,0.3);"><div style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px; margin-bottom:10px; text-transform:uppercase;">STAN LICZNIKA (KM)</div><input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="000000" style="width:100%; background:rgba(0,0,0,0.4); border-radius:12px; padding:15px; color:#f59e0b; font-size:3.5rem; font-weight:900; text-align:center; outline:none; border:1px inset rgba(255,255,255,0.05);"></div>');
             html.push('<button style="width:100%; padding:20px; border-radius:16px; font-size:1.1rem; font-weight:900; background:linear-gradient(135deg, #10b981, #059669); color:#000; border:none; margin-bottom:20px; box-shadow:0 8px 25px rgba(16,185,129,0.3);" onclick="if(window.dStartS) window.dStartS()">ROZPOCZNIJ PRACĘ</button>');
             
             if(!window.dShowOff) {
                 html.push('<button style="width:100%; padding:15px; border-radius:14px; font-size:0.8rem; font-weight:800; background:rgba(255,255,255,0.05); color:var(--muted); border:none; margin-bottom:20px;" onclick="window.dShowOff=true; window.render()">📥 ZAKSIĘGUJ ZALEGŁĄ ZMIANĘ (OFFLINE)</button>');
-                html.push(panelProBanner);
+                html.push(proBanner);
             } else {
                 html.push(window.getOfflineHTML(d));
             }
@@ -814,7 +824,7 @@ window.dAddOfflineWeekly = function() {
     let n = sumV - fc - tax - pFee - cf - vf;
     
     let periodStr = dFrom === dTo ? dFrom : (dFrom + ' do ' + dTo);
-    if (!periodStr) periodStr = window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0];
+    if (!periodStr) periodStr = window.getLocalYMD ? window.getLocalYMD() : 'Zaległa Zmiana';
     
     if (!window.db.drv.h) window.db.drv.h = [];
     window.db.drv.h.push({ id: Date.now(), dt: periodStr, rD: rDateObj.toISOString(), g: sumV, n: n, k: distTotal, pk: pk, emptyK: emptyK, hW: h, fc: fc, tx: tax, pF: pFee, cF: cf, vF: vf, tr: trList });
