@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Terminal Premium V6 (Pro-Design, Smart Netto, Bez-Laga)
+// PLIK: taxi_tab_term.js - Terminal Premium V7 (Perfekcyjne Netto, Auto-Wrap UI, Zero Lag)
 // ==========================================
 
 // --- 1. FUNKCJE POMOCNICZE I MATEMATYKA ---
@@ -17,11 +17,15 @@ window.getValSafe = function(id) {
 
 window.getFixedDailyCosts = function() {
     let c = window.db.drv.cfg || {};
-    let eFixDaily = (c.eType === 'fix' && parseFloat(c.eFix)) ? (parseFloat(c.eFix) / 7) : 0; 
-    let carDaily = parseFloat(c.carRent || c.rent || c.costRent) ? (parseFloat(c.carRent || c.rent || c.costRent) / 7) : 0; 
-    let zusDaily = parseFloat(c.zus || c.costZus) ? (parseFloat(c.zus || c.costZus) / 30) : 0;
-    let fixedOtherDaily = parseFloat(c.fixedDaily) ? parseFloat(c.fixedDaily) : 0;
-    return eFixDaily + carDaily + zusDaily + fixedOtherDaily;
+    // Jeśli użytkownik podał "Koszty Stałe" z ręki na głównym ekranie:
+    if (c.dailyFixedCosts !== undefined && !isNaN(parseFloat(c.dailyFixedCosts))) {
+        return parseFloat(c.dailyFixedCosts);
+    }
+    // Jeśli nie, próbujemy złożyć z ustawień bazowych:
+    let rent = parseFloat(c.carRent || c.rent || c.costRent) || 0; 
+    let zus = parseFloat(c.zus || c.costZus) || 0;
+    let fixedOther = parseFloat(c.fixedDaily || c.otherFix) || 0;
+    return (rent / 7) + (zus / 30) + fixedOther;
 };
 
 window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
@@ -50,17 +54,9 @@ window.dStartS = function() {
     if(!window.db.drv) window.db.drv = {};
     window.db.drv.odo = o;
     window.db.drv.sh = {
-        on: true, 
-        o: o, 
-        t: Date.now(), 
-        shiftStart: Date.now(), 
-        sPT: 0, 
-        sPS: null, 
-        rWT: 0, 
-        rWS: null, 
-        tr: [],
-        shiftDist: 0,
-        lastGlobalSave: Date.now()
+        on: true, o: o, t: Date.now(), shiftStart: Date.now(), 
+        sPT: 0, sPS: null, rWT: 0, rWS: null, tr: [],
+        shiftDist: 0, lastGlobalSave: Date.now()
     };
     window.db.drv.liveRideStart = null;
     
@@ -70,7 +66,7 @@ window.dStartS = function() {
 };
 
 window.dCancelShift = function() {
-    if(confirm('Czy na pewno chcesz anulować bieżącą zmianę? Niezapisane dane przepadną.')) {
+    if(confirm('Czy na pewno chcesz anulować bieżącą zmianę? Zebrane dziś dane przepadną.')) {
         let s = window.db.drv.sh;
         if(s && s.watchId) navigator.geolocation.clearWatch(s.watchId);
         if(s && s.globalWatchId) navigator.geolocation.clearWatch(s.globalWatchId);
@@ -143,12 +139,14 @@ window.resumeLiveRide = function() {
             s.lastPos = {lat: lat, lng: lng};
             s.lastGpsTime = now;
             window.updateLiveRideUI();
-        }, function(error) { console.error('Ride GPS:', error); }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+        }, function(error) { 
+            console.warn('Ride GPS Error:', error); 
+        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
     }
     if(!window.liveRideTimer) window.liveRideTimer = setInterval(window.updateLiveRideUI, 1000);
 };
 
-// --- 3. LOGIKA CELU DZIENNEGO ---
+// --- 3. CEL DZIENNY I KOSZTY STAŁE (SMART NETTO) ---
 window.dGoalMode = window.dGoalMode || 'netto';
 window.toggleGoalMode = function(mode) {
     window.dGoalMode = mode;
@@ -158,13 +156,27 @@ window.toggleGoalMode = function(mode) {
 window.dSetGoal = function() {
     let isNetto = window.dGoalMode === 'netto';
     let current = isNetto ? ((window.db.drv.cfg && window.db.drv.cfg.goalNetto) || 300) : ((window.db.drv.cfg && window.db.drv.cfg.goalBrutto) || 400);
-    let ng = prompt("Wprowadź swój cel na dziś (PLN):", current);
+    let ng = prompt("Podaj swój DZIENNY CEL " + (isNetto ? "NETTO" : "BRUTTO") + " (PLN):", current);
     if(ng !== null && ng !== '') {
-        let val = parseFloat(ng);
+        let val = parseFloat(ng.replace(',','.'));
         if(!isNaN(val) && val > 0) {
             if(!window.db.drv.cfg) window.db.drv.cfg = {};
             if(isNetto) window.db.drv.cfg.goalNetto = val;
             else window.db.drv.cfg.goalBrutto = val;
+            if(typeof window.save === 'function') window.save();
+            if(typeof window.render === 'function') window.render();
+        }
+    }
+};
+
+window.dSetFixedCosts = function() {
+    let current = window.getFixedDailyCosts().toFixed(2);
+    let ng = prompt("Wpisz swoje DZIENNE KOSZTY STAŁE (PLN):\nPodaj sumę kosztów wynajmu auta, ZUS-u, aplikacji rozbitych na 1 dzień. Pasek Netto zacznie rosnąć od tego minusa.", current);
+    if(ng !== null && ng !== '') {
+        let val = parseFloat(ng.replace(',','.'));
+        if(!isNaN(val) && val >= 0) {
+            if(!window.db.drv.cfg) window.db.drv.cfg = {};
+            window.db.drv.cfg.dailyFixedCosts = val;
             if(typeof window.save === 'function') window.save();
             if(typeof window.render === 'function') window.render();
         }
@@ -348,14 +360,14 @@ window.openEndShiftModal = function() {
                 '<p style="color:var(--muted); font-size:0.75rem; margin-bottom:15px;">Podsumuj swój dzień i zaktualizuj przebieg.</p>' +
                 '<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.6); padding:12px; border-radius:12px; border:1px inset rgba(255,255,255,0.05);">' +
                     '<div style="text-align:center; flex:1;"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Czas Pracy</span><br><strong style="color:#0ea5e9; font-size:1.1rem;">'+diffHrs+'h '+diffMins+'m</strong></div>' +
-                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Aktualny Utarg</span><br><strong style="color:#10b981; font-size:1.1rem;">'+g.toFixed(2)+' zł</strong></div>' +
+                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Utarg</span><br><strong style="color:#10b981; font-size:1.1rem;">'+g.toFixed(2)+' zł</strong></div>' +
                 '</div>' +
             '</div>' +
             
             '<div style="background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.2); border-radius:16px; padding:15px; margin-bottom:20px;">' +
-                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:900; display:block; margin-bottom:10px; text-transform:uppercase; text-align:center;">Dodaj Zarobki z Aplikacji</label>' +
+                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:900; display:block; margin-bottom:10px; text-transform:uppercase; text-align:center;">Dodatkowe Zarobki</label>' +
                 (isApps ? 
-                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"><input type="number" step="0.01" id="me-v-uber" placeholder="Uber (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-bolt" placeholder="Bolt (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-freenow" placeholder="FreeNow" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-inna" placeholder="Inna" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka" style="grid-column:span 2; padding:12px; font-size:1rem; color:#10b981; border-color:rgba(16,185,129,0.3);" class="compact-inp"></div>' 
+                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"><input type="number" step="0.01" id="me-v-uber" placeholder="Uber (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-bolt" placeholder="Bolt (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-freenow" placeholder="FreeNow" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-inna" placeholder="Inna Apka" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka" style="grid-column:span 2; padding:12px; font-size:1rem; color:#10b981; border-color:rgba(16,185,129,0.3);" class="compact-inp"></div>' 
                 : 
                     '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"><input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-karta" placeholder="Terminal" class="compact-inp" style="color:#0ea5e9; padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-voucher" placeholder="Vouchery" style="grid-column:span 2; padding:10px; font-size:0.9rem; color:#a855f7;" class="compact-inp"></div>'
                 ) +
@@ -444,11 +456,11 @@ window.submitPremiumEndShift = function() {
     
     if(typeof window.save === 'function') window.save(); 
     if(typeof window.render === 'function') window.render();
-    if(window.sysAlert) window.sysAlert('Zmiana Zakończona', 'Dane poprawnie zapisane w historii.', 'success');
+    if(window.sysAlert) window.sysAlert('Zmiana Zakończona', 'Zapisano w historii i P&L.', 'success');
 };
 
 
-// --- RENDER GŁÓWNY (UI) KOMPAKTOWY PREMIUM ---
+// --- RENDER GŁÓWNY (UI) ---
 window.getOfflineHTML = function(d) {
     let lblStyle = 'font-size:0.6rem; color:var(--muted); font-weight:800; text-transform:uppercase; margin-bottom:6px; display:block; text-align:left;';
     let html = '<div style="color:#0ea5e9; margin-top:10px; font-size:0.75rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:15px;">⚡ ZALEGŁA ZMIANA (OFFLINE)</div><div class="glass-card" style="padding:25px 15px; border-color: rgba(14,165,233,0.3); margin-bottom:20px;">';
@@ -456,9 +468,9 @@ window.getOfflineHTML = function(d) {
     html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#f59e0b; font-weight:900; text-align:center; display:block; margin-bottom:10px;">STAN LICZNIKA POJAZDU</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div><div><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div></div></div>';
     
     if(d.plat === 'apps') {
-        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ZAROBKI (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Aplikacja" class="compact-inp"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma)" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3); font-size:1.2rem; padding:15px;"></div></div></div>';
+        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" class="compact-inp"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3); font-size:1.2rem; padding:15px;"></div></div></div>';
     } else {
-        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ZAROBKI (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3);"></div><div><input type="number" step="0.01" id="dw-v-karta" placeholder="Terminal" class="compact-inp" style="color:#0ea5e9; border-color:rgba(14,165,233,0.3);"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" class="compact-inp" style="color:#a855f7; border-color:rgba(168,85,247,0.3);"></div></div></div>';
+        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3);"></div><div><input type="number" step="0.01" id="dw-v-karta" placeholder="Karta/Terminal" class="compact-inp" style="color:#0ea5e9; border-color:rgba(14,165,233,0.3);"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" class="compact-inp" style="color:#a855f7; border-color:rgba(168,85,247,0.3);"></div></div></div>';
     }
     
     html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;"><div><label style="'+lblStyle+'">Dystans Płatny (KM)</label><input type="number" id="dw-pk" placeholder="0.0" class="compact-inp"></div><div><label style="'+lblStyle+'">Czas Pracy (H)</label><input type="number" id="dw-h" placeholder="0" class="compact-inp"></div></div><button style="width:100%; padding:18px; border-radius:16px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3);" onclick="window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button><button style="width:100%; padding:16px; border-radius:16px; background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.1); margin-top:10px; font-weight:800; font-size:0.85rem;" onclick="window.dShowOff=false; window.render()">ANULUJ</button></div>';
@@ -471,8 +483,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         if(!appContainer) return;
         
         let html = [hdr];
-
-        html.push('<style>.glass-card { background: rgba(20, 20, 25, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); position: relative; overflow: hidden; padding: 20px; } .compact-inp { background: rgba(0,0,0,0.4); border: 1px inset rgba(255,255,255,0.05); color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-size: 1.1rem; font-weight: 700; outline: none; width: 100%; box-sizing: border-box; } .chip { flex: 0 0 auto; border-radius: 10px; font-weight: 800; padding: 8px 14px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; margin-right: 6px; } .chip.active.blue { background: rgba(14,165,233,0.15); color: #0ea5e9; border-color: rgba(14,165,233,0.4); } .chip.active.green { background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.4); } .chip.idle { background: transparent; color: rgba(255,255,255,0.4); } @keyframes glowPulse { 0% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(239,68,68,0.6); } 100% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } } .btn-taryfa { width:100%; height:100%; border-radius:10px; font-weight:900; font-size:1.1rem; background: linear-gradient(to bottom, #333, #111); box-shadow: 0 4px 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); cursor:pointer; outline:none; transition:all 0.1s; } .btn-taryfa:active { transform: translateY(4px); box-shadow: 0 0 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); }</style>');
+        html.push('<style>.glass-card { background: rgba(20, 20, 25, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); position: relative; overflow: hidden; padding: 20px; } .compact-inp { background: rgba(0,0,0,0.4); border: 1px inset rgba(255,255,255,0.05); color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-size: 1.1rem; font-weight: 700; outline: none; width: 100%; box-sizing: border-box; } .chip { padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.05); } .chip.active.blue { background: rgba(14,165,233,0.15); color: #0ea5e9; border-color: rgba(14,165,233,0.4); box-shadow: 0 0 10px rgba(14,165,233,0.2); } .chip.active.green { background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.4); box-shadow: 0 0 10px rgba(16,185,129,0.2); } .chip.idle { background: rgba(255,255,255,0.02); color: rgba(255,255,255,0.4); } @keyframes glowPulse { 0% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(239,68,68,0.6); } 100% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } } .btn-taryfa { width:100%; height:100%; border-radius:10px; font-weight:900; font-size:1.1rem; background: linear-gradient(to bottom, #333, #111); box-shadow: 0 4px 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); cursor:pointer; outline:none; transition:all 0.1s; } .btn-taryfa:active { transform: translateY(4px); box-shadow: 0 0 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); }</style>');
 
         let panelProBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.showProInfo) window.showProInfo()"><div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px rgba(217,70,239,0.5));">🚕</div><div><h4 style="color:#d946ef; margin:0 0 2px 0; font-size:0.85rem; font-weight:900;">Auto-Zlecenia (PRO)</h4><div style="font-size:0.65rem; color:var(--muted);">Integracja z APKAMI i GPS w tle.</div></div></div>';
 
@@ -514,10 +525,15 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             diffMins = Math.floor((aMs % 3600000) / 60000);
         }
 
+        // AUTO-INICJALIZACJA GLOBAL TRACKERA
+        if(d.sh && d.sh.on && !d.sh.globalWatchId) {
+            window.initGlobalTracker();
+        }
+
         if (d.sh && d.sh.on) {
             html.push('<div style="padding:0 15px; margin-top:15px;">');
             
-            // --- SMART GOAL UI ---
+            // --- SMART GOAL UI (ZGODNIE ZE SCREENEM) ---
             window.dGoalMode = window.dGoalMode || 'netto';
             let isNetto = window.dGoalMode === 'netto';
             
@@ -535,7 +551,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             let currentNetto = g - varCosts - fixedCosts;
             let currProg = isNetto ? currentNetto : currentBrutto;
 
-            let goalBrutto = (d.cfg && d.cfg.goalBrutto) ? parseFloat(d.cfg.goalBrutto) : 400;
+            let goalBrutto = (d.cfg && d.cfg.goalBrutto) ? parseFloat(d.cfg.goalBrutto) : ((d.cfg && d.cfg.dailyGoal) ? parseFloat(d.cfg.dailyGoal) : 400);
             let goalNetto = (d.cfg && d.cfg.goalNetto) ? parseFloat(d.cfg.goalNetto) : 300;
             let activeGoal = isNetto ? goalNetto : goalBrutto;
             
@@ -548,7 +564,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             let etaStr = '--:--';
             let speedPerHour = activeHrs > 0 ? ((currProg - startValue) / activeHrs) : 0; 
             
-            if (activeHrs > 0.25) { 
+            if (activeHrs > 0.1) { 
                 let remaining = activeGoal - currProg;
                 if (remaining <= 0) {
                     etaStr = 'Osiągnięto! 🎉';
@@ -557,28 +573,29 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                     let mLeft = Math.round(hoursLeft * 60);
                     etaStr = Math.floor(mLeft / 60) + 'h ' + (mLeft % 60) + 'm';
                 } else {
-                    etaStr = 'Jazda na stracie...';
+                    etaStr = 'Odrabianie strat...';
                 }
             } else {
                 etaStr = 'Zbieranie danych...';
             }
 
-            // GŁÓWNY MODUŁ WIDOKU (Stary styl z wielką liczbą i toggle)
+            // GŁÓWNY MODUŁ WIDOKU (Stary styl z wielką liczbą i toggle z Twojego screena)
             html.push('<div class="glass-card" style="padding:25px 20px; margin-bottom:15px; border-color:rgba(14,165,233,0.3); text-align:center;">');
             html.push('<div style="font-size:0.75rem; color:var(--muted); font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:5px;">'+(isNetto?'NETTO (OPERACYJNE)':'UTARG BRUTTO')+'</div>');
-            html.push('<div style="font-size:3.5rem; font-weight:900; color:'+(isNetto?'#10b981':'#0ea5e9')+'; line-height:1; margin-bottom:15px;">'+currProg.toFixed(2)+' <span style="font-size:1.2rem; color:rgba(255,255,255,0.4);">zł</span></div>');
+            html.push('<div style="font-size:3.8rem; font-weight:900; color:'+(isNetto?'#10b981':'#0ea5e9')+'; line-height:1; margin-bottom:15px;">'+currProg.toFixed(2)+' <span style="font-size:1.2rem; color:rgba(255,255,255,0.4);">zł</span></div>');
             
             html.push('<div style="display:inline-flex; background:rgba(0,0,0,0.5); border-radius:12px; border:1px solid rgba(255,255,255,0.05); overflow:hidden; margin-bottom:20px;">');
-            html.push('<button style="padding:8px 15px; font-size:0.7rem; font-weight:900; border:none; cursor:pointer; ' + (isNetto ? 'background:rgba(255,255,255,0.1); color:#fff;' : 'background:transparent; color:var(--muted);') + '" onclick="window.toggleGoalMode(\'netto\')">Netto (Operacyjne)</button>');
-            html.push('<button style="padding:8px 15px; font-size:0.7rem; font-weight:900; border:none; cursor:pointer; ' + (!isNetto ? 'background:rgba(255,255,255,0.1); color:#fff;' : 'background:transparent; color:var(--muted);') + '" onclick="window.toggleGoalMode(\'brutto\')">Brutto (Utarg)</button>');
+            html.push('<button style="padding:10px 15px; font-size:0.7rem; font-weight:900; border:none; cursor:pointer; ' + (isNetto ? 'background:rgba(255,255,255,0.15); color:#fff;' : 'background:transparent; color:var(--muted);') + '" onclick="window.toggleGoalMode(\'netto\')">Netto (Operacyjne)</button>');
+            html.push('<button style="padding:10px 15px; font-size:0.7rem; font-weight:900; border:none; cursor:pointer; ' + (!isNetto ? 'background:rgba(255,255,255,0.15); color:#fff;' : 'background:transparent; color:var(--muted);') + '" onclick="window.toggleGoalMode(\'brutto\')">Brutto (Utarg)</button>');
             html.push('</div>');
 
             html.push('<div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:800; color:var(--muted); margin-bottom:6px;"><span style="cursor:pointer;" onclick="window.dSetGoal()">Cel: ' + activeGoal.toFixed(0) + ' zł ⚙️</span><span style="color:#fff;">'+Math.round(pct)+'%</span></div>');
             html.push('<div style="height:8px; background:rgba(0,0,0,0.5); border-radius:4px; margin-bottom:10px;"><div style="height:100%; width:'+pct+'%; background:'+(isNetto?'#10b981':'#0ea5e9')+'; border-radius:4px; box-shadow:0 0 10px '+(isNetto?'#10b981':'#0ea5e9')+'; transition:width 0.5s ease;"></div></div>');
-            html.push('<div style="font-size:0.7rem; color:var(--muted); font-weight:700;">Do celu: <span style="color:#fff;">'+etaStr+'</span> ('+(speedPerHour).toFixed(0)+' zł/h)</div>');
+            html.push('<div style="font-size:0.7rem; color:var(--muted); font-weight:700; margin-bottom:10px;">Do celu: <span style="color:#fff;">~'+etaStr+'</span> ('+(speedPerHour).toFixed(0)+' zł/h)</div>');
+            html.push('<div style="font-size:0.65rem; color:#ef4444; font-weight:800; text-decoration:underline; cursor:pointer;" onclick="window.dSetFixedCosts()">Ustaw/Zmień Koszty Stałe Auto+ZUS (obecnie: '+fixedCosts.toFixed(2)+'zł/dzień)</div>');
             html.push('</div>');
 
-            // Karty Gotówka / Karta
+            // Karty Gotówka / Karta (Zgodnie ze screenem)
             html.push('<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:15px;">');
             html.push('<div class="glass-card" style="padding:15px 10px; text-align:center;"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:5px;">GOTÓWKA</div><div style="font-size:1.1rem; font-weight:900; color:#10b981;">'+Number(sumCash).toFixed(2)+'</div></div>');
             html.push('<div class="glass-card" style="padding:15px 10px; text-align:center;"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:5px;">Aplikacja/Karta</div><div style="font-size:1.1rem; font-weight:900; color:#0ea5e9;">'+Number(g - sumCash - sumVouch).toFixed(2)+'</div></div>');
@@ -592,7 +609,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('<button style="flex:1; border-radius:12px; font-weight:800; font-size:0.8rem; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);" onclick="if(window.openEndShiftModal) window.openEndShiftModal()">🔴 ZAKOŃCZ</button>');
             html.push('</div></div>');
 
-            html.push('<div style="text-align:center; margin-bottom:20px; font-size:0.7rem; font-weight:800; color:#f59e0b;"><span style="margin-right:10px;">🚕 Dystans całkowity zmiany: '+Number(d.sh.shiftDist||0).toFixed(1)+' km</span></div>');
+            html.push('<div style="text-align:center; margin-bottom:20px; font-size:0.75rem; font-weight:900; color:#f59e0b;"><span style="margin-right:10px;">🚕 Dystans całkowity zmiany: '+Number(d.sh.shiftDist||0).toFixed(1)+' km</span></div>');
             
             // MODUŁ GPS (LIVE TAKSOMETR)
             if(d.liveRideStart) {
@@ -617,19 +634,24 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 html.push('<button style="width:100%; padding:18px; border-radius:16px; margin-bottom:20px; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(16,185,129,0.3);" onclick="if(window.startLiveRide) window.startLiveRide()">🟢 ROZPOCZNIJ KURS (STOPER / GPS)</button>');
             }
             
-            // KREATOR
+            let autoM = d.sh.tempAutoMins !== undefined ? d.sh.tempAutoMins : '';
+            let autoK = d.sh.tempAutoKm !== undefined ? d.sh.tempAutoKm : '';
+            let autoP = d.sh.tempAutoPrice !== undefined ? d.sh.tempAutoPrice : '';
+            let isHighlight = autoM !== '' ? 'border-color:#10b981; color:#10b981;' : '';
+            d.sh.tempAutoMins = undefined; d.sh.tempAutoKm = undefined; d.sh.tempAutoPrice = undefined;
+
+            // KREATOR KURSU
             html.push('<div class="glass-card" style="padding: 20px 15px; margin-bottom: 20px;">');
             html.push('<div style="font-size: 0.7rem; color: var(--muted); font-weight: 900; text-transform: uppercase; margin-bottom: 12px; text-align: center; letter-spacing:1px;">REJESTRACJA KURSU</div>');
-            html.push('<div style="display:flex; overflow-x:auto; padding-bottom:5px; margin-bottom:5px; white-space:nowrap;">'+ch1+'</div>');
+            html.push('<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:10px;">'+ch1+'</div>');
             html.push(otherSrcHtml);
-            html.push('<div style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom:15px; white-space:nowrap;">'+ch2+'</div>');
+            html.push('<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:15px;">'+ch2+'</div>');
             
-            html.push('<div style="display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.6); border-radius:16px; padding:15px; margin-bottom:15px; border:1px inset rgba(255,255,255,0.05);">');
-            html.push('<input type="number" id="dt-v" placeholder="0.00" style="background:transparent; border:none; color:#0ea5e9; font-size:3.5rem; font-weight:900; text-align:center; outline:none; width:100%;"><span style="font-size:1.4rem; color:var(--muted); font-weight:700; margin-left:10px;">zł</span></div>');
+            html.push('<div style="display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.6); border-radius:16px; padding:15px; margin-bottom:15px; border:1px inset rgba(255,255,255,0.05);"><input type="number" id="dt-v" placeholder="0.00" value="'+autoP+'" style="background:transparent; border:none; color:#fff; font-size:3.5rem; font-weight:900; text-align:center; outline:none; width:100%; max-width:200px; font-family:monospace;"><span style="font-size:1.5rem; color:rgba(255,255,255,0.4); font-weight:700; margin-left:10px;">zł</span></div>');
             
             html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">');
-            html.push('<div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px;">CZAS (MIN)</label><input type="number" id="dt-m" placeholder="0" class="compact-inp"></div>');
-            html.push('<div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px;">DYSTANS (KM)</label><input type="number" step="0.1" id="dt-k" placeholder="0.0" class="compact-inp"></div>');
+            html.push('<div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px; text-align:center;">CZAS (MIN)</label><input type="number" id="dt-m" placeholder="0" value="'+autoM+'" class="compact-inp" style="'+isHighlight+'"></div>');
+            html.push('<div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px; text-align:center;">DYSTANS (KM)</label><input type="number" step="0.1" id="dt-k" placeholder="0.0" value="'+autoK+'" class="compact-inp" style="'+isHighlight+'"></div>');
             html.push('</div>');
 
             html.push('<div class="inp-group" style="margin-bottom:15px;"><select id="dt-cid" class="compact-inp" style="appearance:none;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select></div>');
