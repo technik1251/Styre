@@ -81,7 +81,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
 
         html.push('<div style="padding:0 15px;">');
 
-        // --- ZALOGUJ PRZEZ GOOGLE (KONTO I CHMURA) ---
+        // --- ZALOGUJ PRZEZ GOOGLE (KONTO I CHMURA DARMOWA) ---
         html.push('<div class="panel" style="padding:25px 20px; border-radius:24px; margin-bottom:15px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(14,165,233,0.3); box-shadow:0 10px 30px rgba(0,0,0,0.4); text-align:center;">');
         html.push('<div style="font-size:2.5rem; margin-bottom:10px; filter:drop-shadow(0 0 10px rgba(14,165,233,0.4));">☁️</div>');
         html.push('<h3 style="color:#0ea5e9; font-size:1.1rem; margin:0 0 5px 0; font-weight:900; letter-spacing:1px; text-transform:uppercase;">Konto i Kopia Zapasowa</h3>');
@@ -91,15 +91,15 @@ window.rDrvSet = function(d, t, nav, hdr) {
         html.push('</button>');
         html.push('</div>');
 
-        // --- ZAPOWIEDŹ PRO: SKANER KOSZTÓW OCR ---
-        html.push('<div class="pro-teaser-panel" style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(window.sysAlert) window.sysAlert(\'Skaner OCR PRO\', \'W wersji PRO zrobisz zdjęcie paragonu ze stacji, a Sztuczna Inteligencja sama rozliczy koszty paliwa! 📸🚀\', \'info\')">');
+        // --- ZAPOWIEDŹ PRO: MULTI-PROFILE I FLOTA ---
+        html.push('<div class="pro-teaser-panel" style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(window.sysAlert) window.sysAlert(\'Multi-Profile PRO\', \'W wersji PRO będziesz mógł stworzyć kilka osobnych profili dla różnych samochodów, a nawet zarządzać statystykami całej floty z jednego miejsca! 👥🚀\', \'info\')">');
         html.push('<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>');
         html.push('<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>');
         html.push('<div style="display: flex; align-items: center; gap: 15px;">');
-        html.push('<div style="font-size: 2.5rem; filter: drop-shadow(0 0 15px rgba(217,70,239,0.4));">📸✨</div>');
+        html.push('<div style="font-size: 2.5rem; filter: drop-shadow(0 0 15px rgba(217,70,239,0.4));">👥✨</div>');
         html.push('<div style="text-align: left;">');
-        html.push('<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Inteligentny Skaner (OCR)</h4>');
-        html.push('<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Zdjęcia paragonów:</b> AI samo doda koszty!<br>✅ <b>Raporty PDF:</b> Gotowe pliki dla księgowej.</div>');
+        html.push('<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Multi-Profile i Flota</h4>');
+        html.push('<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Wiele aut:</b> Osobne statystyki i koszty.<br>✅ <b>Tryb Floty:</b> Zarządzaj swoimi kierowcami!</div>');
         html.push('</div></div></div>');
 
         // 1. TARYFIKATOR
@@ -202,7 +202,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
         
         let sIW = insPer === 'week' ? 'selected' : '';
         let sIM = insPer === 'month' ? 'selected' : '';
-        html.push('<div class="inp-row" style="margin-bottom:5px; gap:12px;"><div class="inp-group" style="margin:0; flex:2;"><label style="'+lblStyle+'">ZUS / Ubezp. (zł)</label><input type="number" id="us-ic" value="'+insC+'" style="'+inpStyle+'"></div><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Okres</label><select id="us-i-period" style="'+inpStyle+'"><option value="week" '+sIW+'>Tyg</option><option value="month" '+sIM+'>M-c</option></select></div></div>');
+        html.push('<div class="inp-row" style="margin-bottom:5px; gap:12px;"><div class="inp-group" style="margin:0; flex:2;"><label style="'+lblStyle+'">ZUS Ubezp. (zł)</label><input type="number" id="us-ic" value="'+insC+'" style="'+inpStyle+'"></div><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Okres</label><select id="us-i-period" style="'+inpStyle+'"><option value="week" '+sIW+'>Tyg</option><option value="month" '+sIM+'>M-c</option></select></div></div>');
         html.push('</div></div>');
 
         // 5. PODATKI I PROWIZJE
@@ -234,13 +234,12 @@ window.rDrvSet = function(d, t, nav, hdr) {
         html.push('<div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Stawka podatku (%)</label><input type="number" id="us-tx" value="'+tax+'" step="0.1" style="'+inpStyle+'"></div>');
         html.push('<div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Terminal KARTY (%)</label><input type="number" id="us-cf" value="'+cardF+'" step="0.1" style="'+inpStyle+'"></div>');
         html.push('</div>');
-        html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+'">Prowizja Voucherów (%) (Opcj.)</label><input type="number" id="us-vf" value="'+vouchF+'" placeholder="0" step="0.1" style="'+inpStyle+'"></div>');
+        html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+'">Prowizja Voucherów (%)</label><input type="number" id="us-vf" value="'+vouchF+'" placeholder="0" step="0.1" style="'+inpStyle+'"></div>');
         html.push('</div></div>');
 
-        // 6. WSPARCIE (KUP KAWĘ) - Teraz z animacją CSS Pary, bez zielonej ramki
+        // 6. WSPARCIE (KUP KAWĘ) - CSS Animacja Pary, brak ramek
         html.push('<div class="panel" style="padding:35px 20px; border-radius:24px; margin-bottom:20px; text-align:center; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #2a1505 0%, #090500 100%); box-shadow:0 15px 40px rgba(245,158,11,0.15); position:relative; overflow:hidden;">');
         
-        // Magiczna sztuczka na animację pary z użyciem znaków
         html.push('<div style="position:relative; display:inline-block; font-size:4rem; margin-bottom:15px; filter: drop-shadow(0 4px 15px rgba(245,158,11,0.6));">');
         html.push('<div style="position:absolute; top:-20px; left:10px; font-size:1.5rem; opacity:0; animation: steamRise 2s infinite linear; color:#f59e0b;">〰️</div>');
         html.push('<div style="position:absolute; top:-25px; left:30px; font-size:1.5rem; opacity:0; animation: steamRise 2s infinite linear 0.7s; color:#f59e0b;">〰️</div>');
@@ -252,7 +251,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
         html.push('<a href="https://buycoffee.to/styreos" target="_blank" style="background:linear-gradient(135deg, #ffdd00, #f59e0b); color:#000; font-weight:900; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:10px; padding:18px; border-radius:20px; box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4); font-size:1.05rem; letter-spacing:1px; text-transform:uppercase;">');
         html.push('<span style="font-size:1.4rem;">☕</span> WESPRZYJ PROJEKT</a></div>');
 
-        html.push('</div>'); // Koniec kontenera
+        html.push('</div>'); // Koniec kontenera wciętego
 
         // Przyciski zapisywania i kopii zapasowej
         html.push('<div style="padding:10px 15px; margin-top:10px; margin-bottom:10px;">');
@@ -354,7 +353,7 @@ window.dSaveUS = function() {
 
     window.db.drv.cfg.goal = safeVal('us-goal', 350);
     let cityEl = document.getElementById('us-city');
-    window.db.drv.cfg.defCity = cityEl ? cityEl.value : 'Szczecin';
+    window.db.drv.cfg.defCity = cityEl ? cityEl.value : 'Warszawa';
     
     let selectedF = [];
     let types = ['pb', 'on', 'lpg', 'ev'];
