@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Terminal Premium V11 (Crystal UI, Zero-Lag Pause, Smart Netto)
+// PLIK: taxi_tab_term.js - Terminal Premium V11 (Full Crystal Edition, Zero Lag)
 // ==========================================
 
 // --- 1. FUNKCJE POMOCNICZE I MATEMATYKA ---
@@ -72,7 +72,6 @@ window.dStartS = function() {
             let xDate = x.rD ? new Date(x.rD) : null;
             if(xDate) { xDate.setMinutes(xDate.getMinutes() - xDate.getTimezoneOffset()); xDate = xDate.toISOString().split('T')[0]; }
             else { xDate = x.dt; }
-            
             if (xDate === todayStr) { alreadyAppliedToday = true; break; }
         }
     }
@@ -174,7 +173,7 @@ window.resumeLiveRide = function() {
     if(!window.liveRideTimer) window.liveRideTimer = setInterval(window.updateLiveRideUI, 1000);
 };
 
-// --- 3. CELE I PRZERWY (ZERO LAG) ---
+// --- 3. CELE I PRZERWY ---
 window.dGoalMode = window.dGoalMode || 'netto';
 window.toggleGoalMode = function(mode) {
     window.dGoalMode = mode;
@@ -184,9 +183,9 @@ window.toggleGoalMode = function(mode) {
 window.dSetGoal = function() {
     let isNetto = window.dGoalMode === 'netto';
     let current = isNetto ? ((window.db.drv.cfg && window.db.drv.cfg.goalNetto) || 300) : ((window.db.drv.cfg && window.db.drv.cfg.goalBrutto) || 400);
-    let modeName = isNetto ? 'NETTO (Kasa na czysto)' : 'BRUTTO (Utarg)';
+    let modeName = isNetto ? 'NETTO (Na czysto)' : 'BRUTTO (Utarg)';
     
-    let ng = prompt("Zdefiniuj Cel Dzienny " + modeName + " (PLN):", current);
+    let ng = prompt("Podaj CEL DZIENNY " + modeName + " (PLN):", current);
     if(ng !== null && ng !== '') {
         let val = parseFloat(ng.replace(',','.'));
         if(!isNaN(val) && val > 0) {
@@ -222,11 +221,7 @@ window.toggleShiftPause = function() {
                 elPauseBtn.style.borderColor = 'rgba(245,158,11,0.4)';
             }
         }
-        
-        // Zapis asynchroniczny - Zero lagów w interfejsie!
-        setTimeout(function() {
-            if(typeof window.save === 'function') window.save();
-        }, 10);
+        setTimeout(function() { if(typeof window.save === 'function') window.save(); }, 10);
     }
 };
 
@@ -241,7 +236,6 @@ window.toggleLiveTariff = function() {
         
         window.db.drv.sh.liveTariff = next;
         window.updateLiveRideUI();
-        
         setTimeout(function() { if(typeof window.save === 'function') window.save(); }, 10);
     }
 };
@@ -358,7 +352,7 @@ window.toggleRideWait = function() {
     }
 };
 
-// --- 5. MODAL ZAMYKANIA ZMIANY (BEZBŁĘDNY ZAPIS) ---
+// --- 5. MODAL ZAMYKANIA ZMIANY ---
 window.openPremiumEndShiftModal = function() {
     let s = window.db.drv.sh || {};
     let startOdo = s.o ? parseFloat(s.o) : 0;
@@ -378,8 +372,8 @@ window.openPremiumEndShiftModal = function() {
     if(s.tr) s.tr.forEach(function(x) { g += (parseFloat(x.v)||0); });
     let isApps = (window.db.drv.plat === 'apps');
 
-    let html = '<div id="m-end-shift-premium" class="modal-overlay" style="z-index:99999; position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:flex-start; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(20px); overflow-y:auto; padding:30px 0; box-sizing:border-box; animation:fadeIn 0.2s ease;">' +
-        '<div class="glass-card" style="width:90%; max-width:400px; border:1px solid rgba(239,68,68,0.4); padding:25px 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); margin:auto; flex-shrink:0;">' +
+    let html = '<div id="m-end-shift-premium" class="modal-overlay" style="z-index:99999; position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:flex-start; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(20px); overflow-y:auto; padding:20px 0; box-sizing:border-box; animation:fadeIn 0.2s ease;">' +
+        '<div class="crystal-card crystal-panel" style="width:90%; max-width:400px; padding:25px 20px; margin:auto; flex-shrink:0;">' +
             '<div style="text-align:center; margin-bottom:20px;">' +
                 '<div style="font-size:3rem; margin-bottom:10px; filter:drop-shadow(0 0 10px rgba(239,68,68,0.5));">🏁</div>' +
                 '<h3 style="color:#ef4444; margin:0 0 5px 0; font-size:1.4rem; font-weight:900; text-transform:uppercase;">Zakończ Zmianę</h3>' +
@@ -471,7 +465,6 @@ window.submitPremiumEndShiftModal = function() {
         let cF = sumCard * cardF; let vF = sumVouch * vouchF;
         let tax = g * taxRate; let pFee = g * ePct; let fc = distTotal * fuelPx;
 
-        // Koszty zablokowane na ten start zmiany (żeby nie ucięło 2 razy w jeden dzień)
         let fixedCosts = (s.fixedCosts !== undefined) ? s.fixedCosts : 0;
         let n = g - fc - tax - pFee - cF - vF - fixedCosts;
         
@@ -507,6 +500,22 @@ window.submitPremiumEndShiftModal = function() {
 };
 
 // --- RENDER GŁÓWNY (UI) KOMPAKTOWY PREMIUM ---
+window.getOfflineHTML = function(d) {
+    let lblStyle = 'font-size:0.6rem; color:var(--muted); font-weight:800; text-transform:uppercase; margin-bottom:6px; display:block; text-align:left;';
+    let html = '<div style="color:#0ea5e9; margin-top:10px; font-size:0.75rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:15px;">⚡ ZALEGŁA ZMIANA (OFFLINE)</div><div class="crystal-card crystal-panel" style="padding:25px 15px; margin-bottom:20px;">';
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;"><div><label style="'+lblStyle+'">Data Startu</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" class="compact-inp"></div><div><label style="'+lblStyle+'">Data Koniec</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" class="compact-inp"></div></div>';
+    html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#f59e0b; font-weight:900; text-align:center; display:block; margin-bottom:10px;">STAN LICZNIKA POJAZDU</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div><div><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div></div></div>';
+    
+    if(d.plat === 'apps') {
+        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" class="compact-inp"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma)" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3); font-size:1.2rem; padding:15px;"></div></div></div>';
+    } else {
+        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3);"></div><div><input type="number" step="0.01" id="dw-v-karta" placeholder="Terminal" class="compact-inp" style="color:#0ea5e9; border-color:rgba(14,165,233,0.3);"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" class="compact-inp" style="color:#a855f7; border-color:rgba(168,85,247,0.3);"></div></div></div>';
+    }
+    
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;"><div><label style="'+lblStyle+'">Dystans Płatny (KM)</label><input type="number" id="dw-pk" placeholder="0.0" class="compact-inp"></div><div><label style="'+lblStyle+'">Czas Pracy (H)</label><input type="number" id="dw-h" placeholder="0" class="compact-inp"></div></div><button style="width:100%; padding:18px; border-radius:16px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3);" onclick="window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button><button style="width:100%; padding:16px; border-radius:16px; background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.1); margin-top:10px; font-weight:800; font-size:0.85rem;" onclick="window.dShowOff=false; window.render()">ANULUJ</button></div>';
+    return html;
+};
+
 window.rDrvTerm = function(d, t, nav, hdr) {
     try {
         let appContainer = document.getElementById('app');
@@ -514,8 +523,8 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         
         let html = [hdr];
         
-        // NOWE: STYLE KRYSZTAŁOWE (Diamentowy UI) i Kompaktowe siatki
-        html.push('<style>.glass-card { background: rgba(20, 20, 25, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); position: relative; overflow: hidden; padding: 15px; } .compact-inp { background: rgba(0,0,0,0.4); border: 1px inset rgba(255,255,255,0.05); color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-size: 1.1rem; font-weight: 700; outline: none; width: 100%; box-sizing: border-box; transition: border 0.3s; } .compact-inp:focus { border-color: rgba(14,165,233,0.5); } .chip { padding: 8px 12px; border-radius: 10px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.05); } .chip.active.blue { background: rgba(14,165,233,0.15); color: #0ea5e9; border-color: rgba(14,165,233,0.4); box-shadow: 0 0 10px rgba(14,165,233,0.2); } .chip.active.green { background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.4); box-shadow: 0 0 10px rgba(16,185,129,0.2); } .chip.idle { background: rgba(255,255,255,0.02); color: rgba(255,255,255,0.4); } @keyframes glowPulse { 0% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(239,68,68,0.6); } 100% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } } .btn-taryfa { width:100%; height:100%; border-radius:10px; font-weight:900; font-size:1.1rem; background: linear-gradient(to bottom, #333, #111); box-shadow: 0 4px 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); cursor:pointer; outline:none; transition:all 0.1s; } .btn-taryfa:active { transform: translateY(4px); box-shadow: 0 0 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); }');
+        // Style Kryształowe V2 na wypadek braku pliku CSS
+        html.push('<style id="crystal-styles">');
         html.push('.crystal-card { background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.2) 100%); border: 1px solid rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.3); border-radius: 16px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 8px 20px rgba(0,0,0,0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 15px 5px; text-align: center; position: relative; overflow: hidden; }');
         html.push('.crystal-card::after { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%); transform: skewX(-25deg); animation: shine 6s infinite; }');
         html.push('@keyframes shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }');
@@ -523,6 +532,14 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         html.push('.crystal-bolt { border-top-color: rgba(34,197,94,0.6); box-shadow: inset 0 1px 2px rgba(34,197,94,0.4), 0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(34,197,94,0.1); }');
         html.push('.crystal-freenow { border-top-color: rgba(217,70,239,0.6); box-shadow: inset 0 1px 2px rgba(217,70,239,0.4), 0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(217,70,239,0.1); }');
         html.push('.crystal-cash { border-top-color: rgba(16,185,129,0.6); box-shadow: inset 0 1px 2px rgba(16,185,129,0.4), 0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(16,185,129,0.1); }');
+        html.push('.crystal-main { border-top-color: rgba(255,255,255,0.4); background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.4) 100%); box-shadow: inset 0 1px 2px rgba(255,255,255,0.3), 0 10px 30px rgba(0,0,0,0.7), 0 0 20px rgba(255,255,255,0.05); }');
+        html.push('.crystal-time { border-top-color: rgba(14,165,233,0.6); box-shadow: inset 0 1px 2px rgba(14,165,233,0.4), 0 6px 15px rgba(0,0,0,0.5), 0 0 12px rgba(14,165,233,0.1); }');
+        html.push('.crystal-gross { border-top-color: rgba(16,185,129,0.6); box-shadow: inset 0 1px 2px rgba(16,185,129,0.4), 0 6px 15px rgba(0,0,0,0.5), 0 0 12px rgba(16,185,129,0.1); }');
+        html.push('.crystal-dist { border-top-color: rgba(245,158,11,0.6); box-shadow: inset 0 1px 2px rgba(245,158,11,0.4), 0 6px 15px rgba(0,0,0,0.5), 0 0 12px rgba(245,158,11,0.1); }');
+        html.push('.crystal-panel { border-top-color: rgba(255,255,255,0.2); box-shadow: inset 0 1px 2px rgba(255,255,255,0.1), 0 6px 15px rgba(0,0,0,0.5); }');
+        html.push('.compact-inp { background: rgba(0,0,0,0.4); border: 1px inset rgba(255,255,255,0.05); color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-size: 1.1rem; font-weight: 700; outline: none; width: 100%; box-sizing: border-box; transition: border 0.3s; } .compact-inp:focus { border-color: rgba(14,165,233,0.5); }');
+        html.push('.btn-taryfa { width:100%; height:100%; border-radius:10px; font-weight:900; font-size:1rem; background: linear-gradient(to bottom, #333, #111); box-shadow: 0 3px 0 #000, inset 0 2px 4px rgba(255,255,255,0.2); cursor:pointer; outline:none; transition:all 0.1s; } .btn-taryfa:active { transform: translateY(3px); box-shadow: 0 0 0 #000, inset 0 2px 4px rgba(255,255,255,0.2); }');
+        html.push('.chip-box { display: flex; gap: 6px; margin-bottom: 10px; padding-bottom: 2px; scrollbar-width: none; -ms-overflow-style: none; max-width: 100%; overflow-x:auto;} .chip { padding: 8px 12px; border-radius: 10px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.05); white-space: nowrap; flex: 1; text-align: center;} .chip.active { background: #3b82f6; color: #fff; border-color: #3b82f6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); transform: scale(1.02); } .chip.active.blue { background: rgba(14,165,233,0.15); color: #0ea5e9; border-color: rgba(14,165,233,0.4); box-shadow: 0 0 10px rgba(14,165,233,0.2); } .chip.active.green { background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.4); box-shadow: 0 0 10px rgba(16,185,129,0.2); } .chip.idle { background: rgba(255,255,255,0.02); color: rgba(255,255,255,0.4); }');
         html.push('</style>');
 
         if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; }
@@ -564,13 +581,11 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         if(d.sh && d.sh.shiftStart) {
             let aMs = Date.now() - d.sh.shiftStart;
             if(d.sh.sPT) aMs -= d.sh.sPT;
-            // Pauza nie jest odliczana od widoku "Czas zmiany", ale od czasu PRACY tak.
             activeHrs = aMs / 3600000;
             diffHrs = Math.floor(activeHrs);
             diffMins = Math.floor((aMs % 3600000) / 60000);
         }
 
-        // POBIERANIE WYNIKÓW Z CAŁEGO DNIA DLA PASKA CELU
         let todayStr = window.getRealTodayYMD();
         let todayPastGross = 0, todayPastNetto = 0, todayPastHrs = 0;
         if (d.h) {
@@ -587,7 +602,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             });
         }
 
-        // GLOBALNY ZEGAR UI
+        // GLOBALNY ZEGAR UI (STOPER PRZERWY)
         if(window.globalShiftTimer) clearInterval(window.globalShiftTimer);
         if(d.sh && d.sh.on) {
             window.globalShiftTimer = setInterval(function() {
@@ -600,7 +615,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 
                 let elPauseBtn = document.getElementById('ui-pause-btn');
                 if(s.sPS) {
-                    aMs -= (Date.now() - s.sPS);
+                    aMs -= (Date.now() - s.sPS); // Pauza odejmowana od aktywnego czasu
                     let pMs = Date.now() - s.sPS;
                     let pM = Math.floor(pMs / 60000);
                     let pS = Math.floor((pMs % 60000) / 1000);
@@ -630,7 +645,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         if(d.sh && d.sh.on && !d.sh.globalWatchId) window.initGlobalTracker();
 
         if (d.sh && d.sh.on) {
-            html.push('<div style="padding:0 10px; margin-top:10px;">'); // Mniejszy padding dla lepszego zmieszczenia
+            html.push('<div style="padding:0 10px; margin-top:10px;">');
             
             // --- SMART GOAL UI ---
             window.dGoalMode = window.dGoalMode || 'netto';
@@ -656,7 +671,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             if(d.sh.shiftStart) {
                 let aMs = Date.now() - d.sh.shiftStart;
                 if(d.sh.sPT) aMs -= d.sh.sPT;
-                if(d.sh.sPS) aMs -= (Date.now() - d.sh.sPS); // Pauza nie jest efektywna!
+                if(d.sh.sPS) aMs -= (Date.now() - d.sh.sPS); 
                 activeWorkHrs = Math.max(0, aMs / 3600000);
             }
             let totalActiveHrs = todayPastHrs + activeWorkHrs;
@@ -665,7 +680,6 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             let goalNetto = (d.cfg && d.cfg.goalNetto) ? parseFloat(d.cfg.goalNetto) : 300;
             let activeGoal = isNetto ? goalNetto : goalBrutto;
             
-            // Pasek startuje od minusa całej dniówki (jeśli nie ma przeszłych zmian z zyskiem)
             let totalFixedCosts = todayPastNetto === 0 ? fixedCosts : 0; 
             let startValue = isNetto ? -totalFixedCosts : 0;
             
@@ -692,9 +706,10 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 etaStr = 'Zbieranie danych...';
             }
 
-            html.push('<div class="glass-card" style="padding:20px 15px; margin-bottom:10px; border-color:rgba(14,165,233,0.3); text-align:center;">');
+            // GŁÓWNY PANEL (Kryształowy Duży)
+            html.push('<div class="crystal-card crystal-main" style="padding:20px 15px; margin-bottom:10px;">');
             html.push('<div style="font-size:0.7rem; color:var(--muted); font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:5px;">'+(isNetto?'NETTO CAŁY DZIEŃ':'BRUTTO CAŁY DZIEŃ')+'</div>');
-            html.push('<div style="font-size:3.2rem; font-weight:900; color:'+(isNetto?'#10b981':'#0ea5e9')+'; line-height:1; margin-bottom:15px;"><span id="goal-current-val">'+currProg.toFixed(2)+'</span> <span style="font-size:1.2rem; color:rgba(255,255,255,0.4);">zł</span></div>');
+            html.push('<div style="font-size:3.5rem; font-weight:900; color:'+(isNetto?'#10b981':'#0ea5e9')+'; line-height:1; margin-bottom:15px;"><span id="goal-current-val">'+currProg.toFixed(2)+'</span> <span style="font-size:1.2rem; color:rgba(255,255,255,0.4);">zł</span></div>');
             
             html.push('<div style="display:inline-flex; background:rgba(0,0,0,0.5); border-radius:10px; border:1px solid rgba(255,255,255,0.05); overflow:hidden; margin-bottom:15px;">');
             html.push('<button style="padding:6px 12px; font-size:0.65rem; font-weight:900; border:none; cursor:pointer; ' + (isNetto ? 'background:rgba(255,255,255,0.15); color:#fff;' : 'background:transparent; color:var(--muted);') + '" onclick="window.toggleGoalMode(\'netto\')">Netto (Operacyjne)</button>');
@@ -722,13 +737,11 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 html.push('</div>');
             }
 
-            // Statystyki Paska Kompaktowego
-            html.push('<div class="glass-card" style="padding:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">');
-            html.push('<div style="text-align:center; flex:1;"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px;">CZAS PRACY</div><div id="ui-shift-time" style="font-size:1.1rem; font-weight:900; color:#0ea5e9;">0h 0m</div></div>');
-            html.push('<div style="width:1px; background:rgba(255,255,255,0.1); height:30px;"></div>');
-            html.push('<div style="text-align:center; flex:1;"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px;">UTARG ZMIANY</div><div style="font-size:1.1rem; font-weight:900; color:#10b981;">'+Number(g).toFixed(2)+' zł</div></div>');
-            html.push('<div style="width:1px; background:rgba(255,255,255,0.1); height:30px;"></div>');
-            html.push('<div style="text-align:center; flex:1;"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px;">DYSTANS (GPS)</div><div style="font-size:1.1rem; font-weight:900; color:#f59e0b;"><span id="shift-total-dist">'+Number(d.sh.shiftDist||0).toFixed(1)+'</span> km</div></div>');
+            // --- NOWE KAFELKI KRYSZTAŁOWE DLA STATYSTYK BIEŻĄCYCH ---
+            html.push('<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px;">');
+            html.push('<div class="crystal-card crystal-time"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">CZAS PRACY</div><div id="ui-shift-time" style="font-size:1.1rem; font-weight:900; color:#0ea5e9;">0h 0m</div></div>');
+            html.push('<div class="crystal-card crystal-gross"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">UTARG ZMIANY</div><div style="font-size:1.1rem; font-weight:900; color:#10b981;">'+Number(g).toFixed(2)+' zł</div></div>');
+            html.push('<div class="crystal-card crystal-dist"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">DYSTANS (GPS)</div><div style="font-size:1.1rem; font-weight:900; color:#f59e0b;"><span id="shift-total-dist">'+Number(d.sh.shiftDist||0).toFixed(1)+'</span> km</div></div>');
             html.push('</div>');
 
             html.push('<div style="display:flex; gap:8px; margin-bottom:10px;">');
@@ -744,7 +757,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 let activeTariff = d.sh.liveTariff || 't1';
                 let tColor = (activeTariff==='t1')?'#10b981':(activeTariff==='t2')?'#3b82f6':(activeTariff==='t3')?'#f59e0b':'#ef4444';
 
-                html.push('<div class="glass-card" style="padding:15px; margin-bottom:15px; border-color:rgba(16,185,129,0.4);">');
+                html.push('<div class="crystal-card crystal-panel" style="padding:15px; margin-bottom:15px;">');
                 html.push('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;"><div style="display: flex; align-items: center; gap: 8px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></div><span style="color:#10b981; font-size: 0.75rem; font-weight: 900; letter-spacing: 1px; text-transform:uppercase;">W Trasie</span></div><div id="live-ride-time" style="font-size: 1.1rem; font-weight: 900; color: #0ea5e9; font-family: monospace;">'+cTime+'</div></div>');
 
                 html.push('<div style="text-align:center; margin-bottom:10px; display:flex; flex-direction:column; align-items:center;">');
@@ -767,11 +780,11 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             d.sh.tempAutoMins = undefined; d.sh.tempAutoKm = undefined; d.sh.tempAutoPrice = undefined;
 
             // KREATOR KURSU
-            html.push('<div class="glass-card" style="padding: 15px; margin-bottom: 20px;">');
+            html.push('<div class="crystal-card crystal-panel" style="padding: 15px; margin-bottom: 20px;">');
             html.push('<div style="font-size: 0.65rem; color: var(--muted); font-weight: 900; text-transform: uppercase; margin-bottom: 10px; text-align: center; letter-spacing:1px;">REJESTRACJA KURSU</div>');
-            html.push('<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin-bottom:8px;">'+ch1+'</div>');
+            html.push('<div class="chip-box">'+ch1+'</div>');
             html.push(otherSrcHtml);
-            html.push('<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin-bottom:10px;">'+ch2+'</div>');
+            html.push('<div class="chip-box" style="margin-bottom:10px;">'+ch2+'</div>');
             
             html.push('<div style="display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.6); border-radius:14px; padding:12px; margin-bottom:10px; border:1px inset rgba(255,255,255,0.05);"><input type="number" id="dt-v" placeholder="0.00" value="'+autoP+'" style="background:transparent; border:none; color:#fff; font-size:3rem; font-weight:900; text-align:center; outline:none; width:100%; max-width:200px; font-family:monospace;"><span style="font-size:1.2rem; color:rgba(255,255,255,0.4); font-weight:700; margin-left:10px;">zł</span></div>');
             
@@ -808,7 +821,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             let proBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.showProInfo) window.showProInfo()"><div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px rgba(217,70,239,0.5));">🚕</div><div><h4 style="color:#d946ef; margin:0 0 2px 0; font-size:0.85rem; font-weight:900;">Auto-Zlecenia (PRO)</h4><div style="font-size:0.65rem; color:var(--muted);">Integracja z APKAMI i GPS w tle.</div></div></div>';
             
             html.push('<div style="padding: 30px 20px; text-align: center;"><div style="width:60px; height:60px; background:rgba(245,158,11,0.1); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2rem;">🚕</div><h1 style="font-size:2.2rem; font-weight:900; color:#fff; margin:0 0 5px 0;">Witaj!</h1><p style="color:var(--muted); font-size:0.85rem; margin-bottom:30px; font-weight:600;">Potwierdź licznik, aby zacząć pracę.</p>');
-            html.push('<div class="glass-card" style="padding:25px 20px; margin-bottom:20px; border-color: rgba(245,158,11,0.3);"><div style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px; margin-bottom:10px; text-transform:uppercase;">STAN LICZNIKA (KM)</div><input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="000000" style="width:100%; background:rgba(0,0,0,0.4); border-radius:12px; padding:15px; color:#f59e0b; font-size:3.5rem; font-weight:900; text-align:center; outline:none; border:1px inset rgba(255,255,255,0.05);"></div>');
+            html.push('<div class="crystal-card crystal-panel" style="padding:25px 20px; margin-bottom:20px;"><div style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px; margin-bottom:10px; text-transform:uppercase;">STAN LICZNIKA (KM)</div><input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="000000" style="width:100%; background:rgba(0,0,0,0.4); border-radius:12px; padding:15px; color:#f59e0b; font-size:3.5rem; font-weight:900; text-align:center; outline:none; border:1px inset rgba(255,255,255,0.05);"></div>');
             html.push('<button style="width:100%; padding:20px; border-radius:16px; font-size:1.1rem; font-weight:900; background:linear-gradient(135deg, #10b981, #059669); color:#000; border:none; margin-bottom:20px; box-shadow:0 8px 25px rgba(16,185,129,0.3);" onclick="if(window.dStartS) window.dStartS()">ROZPOCZNIJ PRACĘ</button>');
             
             if(!window.dShowOff) {
