@@ -1,7 +1,8 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Niezawodny Terminal (Global Tracker, Smart Netto, Auto-Resume)
+// PLIK: taxi_tab_term.js - Terminal Premium (Smart Netto, Płynny GPS, Wbitki na koniec)
 // ==========================================
 
+// --- BEZPIECZNE FUNKCJE POMOCNICZE ---
 window.dTC = function(type, val) {
     if(type === 's') window.dTSrc = val;
     if(type === 'p') window.dTPay = val;
@@ -20,13 +21,12 @@ window.dStartS = function() {
         return; 
     }
     
-    // Obliczanie początkowych kosztów stałych dla zmiany
+    // Obliczanie początkowych kosztów stałych dla Prawdziwego Netto
     let c = window.db.drv.cfg || {};
     let eFixDaily = (c.eType === 'fix' && parseFloat(c.eFix)) ? (parseFloat(c.eFix) / 7) : 0; 
     let carDaily = parseFloat(c.carRent || c.rent || c.costRent) ? (parseFloat(c.carRent || c.rent || c.costRent) / 7) : 0; 
     let zusDaily = parseFloat(c.zus || c.costZus) ? (parseFloat(c.zus || c.costZus) / 30) : 0;
     let fixedOtherDaily = parseFloat(c.fixedDaily) ? parseFloat(c.fixedDaily) : 0;
-    
     let initialFixedCosts = eFixDaily + carDaily + zusDaily + fixedOtherDaily;
 
     if(!window.db.drv) window.db.drv = {};
@@ -42,7 +42,8 @@ window.dStartS = function() {
         rWS: null, 
         tr: [],
         shiftDist: 0,
-        fixedCosts: initialFixedCosts // Zapisujemy koszt zmiany na start!
+        fixedCosts: initialFixedCosts,
+        lastGlobalSave: Date.now()
     };
     window.db.drv.liveRideStart = null;
     
@@ -53,10 +54,10 @@ window.dStartS = function() {
 };
 
 window.dCancelShift = function() {
-    if(confirm('Czy na pewno chcesz anulować bieżącą zmianę? Wszystkie zebrane dziś dane i kursy znikną bezpowrotnie.')) {
+    if(confirm('Czy na pewno chcesz anulować bieżącą zmianę? Wszystkie zebrane dziś dane i dystans znikną bezpowrotnie.')) {
         let s = window.db.drv.sh;
-        if(s.watchId) navigator.geolocation.clearWatch(s.watchId);
-        if(s.globalWatchId) navigator.geolocation.clearWatch(s.globalWatchId);
+        if(s && s.watchId) navigator.geolocation.clearWatch(s.watchId);
+        if(s && s.globalWatchId) navigator.geolocation.clearWatch(s.globalWatchId);
         if(window.liveRideTimer) clearInterval(window.liveRideTimer);
         
         window.db.drv.sh = {on: false};
@@ -76,7 +77,7 @@ window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 };
 
-// --- LEKKI GLOBAL TRACKER (Brak Lagów) ---
+// --- NIEZAWODNY GLOBAL TRACKER (Brak Lagów, Zapis co minutę) ---
 window.initGlobalTracker = function() {
     if (!('geolocation' in navigator)) return;
     let s = window.db.drv.sh;
@@ -93,19 +94,13 @@ window.initGlobalTracker = function() {
         if (!s.sPS) { // Gdy nie jesteśmy na pauzie
             if (s.lastShiftPos) {
                 let distTotal = window.getDistanceFromLatLonInKm(s.lastShiftPos.lat, s.lastShiftPos.lng, lat, lng);
-                
-                // Filtr 5 metrów, aby zapobiec skakaniu GPS
-                if (distTotal > 0.005) { 
+                if (distTotal > 0.005) { // Odrzucanie szumu GPS (<5m)
                     s.shiftDist += distTotal;
                     
-                    // Aktualizujemy DOM bezpośrednio (bardzo szybkie, bez lagów)
                     let elShiftDist = document.getElementById('shift-total-dist');
                     if(elShiftDist) elShiftDist.innerHTML = s.shiftDist.toFixed(1) + ' km';
                     
-                    // Odśwież też pasek Netto w locie (spala paliwo na pusto!)
-                    window.updateGoalBar();
-                    
-                    // Zapis do pamięci co 60 sek, żeby nie mulić przeglądarki
+                    // Zapis w tle tylko co 60 sekund aby nie wieszać telefonu!
                     if (now - (s.lastGlobalSave || 0) > 60000) {
                         if(typeof window.save === 'function') window.save();
                         s.lastGlobalSave = now;
@@ -114,63 +109,12 @@ window.initGlobalTracker = function() {
             }
             s.lastShiftPos = {lat: lat, lng: lng};
         }
-    }, function(err) { console.warn('Global GPS:', err); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 });
+    }, function(err) { 
+        console.warn('Global GPS:', err); 
+    }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
 };
 
-// --- SILNIK AKTUALIZACJI PASKA NETTO ---
-window.updateGoalBar = function() {
-    let d = window.db.drv;
-    if(!d.sh || !d.sh.on) return;
-    
-    let isNetto = window.dGoalMode === 'netto';
-    let goalBrutto = (d.cfg && d.cfg.goalBrutto) ? parseFloat(d.cfg.goalBrutto) : ((d.cfg && d.cfg.dailyGoal) ? parseFloat(d.cfg.dailyGoal) : 400);
-    let goalNetto = (d.cfg && d.cfg.goalNetto) ? parseFloat(d.cfg.goalNetto) : 300;
-    let activeGoal = isNetto ? goalNetto : goalBrutto;
-
-    // Obliczanie Bruttta
-    let g = 0, sumCard = 0, sumVouch = 0, manualKm = 0;
-    if(d.sh.tr) {
-        d.sh.tr.forEach(x => {
-            let val = parseFloat(x.v)||0; 
-            g += val; 
-            manualKm += parseFloat(x.k)||0;
-            if(x.p === 'Karta') sumCard += val;
-            if(x.p === 'Voucher') sumVouch += val;
-        });
-    }
-
-    // Wyciągamy zainicjalizowane koszty stałe zmiany
-    let fixedCosts = d.sh.fixedCosts || 0; 
-    
-    let totalKm = (d.sh.shiftDist || 0) + manualKm;
-    let taxRate = (d.cfg && d.cfg.tax) ? parseFloat(d.cfg.tax) : 0;
-    let fuelPx = (d.cfg && d.cfg.fuelPx) ? parseFloat(d.cfg.fuelPx) : 0;
-    let ePct = (d.cfg && d.cfg.eType === 'pct') ? (parseFloat(d.cfg.ePct) || 0) : 0;
-    let cardF = (d.cfg && d.cfg.cardF) ? parseFloat(d.cfg.cardF) : 0;
-    let vouchF = (d.cfg && d.cfg.voucherF) ? parseFloat(d.cfg.voucherF) : 0;
-
-    let varCosts = (totalKm * fuelPx) + (g * taxRate) + (g * ePct) + (sumCard * cardF) + (sumVouch * vouchF);
-    
-    let currentNetto = g - varCosts - fixedCosts;
-    let currProg = isNetto ? currentNetto : g;
-
-    // Pasek rośnie od minusa!
-    let startValue = isNetto ? -fixedCosts : 0;
-    let totalJourney = activeGoal - startValue;
-    let covered = currProg - startValue;
-    
-    let pct = (totalJourney > 0) ? (covered / totalJourney) * 100 : 0;
-    pct = Math.min(Math.max(pct, 0), 100);
-
-    // Aktualizujemy DOM
-    let elProg = document.getElementById('goal-current-val');
-    let elBar = document.getElementById('goal-bar-fill');
-    
-    if(elProg) elProg.innerHTML = currProg.toFixed(2) + ' zł';
-    if(elBar) elBar.style.width = pct + '%';
-};
-
-// --- NIEZAWODNE WZNOWIENIE TAKSOMETRU (Auto-Resume po odświeżeniu) ---
+// --- NIEZAWODNE WZNOWIENIE TAKSOMETRU (Auto-Resume) ---
 window.resumeLiveRide = function() {
     let s = window.db.drv.sh;
     if (!s || !window.db.drv.liveRideStart) return;
@@ -201,11 +145,14 @@ window.resumeLiveRide = function() {
             s.lastPos = {lat: lat, lng: lng};
             s.lastGpsTime = now;
             window.updateLiveRideUI();
-        }, function(error) { console.error('Ride GPS:', error); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 });
+        }, function(error) { 
+            console.error('Ride GPS:', error); 
+        }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 });
     }
     if(!window.liveRideTimer) window.liveRideTimer = setInterval(window.updateLiveRideUI, 1000);
 };
 
+// --- LOGIKA CELU DZIENNEGO (OSOBNE CELE) ---
 window.dGoalMode = window.dGoalMode || 'netto';
 window.toggleGoalMode = function() {
     window.dGoalMode = (window.dGoalMode === 'brutto') ? 'netto' : 'brutto';
@@ -247,6 +194,7 @@ window.toggleLiveTariff = function() {
     }
 };
 
+// --- SILNIK PRAWDZIWEGO TAKSOMETRU (AUTO-KOREK) ---
 window.updateLiveRideUI = function() {
     if (!window.db || !window.db.drv || !window.db.drv.liveRideStart) return;
     let d = window.db.drv;
@@ -382,6 +330,7 @@ window.toggleShiftPause = function() {
     }
 };
 
+// --- NOWE OKNO ZAMYKANIA ZMIANY (Z WBITKAMI) ---
 window.openEndShiftModal = function() {
     let s = window.db.drv.sh || {};
     let startOdo = s.o ? parseFloat(s.o) : 0;
@@ -399,42 +348,96 @@ window.openEndShiftModal = function() {
     let g = 0;
     if(s.tr) s.tr.forEach(function(x) { g += (parseFloat(x.v)||0); });
 
-    let html = '<div id="m-end-shift" class="modal-overlay" style="z-index:99999; position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.8); backdrop-filter:blur(15px); animation:fadeIn 0.2s ease;">' +
-        '<div class="glass-card" style="width:90%; max-width:380px; border:1px solid rgba(239,68,68,0.3); padding:25px 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">' +
+    let isApps = (window.db.drv.plat === 'apps');
+
+    let html = '<div id="m-end-shift" class="modal-overlay" style="z-index:99999; position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(20px); overflow-y:auto; animation:fadeIn 0.2s ease;">' +
+        '<div class="glass-card" style="width:90%; max-width:400px; border:1px solid rgba(239,68,68,0.4); padding:25px 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); margin:auto;">' +
             '<div style="text-align:center; margin-bottom:20px;">' +
-                '<div style="font-size:3rem; margin-bottom:10px; filter:drop-shadow(0 0 10px rgba(239,68,68,0.4));">🏁</div>' +
+                '<div style="font-size:3rem; margin-bottom:10px; filter:drop-shadow(0 0 10px rgba(239,68,68,0.5));">🏁</div>' +
                 '<h3 style="color:#ef4444; margin:0 0 5px 0; font-size:1.4rem; font-weight:900; text-transform:uppercase;">Zakończ Zmianę</h3>' +
-                '<div style="display:flex; justify-content:space-between; margin-top:15px; background:rgba(0,0,0,0.5); padding:10px; border-radius:12px; border:1px inset rgba(255,255,255,0.05);">' +
-                    '<div style="text-align:center; flex:1;"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Czas</span><br><strong style="color:#0ea5e9;">'+diffHrs+'h '+diffMins+'m</strong></div>' +
-                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Utarg</span><br><strong style="color:#10b981;">'+g.toFixed(2)+' zł</strong></div>' +
-                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Dystans</span><br><strong style="color:#f59e0b;">'+shiftDist.toFixed(1)+' km</strong></div>' +
+                '<p style="color:var(--muted); font-size:0.75rem; margin-bottom:15px;">Podsumuj swój dzień i zaktualizuj przebieg.</p>' +
+                
+                '<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.6); padding:12px; border-radius:12px; border:1px inset rgba(255,255,255,0.05);">' +
+                    '<div style="text-align:center; flex:1;"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Czas</span><br><strong style="color:#0ea5e9; font-size:1.1rem;">'+diffHrs+'h '+diffMins+'m</strong></div>' +
+                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Utarg Dotychczas</span><br><strong style="color:#10b981; font-size:1.1rem;">'+g.toFixed(2)+' zł</strong></div>' +
                 '</div>' +
             '</div>' +
             
-            '<div style="background:#000; border-radius:20px; padding:20px; text-align:center; border:1px inset rgba(255,255,255,0.05); margin-bottom:20px; box-shadow:inset 0 4px 15px rgba(0,0,0,0.5);">' +
-                '<label style="font-size:0.65rem; color:#ef4444; font-weight:800; display:block; margin-bottom:10px; letter-spacing:1px;">STAN LICZNIKA POJAZDU (KONIEC)</label>' +
-                '<input type="number" id="de-o" value="'+predictedEndOdo+'" style="width:100%; background:transparent; border:none; color:#ef4444; font-size:3.5rem; font-weight:900; text-align:center; outline:none; padding:0; font-family:monospace; text-shadow: 0 0 15px rgba(239,68,68,0.4);">' +
-                '<div style="font-size:0.65rem; color:rgba(255,255,255,0.4); margin-top:5px; font-weight:700;">Start: '+startOdo+' km | Przejechano (GPS): '+shiftDist.toFixed(1)+' km</div>' +
+            // Sekcja: Szybkie wbitki z aplikacji (Magia Uniwersalności!)
+            '<div style="background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.2); border-radius:16px; padding:15px; margin-bottom:20px;">' +
+                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:900; display:block; margin-bottom:10px; text-transform:uppercase; text-align:center;">Dodaj Zarobki z Aplikacji (Koniec Dnia)</label>' +
+                (isApps ? 
+                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">' +
+                        '<input type="number" step="0.01" id="me-v-uber" placeholder="Uber (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-bolt" placeholder="Bolt (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-freenow" placeholder="FreeNow" class="compact-inp" style="padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-inna" placeholder="Inna Apka" class="compact-inp" style="padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka (Kasa z portfela)" style="grid-column:span 2; padding:12px; font-size:1rem; color:#10b981; border-color:rgba(16,185,129,0.3);" class="compact-inp">' +
+                    '</div>' 
+                : 
+                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">' +
+                        '<input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-karta" placeholder="Terminal" class="compact-inp" style="color:#0ea5e9; padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-voucher" placeholder="Vouchery" style="grid-column:span 2; padding:10px; font-size:0.9rem; color:#a855f7;" class="compact-inp">' +
+                    '</div>'
+                ) +
             '</div>' +
 
-            '<div style="margin-bottom:20px;">' +
-                '<label style="font-size:0.65rem; color:rgba(255,255,255,0.6); font-weight:800; margin-bottom:8px; display:block; text-transform:uppercase;">Płatny Dystans z Aplikacji (KM)</label>' +
-                '<input type="number" step="0.1" id="dw-m-pk" placeholder="np. 85.5" class="compact-inp">' +
+            '<div style="background:#000; border-radius:16px; padding:20px; text-align:center; border:1px inset rgba(255,255,255,0.05); margin-bottom:20px; box-shadow:inset 0 4px 15px rgba(0,0,0,0.5);">' +
+                '<label style="font-size:0.65rem; color:#ef4444; font-weight:800; display:block; margin-bottom:10px; letter-spacing:1px;">STAN LICZNIKA POJAZDU (KONIEC)</label>' +
+                '<input type="number" id="de-o" value="'+predictedEndOdo+'" style="width:100%; background:transparent; border:none; color:#ef4444; font-size:3rem; font-weight:900; text-align:center; outline:none; padding:0; font-family:monospace; text-shadow: 0 0 15px rgba(239,68,68,0.4);">' +
+                '<div style="font-size:0.65rem; color:var(--muted); margin-top:5px; font-weight:700;">Start: '+startOdo+' km | Przejechano (GPS): '+shiftDist.toFixed(1)+' km</div>' +
             '</div>' +
             
-            '<button style="background:linear-gradient(135deg, #ef4444, #b91c1c); color:#fff; font-weight:900; padding:18px; border-radius:20px; border:none; width:100%; font-size:1.1rem; box-shadow:0 8px 25px rgba(239,68,68,0.4); cursor:pointer;" onclick="window.dEndS()">ROZLICZ ZMIANĘ</button>' +
-            '<button style="background:transparent; color:rgba(255,255,255,0.4); margin-top:10px; border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:20px; width:100%; font-weight:bold; cursor:pointer;" onclick="document.getElementById(\'m-end-shift\').remove()">ANULUJ</button>' +
+            '<button style="background:linear-gradient(135deg, #ef4444, #b91c1c); color:#fff; font-weight:900; padding:18px; border-radius:16px; border:none; width:100%; font-size:1.1rem; box-shadow:0 8px 25px rgba(239,68,68,0.4); cursor:pointer;" onclick="window.processAndEndShift()">ROZLICZ ZMIANĘ</button>' +
+            '<button style="background:transparent; color:rgba(255,255,255,0.4); margin-top:10px; border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:16px; width:100%; font-weight:bold; cursor:pointer;" onclick="document.getElementById(\'m-end-shift\').remove()">ANULUJ</button>' +
         '</div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
 };
 
-let origDEndS = window.dEndS;
-window.dEndS = function() {
-    if(window.db && window.db.drv && window.db.drv.sh && window.db.drv.sh.globalWatchId) {
-        navigator.geolocation.clearWatch(window.db.drv.sh.globalWatchId);
-        window.db.drv.sh.globalWatchId = null;
+// Funkcja procesująca Wbitki na koniec i wołająca oryginalny EndShift
+window.processAndEndShift = function() {
+    let d = window.db.drv;
+    let time = new Date().toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'});
+    
+    if(d.plat === 'apps') {
+        let u = parseFloat(document.getElementById('me-v-uber')?.value)||0;
+        let b = parseFloat(document.getElementById('me-v-bolt')?.value)||0;
+        let f = parseFloat(document.getElementById('me-v-freenow')?.value)||0;
+        let i = parseFloat(document.getElementById('me-v-inna')?.value)||0;
+        let c = parseFloat(document.getElementById('me-v-cash')?.value)||0;
+        if(u>0) d.sh.tr.unshift({id:Date.now()+1, v:u, k:0, m:0, time:time, p:'Aplikacja', s:'Uber'});
+        if(b>0) d.sh.tr.unshift({id:Date.now()+2, v:b, k:0, m:0, time:time, p:'Aplikacja', s:'Bolt'});
+        if(f>0) d.sh.tr.unshift({id:Date.now()+3, v:f, k:0, m:0, time:time, p:'Aplikacja', s:'FreeNow'});
+        if(i>0) d.sh.tr.unshift({id:Date.now()+4, v:i, k:0, m:0, time:time, p:'Aplikacja', s:'Inna'});
+        if(c>0) d.sh.tr.unshift({id:Date.now()+5, v:c, k:0, m:0, time:time, p:'Gotówka', s:'Aplikacja'});
+    } else {
+        let c = parseFloat(document.getElementById('me-v-cash')?.value)||0;
+        let k = parseFloat(document.getElementById('me-v-karta')?.value)||0;
+        let v = parseFloat(document.getElementById('me-v-voucher')?.value)||0;
+        if(c>0) d.sh.tr.unshift({id:Date.now()+1, v:c, k:0, m:0, time:time, p:'Gotówka', s:'Centrala'});
+        if(k>0) d.sh.tr.unshift({id:Date.now()+2, v:k, k:0, m:0, time:time, p:'Karta', s:'Terminal'});
+        if(v>0) d.sh.tr.unshift({id:Date.now()+3, v:v, k:0, m:0, time:time, p:'Voucher', s:'Korporacja'});
     }
-    if(origDEndS) origDEndS();
+
+    // Czyśćmy Timery
+    if(d.sh.globalWatchId) navigator.geolocation.clearWatch(d.sh.globalWatchId);
+    if(d.sh.watchId) navigator.geolocation.clearWatch(d.sh.watchId);
+    if(window.liveRideTimer) clearInterval(window.liveRideTimer);
+
+    let endOdo = parseFloat(document.getElementById('de-o')?.value);
+    if(endOdo && endOdo > d.sh.o) d.odo = endOdo; // Global odo update
+
+    document.getElementById('m-end-shift').remove();
+
+    // Wołamy oryginalną funkcję dEndS (jeśli istnieje z taxi_modal_shifts)
+    if(typeof window.dEndS === 'function') {
+        window.dEndS();
+    } else {
+        // Fallback w razie braku pliku
+        window.db.drv.sh = {on:false};
+        window.save(); window.render();
+    }
 };
 
 window.dAddOfflineWeekly = function() {
@@ -581,7 +584,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             let fuelPx = (d.cfg && d.cfg.fuelPx) ? parseFloat(d.cfg.fuelPx) : 0;
             let ePct = (d.cfg && d.cfg.eType === 'pct') ? (parseFloat(d.cfg.ePct) || 0) : 0;
             
-            // Koszty zapisane podczas startu zmiany (gwarantuje niezawodność)
+            // Koszty stałe (ściągnięte podczas startu zmiany)
             let fixedCosts = d.sh.fixedCosts || 0;
             
             let cardF = (d.cfg && d.cfg.cardF) ? parseFloat(d.cfg.cardF) : 0;
@@ -590,14 +593,14 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             let varCosts = (totalKm * fuelPx) + (g * taxRate) + (g * ePct) + (sumCard * cardF) + (sumVouch * vouchF);
 
             let currentBrutto = g;
-            let currentNetto = g - varCosts - fixedCosts;
+            let currentNetto = g - varCosts - fixedCosts; // Netto = Utarg - Zmienne - Stałe
             let currProg = isNetto ? currentNetto : currentBrutto;
 
             let goalBrutto = (d.cfg && d.cfg.goalBrutto) ? parseFloat(d.cfg.goalBrutto) : ((d.cfg && d.cfg.dailyGoal) ? parseFloat(d.cfg.dailyGoal) : 400);
             let goalNetto = (d.cfg && d.cfg.goalNetto) ? parseFloat(d.cfg.goalNetto) : 300;
             let activeGoal = isNetto ? goalNetto : goalBrutto;
             
-            // Logika Paska (jeśli startujesz z minusa, pasek zaczyna fizycznie od zera na UI)
+            // Pasek startuje od minusa
             let startValue = isNetto ? -fixedCosts : 0;
             let totalJourney = activeGoal - startValue;
             let covered = currProg - startValue;
@@ -647,8 +650,8 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('<button style="flex:1; padding:14px; border-radius:14px; font-weight:800; font-size:0.8rem; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);" onclick="if(window.openEndShiftModal) window.openEndShiftModal()">🔴 ZAKOŃCZ ZMIANĘ</button>');
             html.push('</div>');
             
-            // Opcja Anulowania (Dyskretny przycisk)
-            html.push('<div style="text-align:center; margin-bottom:15px;"><button style="background:transparent; color:#ef4444; border:none; font-size:0.65rem; font-weight:800; text-decoration:underline; cursor:pointer;" onclick="window.dCancelShift()">🗑️ Anuluj przypadkowo rozpoczętą zmianę</button></div>');
+            // Opcja Anulowania (Dyskretny przycisk pod głównymi akcjami)
+            html.push('<div style="text-align:center; margin-bottom:15px;"><button style="background:transparent; color:#ef4444; border:none; font-size:0.65rem; font-weight:800; text-decoration:underline; cursor:pointer; opacity:0.8;" onclick="window.dCancelShift()">🗑️ Anuluj przypadkowo rozpoczętą zmianę</button></div>');
             
             // MODUŁ GPS (LIVE TAKSOMETR MULTITARYFOWY)
             if(d.liveRideStart) {
@@ -714,7 +717,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             } else {
                 html.push('<div style="text-align:center; color:var(--muted); padding:20px 0; font-size:0.8rem; background:rgba(0,0,0,0.3); border-radius:16px; font-weight:700;">Brak wpisów w tej zmianie.</div>');
             }
-            html.push('</div>');
+            html.push('</div>'); 
         } else {
             // EKRAN STARTOWY
             html.push('<div style="padding: 30px 20px; text-align: center;"><div style="width:60px; height:60px; background:rgba(245,158,11,0.1); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2rem;">🚕</div><h1 style="font-size:2rem; font-weight:900; color:#fff; margin:0 0 5px 0;">Witaj!</h1><p style="color:var(--muted); font-size:0.85rem; margin-bottom:30px; font-weight:600;">Potwierdź licznik, aby zacząć pracę.</p>');
