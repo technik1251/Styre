@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Terminal Premium V11 (Crystal UI, Zero-Lag Pause & Tariff, Smart Netto)
+// PLIK: taxi_tab_term.js - Terminal Premium V12 (Ultra-Crystal UI, Neo-Input, Zero Lag)
 // ==========================================
 
 // --- 1. FUNKCJE POMOCNICZE I MATEMATYKA ---
@@ -183,7 +183,7 @@ window.toggleGoalMode = function(mode) {
 window.dSetGoal = function() {
     let isNetto = window.dGoalMode === 'netto';
     let current = isNetto ? ((window.db.drv.cfg && window.db.drv.cfg.goalNetto) || 300) : ((window.db.drv.cfg && window.db.drv.cfg.goalBrutto) || 400);
-    let modeName = isNetto ? 'NETTO (Na czysto)' : 'BRUTTO (Utarg)';
+    let modeName = isNetto ? 'NETTO (Kasa na czysto)' : 'BRUTTO (Utarg)';
     
     let ng = prompt("Podaj CEL DZIENNY " + modeName + " (PLN):", current);
     if(ng !== null && ng !== '') {
@@ -235,8 +235,7 @@ window.toggleLiveTariff = function() {
         else if(current === 't4') next = 't1';
         
         window.db.drv.sh.liveTariff = next;
-        window.updateLiveRideUI(); // Aktualizuje przycisk natychmiast bez przeładowania UI
-        
+        window.updateLiveRideUI();
         setTimeout(function() { if(typeof window.save === 'function') window.save(); }, 10);
     }
 };
@@ -279,7 +278,6 @@ window.updateLiveRideUI = function() {
     let activeTariff = s.liveTariff || 't1';
     let isAutoWaitActive = (!isWaiting && (s.currentSpeed || 0) <= 20);
     
-    // Zmiana przycisku TARYFY w locie (Zero Lag)
     if (elTariffBtn) {
         let tColor = (activeTariff==='t1')?'#10b981':(activeTariff==='t2')?'#3b82f6':(activeTariff==='t3')?'#f59e0b':'#ef4444';
         elTariffBtn.innerHTML = '🔄 TARYFA: ' + activeTariff.toUpperCase();
@@ -510,36 +508,41 @@ window.submitPremiumEndShiftModal = function() {
 };
 
 // --- RENDER GŁÓWNY (UI) KOMPAKTOWY PREMIUM ---
-window.getOfflineHTML = function(d) {
-    let lblStyle = 'font-size:0.6rem; color:var(--muted); font-weight:800; text-transform:uppercase; margin-bottom:6px; display:block; text-align:left;';
-    let html = '<div style="color:#0ea5e9; margin-top:10px; font-size:0.75rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:15px;">⚡ ZALEGŁA ZMIANA (OFFLINE)</div><div class="crystal-card crystal-panel" style="padding:25px 15px; margin-bottom:20px;">';
-    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;"><div><label style="'+lblStyle+'">Data Startu</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" class="compact-inp"></div><div><label style="'+lblStyle+'">Data Koniec</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" class="compact-inp"></div></div>';
-    html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#f59e0b; font-weight:900; text-align:center; display:block; margin-bottom:10px;">STAN LICZNIKA POJAZDU</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div><div><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div></div></div>';
-    
-    if(d.plat === 'apps') {
-        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" class="compact-inp"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma)" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3); font-size:1.2rem; padding:15px;"></div></div></div>';
-    } else {
-        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3);"></div><div><input type="number" step="0.01" id="dw-v-karta" placeholder="Terminal" class="compact-inp" style="color:#0ea5e9; border-color:rgba(14,165,233,0.3);"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" class="compact-inp" style="color:#a855f7; border-color:rgba(168,85,247,0.3);"></div></div></div>';
-    }
-    
-    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;"><div><label style="'+lblStyle+'">Dystans Płatny (KM)</label><input type="number" id="dw-pk" placeholder="0.0" class="compact-inp"></div><div><label style="'+lblStyle+'">Czas Pracy (H)</label><input type="number" id="dw-h" placeholder="0" class="compact-inp"></div></div><button style="width:100%; padding:18px; border-radius:16px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3);" onclick="window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button><button style="width:100%; padding:16px; border-radius:16px; background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.1); margin-top:10px; font-weight:800; font-size:0.85rem;" onclick="window.dShowOff=false; window.render()">ANULUJ</button></div>';
-    return html;
-};
-
 window.rDrvTerm = function(d, t, nav, hdr) {
     try {
         let appContainer = document.getElementById('app');
         if(!appContainer) return;
         
         let html = [hdr];
-
-        // Usunięto style CSS z JS - używamy już tych przeniesionych do style.css
         
+        // ZASZYCIE STYLÓW CSS W KODZIE JS - Ostateczna ochrona przed brakiem cache
+        html.push('<style id="crystal-styles-v12">');
+        html.push('.crystal-card { background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.2) 100%); border: 1px solid rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.3); border-radius: 16px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 8px 20px rgba(0,0,0,0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 15px 5px; text-align: center; position: relative; overflow: hidden; }');
+        html.push('.crystal-card::after { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%); transform: skewX(-25deg); animation: shine 6s infinite; }');
+        html.push('@keyframes shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }');
+        html.push('.crystal-uber { border-top-color: rgba(14,165,233,0.6); box-shadow: inset 0 1px 2px rgba(14,165,233,0.4), 0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(14,165,233,0.1); }');
+        html.push('.crystal-bolt { border-top-color: rgba(34,197,94,0.6); box-shadow: inset 0 1px 2px rgba(34,197,94,0.4), 0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(34,197,94,0.1); }');
+        html.push('.crystal-freenow { border-top-color: rgba(217,70,239,0.6); box-shadow: inset 0 1px 2px rgba(217,70,239,0.4), 0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(217,70,239,0.1); }');
+        html.push('.crystal-cash { border-top-color: rgba(16,185,129,0.6); box-shadow: inset 0 1px 2px rgba(16,185,129,0.4), 0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(16,185,129,0.1); }');
+        html.push('.crystal-main { border-top-color: rgba(255,255,255,0.4); background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.4) 100%); box-shadow: inset 0 1px 2px rgba(255,255,255,0.3), 0 10px 30px rgba(0,0,0,0.7), 0 0 20px rgba(255,255,255,0.05); }');
+        html.push('.crystal-time { border-top-color: rgba(14,165,233,0.6); box-shadow: inset 0 1px 2px rgba(14,165,233,0.4), 0 6px 15px rgba(0,0,0,0.5), 0 0 12px rgba(14,165,233,0.1); }');
+        html.push('.crystal-gross { border-top-color: rgba(16,185,129,0.6); box-shadow: inset 0 1px 2px rgba(16,185,129,0.4), 0 6px 15px rgba(0,0,0,0.5), 0 0 12px rgba(16,185,129,0.1); }');
+        html.push('.crystal-dist { border-top-color: rgba(245,158,11,0.6); box-shadow: inset 0 1px 2px rgba(245,158,11,0.4), 0 6px 15px rgba(0,0,0,0.5), 0 0 12px rgba(245,158,11,0.1); }');
+        html.push('.crystal-panel { border-top-color: rgba(255,255,255,0.2); box-shadow: inset 0 1px 2px rgba(255,255,255,0.1), 0 6px 15px rgba(0,0,0,0.5); }');
+        
+        // Neo-Kreator Kursu CSS
+        html.push('.crystal-chip { padding: 10px 14px; border-radius: 12px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.4); color: var(--muted); text-align: center; flex: 1; white-space: nowrap; }');
+        html.push('.crystal-chip.active.blue { background: linear-gradient(135deg, rgba(14,165,233,0.3), rgba(14,165,233,0.1)); color: #fff; border-color: rgba(14,165,233,0.6); box-shadow: 0 4px 15px rgba(14,165,233,0.3); text-shadow: 0 0 5px rgba(255,255,255,0.5); transform: translateY(-2px); }');
+        html.push('.crystal-chip.active.green { background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(16,185,129,0.1)); color: #fff; border-color: rgba(16,185,129,0.6); box-shadow: 0 4px 15px rgba(16,185,129,0.3); text-shadow: 0 0 5px rgba(255,255,255,0.5); transform: translateY(-2px); }');
+        html.push('.neo-input-box { background: rgba(0,0,0,0.6); border: 1px solid rgba(14,165,233,0.3); border-radius: 16px; padding: 15px; box-shadow: inset 0 4px 20px rgba(0,0,0,0.8), 0 0 15px rgba(14,165,233,0.1); display: flex; align-items: center; justify-content: center; transition: all 0.3s; }');
+        html.push('.neo-input-box:focus-within { border-color: #0ea5e9; box-shadow: inset 0 4px 20px rgba(0,0,0,0.8), 0 0 25px rgba(14,165,233,0.3); }');
+        html.push('</style>');
+
         if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; }
         if(!window.dTPay) { window.dTPay = d.plat === 'apps' ? 'Aplikacja' : 'Gotówka'; }
         
-        let cSrc = function(name) { return window.dTSrc === name ? 'chip active blue' : 'chip idle'; };
-        let cPay = function(name, cl) { return window.dTPay === name ? 'chip active '+cl : 'chip idle'; };
+        let cSrc = function(name) { return window.dTSrc === name ? 'crystal-chip active blue' : 'crystal-chip idle'; };
+        let cPay = function(name, cl) { return window.dTPay === name ? 'crystal-chip active '+cl : 'crystal-chip idle'; };
         
         let ch1 = '', ch2 = '', otherSrcHtml = '';
         if(d.plat === 'apps') {
@@ -608,7 +611,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                 
                 let elPauseBtn = document.getElementById('ui-pause-btn');
                 if(s.sPS) {
-                    aMs -= (Date.now() - s.sPS); // Pauza odejmowana od aktywnego czasu
+                    aMs -= (Date.now() - s.sPS);
                     let pMs = Date.now() - s.sPS;
                     let pM = Math.floor(pMs / 60000);
                     let pS = Math.floor((pMs % 60000) / 1000);
@@ -772,22 +775,25 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             let isHighlight = autoM !== '' ? 'border-color:#10b981; color:#10b981;' : '';
             d.sh.tempAutoMins = undefined; d.sh.tempAutoKm = undefined; d.sh.tempAutoPrice = undefined;
 
-            // KREATOR KURSU
-            html.push('<div class="crystal-card crystal-panel" style="padding: 15px; margin-bottom: 20px;">');
-            html.push('<div style="font-size: 0.65rem; color: var(--muted); font-weight: 900; text-transform: uppercase; margin-bottom: 10px; text-align: center; letter-spacing:1px;">REJESTRACJA KURSU</div>');
-            html.push('<div class="chip-box">'+ch1+'</div>');
+            // --- NOWY, LUKSUSOWY KREATOR KURSU ---
+            html.push('<div class="crystal-card crystal-panel" style="padding: 20px 15px; margin-bottom: 20px; border-top-color:rgba(14,165,233,0.4);">');
+            html.push('<div style="font-size: 0.75rem; color: #0ea5e9; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; text-align: center; letter-spacing:1.5px; text-shadow: 0 0 10px rgba(14,165,233,0.3);">✨ REJESTRACJA KURSU</div>');
+            
+            html.push('<div style="display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; padding-bottom:5px;">'+ch1+'</div>');
             html.push(otherSrcHtml);
-            html.push('<div class="chip-box" style="margin-bottom:10px;">'+ch2+'</div>');
+            html.push('<div style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;">'+ch2+'</div>');
             
-            html.push('<div style="display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.6); border-radius:14px; padding:12px; margin-bottom:10px; border:1px inset rgba(255,255,255,0.05);"><input type="number" id="dt-v" placeholder="0.00" value="'+autoP+'" style="background:transparent; border:none; color:#fff; font-size:3rem; font-weight:900; text-align:center; outline:none; width:100%; max-width:200px; font-family:monospace;"><span style="font-size:1.2rem; color:rgba(255,255,255,0.4); font-weight:700; margin-left:10px;">zł</span></div>');
+            html.push('<div class="neo-input-box" style="margin-bottom:15px;">');
+            html.push('<input type="number" id="dt-v" placeholder="0.00" value="'+autoP+'" style="background:transparent; border:none; color:#fff; font-size:3.5rem; font-weight:900; text-align:center; outline:none; width:100%; font-family:monospace; text-shadow: 0 0 20px rgba(255,255,255,0.4);"><span style="font-size:1.5rem; color:var(--muted); font-weight:700; margin-left:10px;">zł</span>');
+            html.push('</div>');
             
-            html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">');
-            html.push('<div><label style="font-size:0.55rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px; text-align:center;">CZAS (MIN)</label><input type="number" id="dt-m" placeholder="0" value="'+autoM+'" class="compact-inp" style="padding:10px;'+isHighlight+'"></div>');
-            html.push('<div><label style="font-size:0.55rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px; text-align:center;">DYSTANS (KM)</label><input type="number" step="0.1" id="dt-k" placeholder="0.0" value="'+autoK+'" class="compact-inp" style="padding:10px;'+isHighlight+'"></div>');
+            html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">');
+            html.push('<div style="background:rgba(0,0,0,0.4); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.55rem; color:var(--muted); font-weight:800; display:block; margin-bottom:6px; text-align:center; letter-spacing:1px;">CZAS (MIN)</label><input type="number" id="dt-m" placeholder="0" value="'+autoM+'" style="width:100%; background:transparent; border:none; color:#fff; text-align:center; font-size:1.5rem; font-weight:800; outline:none;" ' + (autoM !== '' ? 'style="color:#10b981;"' : '') + '></div>');
+            html.push('<div style="background:rgba(0,0,0,0.4); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.55rem; color:var(--muted); font-weight:800; display:block; margin-bottom:6px; text-align:center; letter-spacing:1px;">DYSTANS (KM)</label><input type="number" step="0.1" id="dt-k" placeholder="0.0" value="'+autoK+'" style="width:100%; background:transparent; border:none; color:#fff; text-align:center; font-size:1.5rem; font-weight:800; outline:none;" ' + (autoK !== '' ? 'style="color:#10b981;"' : '') + '></div>');
             html.push('</div>');
 
-            html.push('<div class="inp-group" style="margin-bottom:10px;"><select id="dt-cid" class="compact-inp" style="appearance:none; padding:10px;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select></div>');
-            html.push('<button style="width:100%; padding:15px; border-radius:12px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:0.9rem; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); outline:none;" onclick="if(window.dAddT) window.dAddT()">ZAPISZ KURS</button></div>');
+            html.push('<div class="inp-group" style="margin-bottom:15px;"><select id="dt-cid" style="width:100%; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:12px; border-radius:12px; font-size:0.9rem; font-weight:700; outline:none; appearance:none; text-align:center;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select></div>');
+            html.push('<button style="width:100%; padding:18px; border-radius:16px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1.1rem; border:none; box-shadow:0 8px 25px rgba(14,165,233,0.4); outline:none; cursor:pointer; letter-spacing:1px;" onclick="if(window.dAddT) window.dAddT()">ZAPISZ KURS</button></div>');
             
             // DZIENNIK
             html.push('<div style="margin: 30px 15px 10px 15px; text-align: center;"><span style="font-size:0.7rem; color:var(--muted); font-weight:900; text-transform:uppercase;">DZIENNIK ZAROBKÓW BIEŻĄCEJ ZMIANY</span></div>');
@@ -811,7 +817,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('</div>'); // End padding container
         } else {
             // EKRAN STARTOWY
-            let proBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.sysAlert) window.sysAlert(\'PRO\', \'Automatyczne Zlecenia z apek i Pełen GPS w tle.🚀\', \'info\')"><div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px rgba(217,70,239,0.5));">🚕</div><div><h4 style="color:#d946ef; margin:0 0 2px 0; font-size:0.85rem; font-weight:900;">Auto-Zlecenia (PRO)</h4><div style="font-size:0.65rem; color:var(--muted);">Integracja z APKAMI i GPS w tle.</div></div></div>';
+            let proBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.showProInfo) window.showProInfo()"><div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px rgba(217,70,239,0.5));">🚕</div><div><h4 style="color:#d946ef; margin:0 0 2px 0; font-size:0.85rem; font-weight:900;">Auto-Zlecenia (PRO)</h4><div style="font-size:0.65rem; color:var(--muted);">Integracja z APKAMI i GPS w tle.</div></div></div>';
             
             html.push('<div style="padding: 30px 20px; text-align: center;"><div style="width:60px; height:60px; background:rgba(245,158,11,0.1); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2rem;">🚕</div><h1 style="font-size:2.2rem; font-weight:900; color:#fff; margin:0 0 5px 0;">Witaj!</h1><p style="color:var(--muted); font-size:0.85rem; margin-bottom:30px; font-weight:600;">Potwierdź licznik, aby zacząć pracę.</p>');
             html.push('<div class="crystal-card crystal-panel" style="padding:25px 20px; margin-bottom:20px;"><div style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px; margin-bottom:10px; text-transform:uppercase;">STAN LICZNIKA (KM)</div><input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="000000" style="width:100%; background:rgba(0,0,0,0.4); border-radius:12px; padding:15px; color:#f59e0b; font-size:3.5rem; font-weight:900; text-align:center; outline:none; border:1px inset rgba(255,255,255,0.05);"></div>');
