@@ -1,0 +1,382 @@
+// ==========================================
+// PLIK: taxi_tab_stats.js - Zakładka Wyniki (Wodospad Finansowy i Historia)
+// ==========================================
+
+window.rDrvStats = function(d, t, nav, hdr) {
+    try {
+        let appContainer = document.getElementById('app');
+        if(!appContainer) return;
+
+        let fM = window.db.filter || 'all';
+        let now = new Date();
+        let fs = [], fe = [], dF = null, dT = null;
+        
+        if(fM === 'custom') {
+            if(!window.db.filterFrom) window.db.filterFrom = (window.getLocalYMD ? window.getLocalYMD() : '');
+            if(!window.db.filterTo) window.db.filterTo = (window.getLocalYMD ? window.getLocalYMD() : '');
+            dF = new Date(window.db.filterFrom); dF.setHours(0,0,0,0);
+            dT = new Date(window.db.filterTo); dT.setHours(23,59,59,999);
+        }
+        
+        // Filtrowanie historii zmian
+        let hArr = d.h || [];
+        for(let i=0; i<hArr.length; i++) {
+            let s = hArr[i];
+            let sd = new Date(s.rD);
+            if(fM === 'all') fs.push(s);
+            else if(fM === 'today' && sd.toDateString() === now.toDateString()) fs.push(s);
+            else if(fM === 'month' && sd.getMonth() === now.getMonth() && sd.getFullYear() === now.getFullYear()) fs.push(s);
+            else if(fM === 'week') {
+                let diff = now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1);
+                let st = new Date(now.setDate(diff)); st.setHours(0,0,0,0);
+                if(sd >= st) fs.push(s);
+            }
+            else if(fM === 'custom' && sd >= dF && sd <= dT) fs.push(s);
+        }
+        
+        // Filtrowanie wydatków
+        let expArr = d.exp || [];
+        for(let i=0; i<expArr.length; i++) {
+            let e = expArr[i];
+            let ed = new Date(e.rD);
+            if(fM === 'all') fe.push(e);
+            else if(fM === 'today' && ed.toDateString() === now.toDateString()) fe.push(e);
+            else if(fM === 'month' && ed.getMonth() === now.getMonth() && ed.getFullYear() === now.getFullYear()) fe.push(e);
+            else if(fM === 'week') {
+                let diff = now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1);
+                let st = new Date(now.setDate(diff)); st.setHours(0,0,0,0);
+                if(ed >= st) fe.push(e);
+            }
+            else if(fM === 'custom' && ed >= dF && ed <= dT) fe.push(e);
+        }
+        
+        let g=0, k=0, fc=0, tx=0, ex=0, pf=0, cf=0, vf=0, th=0, pkSum=0, emptyKSum=0;
+        let cashEarned=0, cardEarned=0, appEarned=0, uberEarned=0, boltEarned=0, vouchEarned=0;
+        
+        let getDaily = function(val, p, dim) { let v = parseFloat(val)||0; if(p==='week') return v/7; if(p==='year') return v/365; return v/dim; };
+        let daysInCurrentMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+        
+        let cfg = d.cfg || {};
+        let exactDailyRate = getDaily(cfg.bC, cfg.bPeriod, daysInCurrentMonth) + 
+                             getDaily(cfg.iC, cfg.iPeriod, daysInCurrentMonth) + 
+                             getDaily(cfg.cC, cfg.cType, daysInCurrentMonth) + 
+                             getDaily(cfg.uC, cfg.uType, daysInCurrentMonth) + 
+                             (cfg.eType === 'flat' ? getDaily(cfg.eC, cfg.ePeriod, daysInCurrentMonth) : 0);
+        
+        let oD = new Date();
+        if(d.h && d.h.length > 0) {
+            let sH = [];
+            for(let i=0; i<d.h.length; i++) sH.push(d.h[i]);
+            sH.sort(function(a,b){ return new Date(a.rD) - new Date(b.rD); });
+            oD = new Date(sH[0].rD);
+        }
+        
+        let aS = window.db.createdAt ? new Date(window.db.createdAt) : new Date();
+        if(oD < aS) { aS = oD; window.db.createdAt = (window.getLocalYMD ? window.getLocalYMD(aS) : ''); if(typeof window.save==='function') window.save(); }
+        aS.setHours(0,0,0,0);
+        
+        let tE = new Date(); tE.setHours(23,59,59,999);
+        let rS = new Date(), rE = new Date(tE);
+        
+        if(fM === 'today') { rS.setHours(0,0,0,0); }
+        else if(fM === 'week') {
+            let wN = new Date();
+            let diff = wN.getDate() - wN.getDay() + (wN.getDay() === 0 ? -6 : 1);
+            rS = new Date(wN.setDate(diff)); rS.setHours(0,0,0,0);
+            rE = new Date(rS); rE.setDate(rE.getDate()+6); rE.setHours(23,59,59,999);
+        }
+        else if(fM === 'month') { rS = new Date(now.getFullYear(), now.getMonth(), 1); rE = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999); }
+        else if(fM === 'custom') { rS = new Date(dF); rE = new Date(dT); rE.setHours(23,59,59,999); }
+        else { rS = new Date(aS); }
+        
+        let actS = new Date(Math.max(rS.getTime(), aS.getTime()));
+        let actE = new Date(Math.min(rE.getTime(), tE.getTime()));
+        let daysToCharge = 0;
+        
+        if(actS <= actE) { daysToCharge = Math.floor((actE.getTime() - actS.getTime()) / 86400000) + 1; }
+        if(daysToCharge < 1) daysToCharge = 1;
+        
+        let totalDynamicFix = (window.db.drv && window.db.drv.showFixed) ? (daysToCharge * exactDailyRate) : 0;
+        
+        for(let i=0; i<fs.length; i++) {
+            let x = fs[i];
+            g += (parseFloat(x.g) || 0); 
+            k += (parseFloat(x.k) || 0); 
+            fc += (parseFloat(x.fc) || 0); 
+            tx += (parseFloat(x.tx) || 0); 
+            pf += (parseFloat(x.pF) || 0); 
+            cf += (parseFloat(x.cF) || 0); 
+            vf += (parseFloat(x.vF) || 0); 
+            th += (parseFloat(x.hW) || 0); 
+            pkSum += (parseFloat(x.pk) || 0); 
+            emptyKSum += (parseFloat(x.emptyK) || 0); 
+            
+            let xtr = x.tr || [];
+            for(let j=0; j<xtr.length; j++) {
+                let tr = xtr[j];
+                let trv = parseFloat(tr.v) || 0;
+                if(tr.p === 'Gotówka') cashEarned += trv; 
+                else if(tr.p === 'Karta') cardEarned += trv; 
+                else if(tr.p === 'Voucher') vouchEarned += trv; 
+                else { 
+                    appEarned += trv; 
+                    if(tr.s === 'Uber') uberEarned += trv; 
+                    else if(tr.s === 'Bolt') boltEarned += trv; 
+                } 
+            }
+        }
+        
+        for(let i=0; i<fe.length; i++) {
+            if(fe[i].ty === 'e') ex += (parseFloat(fe[i].v) || 0);
+        }
+        
+        let n = g - fc - tx - totalDynamicFix - pf - cf - vf - ex;
+        let rKm = k > 0 ? (n / k) : 0;
+        let rHr = th > 0 ? (n / th) : 0;
+
+        let act = ''; // Główna zmienna do budowy interfejsu
+
+        // ZAPOWIEDŹ PRO DLA WYNIKÓW
+        let alertCodeStats = "if(window.sysAlert) window.sysAlert('Centrum Funkcji PRO', 'W wersji PRO uzyskasz dostęp do pełnej automatyzacji! Zlecenia, paragony i e-kasy będą się rozliczać same. 🚀', 'info')";
+        
+        let proBannerHtml = '<div class="pro-teaser-panel" style="margin: 15px 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="' + alertCodeStats + '">' +
+            '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+            '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+            '<div style="display: flex; align-items: center; gap: 15px;">' +
+                '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🏆✨</div>' +
+                '<div style="text-align: left;">' +
+                    '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Wyniki</h4>' +
+                    '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ ' + (d.plat === 'apps' ? '<b>Rozliczenia AI:</b> Wszystko w jednym miejscu.<br>✅ <b>Pełna Historia:</b> Analizuj swoje zyski!' : '<b>Integracja e-Kasy:</b> Automatyczne zaciąganie kursów (API).') + '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // PRZEŁĄCZNIKI WIDOKÓW
+        act += '<div class="mode-switch" style="margin:12px 15px; border-radius:16px; padding:6px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05);">' +
+            '<div class="m-btn '+(fM==='today'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'today\'; window.render()">Dziś</div>' +
+            '<div class="m-btn '+(fM==='week'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'week\'; window.render()">Tydzień</div>' +
+            '<div class="m-btn '+(fM==='month'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'month\'; window.render()">Miesiąc</div>' +
+            '<div class="m-btn '+(fM==='all'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'all\'; window.render()">Całość</div>' +
+            '<div class="m-btn '+(fM==='custom'?'active':'')+'" style="padding:12px; font-size:0.7rem; border-radius:12px; font-weight:800;" onclick="window.db.filter=\'custom\'; window.render()">Własny</div>' +
+        '</div>';
+
+        if (fM === 'custom') {
+            act += '<div style="display:flex;gap:8px;padding:0 15px;margin-bottom:15px;">' +
+                '<div class="inp-group" style="margin:0; flex:1;"><label style="font-size:0.6rem; color:rgba(255,255,255,0.4); margin-bottom:4px; display:block;">Data Od</label><input type="date" value="'+(window.db.filterFrom||'')+'" onchange="window.db.filterFrom=this.value; window.render()" style="padding:10px; font-size:0.75rem; border-radius:10px; background:rgba(255,255,255,0.05); color:#fff; border:none; width:100%; box-sizing:border-box; outline:none;"></div>' +
+                '<div class="inp-group" style="margin:0; flex:1;"><label style="font-size:0.6rem; color:rgba(255,255,255,0.4); margin-bottom:4px; display:block;">Data Do</label><input type="date" value="'+(window.db.filterTo||'')+'" onchange="window.db.filterTo=this.value; window.render()" style="padding:10px; font-size:0.75rem; border-radius:10px; background:rgba(255,255,255,0.05); color:#fff; border:none; width:100%; box-sizing:border-box; outline:none;"></div>' +
+            '</div>';
+        }
+
+        // OBLICZENIA PRZELEWÓW DO DOMU
+        let totalTransferred = 0;
+        if(window.db.home && window.db.home.trans) {
+            for(let i=0; i<window.db.home.trans.length; i++) {
+                let ht = window.db.home.trans[i];
+                if(ht.cat === 'Wypłata z Etatu' && ht.d === 'Utarg z Taxi') {
+                    totalTransferred += (parseFloat(ht.v)||0);
+                }
+            }
+        }
+        let availableCashForTransfer = cashEarned - totalTransferred;
+        
+        let transferButtonHtml = '';
+        if (availableCashForTransfer > 0) {
+            transferButtonHtml = '<button class="btn btn-success" style="margin-top:15px; width:calc(100% - 30px); margin-left:auto; margin-right:auto; font-weight:800; background:#10b981; color:#000; box-shadow: 0 4px 15px rgba(16,185,129,0.3); padding:14px; border-radius:14px; border:none; outline:none; cursor:pointer;" onclick="if(typeof window.dTransferToHomeModal===\'function\') window.dTransferToHomeModal()"><span style="font-size:1.1rem; margin-right:8px;">💸</span> PRZELEJ DO BUDŻETU<br><small style="font-weight:600; font-size:0.7rem; color:rgba(0,0,0,0.6); display:block; margin-top:2px;">Nierozliczone: '+Number(availableCashForTransfer).toFixed(2)+' zł</small></button>';
+        } else {
+            transferButtonHtml = '<button class="btn" style="margin-top:15px; width:calc(100% - 30px); margin-left:auto; margin-right:auto; font-weight:700; background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.05); padding:14px; border-radius:14px; outline:none;" disabled><span style="font-size:1rem; margin-right:8px;">✅</span> GOTÓWKA ROZLICZONA<br><small style="font-weight:600; font-size:0.65rem; display:block; margin-top:2px;">W domu: '+Number(totalTransferred).toFixed(2)+' zł</small></button>';
+        }
+
+        // PRZEŁĄCZNIK KOSZTÓW PEŁNYCH
+        act += '<div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px; padding:0 15px;">' +
+            '<button class="chip '+(window.db.drv.showFixed?'active':'')+'" style="font-size:0.7rem; padding:8px 16px; border-radius:20px; font-weight:800; background:'+(window.db.drv.showFixed?'rgba(255,255,255,0.1)':'transparent')+'; border:1px solid rgba(255,255,255,0.1); color:'+(window.db.drv.showFixed?'#fff':'var(--muted)')+';" onclick="window.db.drv.showFixed=true; window.render()">Koszty pełne</button>' +
+            '<button class="chip '+(!window.db.drv.showFixed?'active':'')+'" style="font-size:0.7rem; padding:8px 16px; border-radius:20px; font-weight:800; background:'+(!window.db.drv.showFixed?'rgba(255,255,255,0.1)':'transparent')+'; border:1px solid rgba(255,255,255,0.1); color:'+(!window.db.drv.showFixed?'#fff':'var(--muted)')+';" onclick="window.db.drv.showFixed=false; window.render()">Tylko Operacyjny</button>' +
+        '</div>';
+
+        // GŁÓWNY WYNIK HERO
+        act += '<div class="dash-hero" style="padding-top:0; padding-bottom:20px; border-bottom:1px dashed rgba(255,255,255,0.05); margin-bottom:20px;">' +
+            '<p style="font-size:0.65rem; font-weight:800; color:rgba(255,255,255,0.4); letter-spacing:1px; text-transform:uppercase;">'+(window.db.drv.showFixed ? 'TWOJE PRAWDZIWE NETTO' : 'ZYSK Z KURSÓW (BEZ KOSZTÓW STAŁYCH)')+'</p>' +
+            '<h1 style="color:'+(n>=0?'#10b981':'#ef4444')+'; font-size:3.5rem; font-weight:900; letter-spacing:-2px; margin:0; text-shadow:0 0 20px '+(n>=0?'rgba(16,185,129,0.3)':'rgba(239,68,68,0.3)')+';">'+Number(n).toFixed(2)+' zł</h1>' +
+            transferButtonHtml +
+        '</div>';
+
+        // ROZBICIE PORTFELA
+        if (d.plat === 'apps') {
+            act += '<div style="display:flex; justify-content:space-between; gap:10px; margin-top:20px; padding:0 15px; margin-bottom:20px;">' +
+                '<div style="flex:1; background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.15); border-radius:16px; padding:15px 10px; text-align:center;"><span style="font-size:0.6rem; color:#10b981; text-transform:uppercase; font-weight:800; letter-spacing:1px;">Gotówka</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:6px;">'+Number(cashEarned).toFixed(2)+'</strong></div>' +
+                '<div style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:15px 10px; text-align:center;"><span style="font-size:0.6rem; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:800; letter-spacing:1px;">Uber</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:6px;">'+Number(uberEarned).toFixed(2)+'</strong></div>' +
+                '<div style="flex:1; background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.15); border-radius:16px; padding:15px 10px; text-align:center;"><span style="font-size:0.6rem; color:#0ea5e9; text-transform:uppercase; font-weight:800; letter-spacing:1px;">Bolt</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:6px;">'+Number(boltEarned).toFixed(2)+'</strong></div>' +
+            '</div>';
+        } else {
+            act += '<div style="display:flex; justify-content:space-between; gap:10px; margin-top:20px; padding:0 15px; margin-bottom:20px;">' +
+                '<div style="flex:1; background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.15); border-radius:16px; padding:15px 10px; text-align:center;"><span style="font-size:0.6rem; color:#10b981; text-transform:uppercase; font-weight:800; letter-spacing:1px;">Gotówka</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:6px;">'+Number(cashEarned).toFixed(2)+'</strong></div>' +
+                '<div style="flex:1; background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.15); border-radius:16px; padding:15px 10px; text-align:center;"><span style="font-size:0.6rem; color:#0ea5e9; text-transform:uppercase; font-weight:800; letter-spacing:1px;">Karta</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:6px;">'+Number(cardEarned).toFixed(2)+'</strong></div>' +
+                '<div style="flex:1; background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.15); border-radius:16px; padding:15px 10px; text-align:center;"><span style="font-size:0.6rem; color:#a855f7; text-transform:uppercase; font-weight:800; letter-spacing:1px;">Voucher</span><br><strong style="color:#fff; font-size:1.1rem; display:block; margin-top:6px;">'+Number(vouchEarned).toFixed(2)+'</strong></div>' +
+            '</div>';
+        }
+
+        // STATYSTYKI JEDNOSTKOWE
+        act += '<div style="padding:0 15px; display:flex; flex-direction:column; gap:12px; margin-bottom:25px;">' +
+            '<div style="display:flex; gap:12px;">' +
+                '<div class="box" style="flex:1; padding:16px; border-radius:20px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05); box-shadow:0 8px 20px rgba(0,0,0,0.3);">' +
+                    '<span style="color:#0ea5e9; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">ZYSK JEDNOSTKOWY (1 KM)</span>' +
+                    '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+Number(rKm).toFixed(2)+' zł</strong>' +
+                '</div>' +
+                '<div class="box" style="flex:1; padding:16px; border-radius:20px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05); box-shadow:0 8px 20px rgba(0,0,0,0.3);">' +
+                    '<span style="color:#d946ef; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">ZYSK GODZINOWY (1 H)</span>' +
+                    '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+Number(rHr).toFixed(2)+' zł</strong>' +
+                '</div>' +
+            '</div>' +
+            '<div style="display:flex; gap:12px;">' +
+                '<div class="box" style="flex:1; padding:16px; border-radius:20px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05); box-shadow:0 8px 20px rgba(0,0,0,0.3);">' +
+                    '<span style="color:#10b981; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">AKTYWNE DNI</span>' +
+                    '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+daysToCharge+' dni</strong>' +
+                '</div>' +
+                '<div class="box" style="flex:1; padding:16px; border-radius:20px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(255,255,255,0.05); box-shadow:0 8px 20px rgba(0,0,0,0.3);">' +
+                    '<span style="color:#f59e0b; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">CZAS ZALOGOWANIA</span>' +
+                    '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+Number(th).toFixed(1)+' h</strong>' +
+                '</div>' +
+            '</div>' +
+            '<div style="display:flex; gap:12px;">' +
+                '<div class="box" style="flex:1; border:1px solid rgba(16,185,129,0.2); background:rgba(16,185,129,0.05); padding:16px; border-radius:20px; box-shadow:inset 0 2px 10px rgba(0,0,0,0.2);">' +
+                    '<span style="color:#10b981; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">DYSTANS PŁATNY</span>' +
+                    '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+Number(pkSum).toFixed(1)+' km</strong>' +
+                '</div>' +
+                '<div class="box" style="flex:1; border:1px solid rgba(239,68,68,0.2); background:rgba(239,68,68,0.05); padding:16px; border-radius:20px; box-shadow:inset 0 2px 10px rgba(0,0,0,0.2);">' +
+                    '<span style="color:#ef4444; font-size:0.65rem; text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">PUSTE PRZEBIEGI</span>' +
+                    '<strong style="color:#fff; font-size:1.3rem; display:block; margin-top:6px; letter-spacing:-0.5px;">'+Number(emptyKSum).toFixed(1)+' km</strong>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        act += proBannerHtml;
+
+        // =========================================================
+        // BUDOWA AKORDEONÓW SZCZEGÓŁOWYCH P&L
+        // =========================================================
+
+        let bruttoDetHtml = '<div id="brutto-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);">';
+        if(d.plat === 'apps') {
+            if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
+            if(uberEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z Uber:</span><span style="color:#fff;">+'+Number(uberEarned).toFixed(2)+' zł</span></div>';
+            if(boltEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z Bolt:</span><span style="color:#fff;">+'+Number(boltEarned).toFixed(2)+' zł</span></div>';
+            let otherApps = appEarned - uberEarned - boltEarned;
+            if(otherApps > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód Inne (Aplikacje):</span><span style="color:#fff;">+'+Number(otherApps).toFixed(2)+' zł</span></div>';
+        } else {
+            if(cashEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z gotówki:</span><span style="color:#10b981;">+'+Number(cashEarned).toFixed(2)+' zł</span></div>';
+            if(cardEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z Karty/Terminal:</span><span style="color:#0ea5e9;">+'+Number(cardEarned).toFixed(2)+' zł</span></div>';
+            if(vouchEarned > 0) bruttoDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Przychód z Voucherów:</span><span style="color:#a855f7;">+'+Number(vouchEarned).toFixed(2)+' zł</span></div>';
+        }
+        bruttoDetHtml += '</div>';
+
+        let exDetHtml = '<div id="ex-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);">';
+        let exList = fe.filter(function(e) { return e.ty === 'e'; });
+        if (exList.length > 0) {
+            for(let i=0; i<exList.length; i++) {
+                exDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>'+exList[i].d+' ('+exList[i].dt+'):</span><span>-'+Number(exList[i].v).toFixed(2)+' zł</span></div>';
+            }
+        } else {
+            exDetHtml += '<div style="text-align:center; padding: 10px 0;">Brak zrejestrowanych kosztów eksploatacyjnych.</div>';
+        }
+        exDetHtml += '</div>';
+
+        let costPk = pkSum * (cfg.fuelPx || 0);
+        let costEmpty = emptyKSum * (cfg.fuelPx || 0);
+
+        let fuelDetHtml = '<div id="fuel-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);">';
+        fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:#fff;">Dystans całkowity ('+Number(k).toFixed(1)+' km):</span><span style="color:#fff;">-'+Number(fc).toFixed(2)+' zł</span></div>';
+        fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>W tym płatny (z klientem) - '+Number(pkSum).toFixed(1)+' km:</span><span>-'+Number(costPk).toFixed(2)+' zł</span></div>';
+        fuelDetHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>W tym pusty (dojazdy) - '+Number(emptyKSum).toFixed(1)+' km:</span><span style="color:var(--danger);">-'+Number(costEmpty).toFixed(2)+' zł</span></div>';
+        fuelDetHtml += '<div style="text-align:right; font-size:0.65rem; margin-top:8px; color:rgba(255,255,255,0.3); border-top:1px dashed rgba(255,255,255,0.05); padding-top:8px;">Średni koszt: '+Number(cfg.fuelPx || 0).toFixed(2)+' zł/km</div>';
+        fuelDetHtml += '</div>';
+
+        let taxDetHtml = '<div id="tax-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Przychód Brutto ('+Number(g).toFixed(2)+' zł) * Podatek ('+Number((cfg.tax||0)*100).toFixed(1)+'%)</span><span>-'+Number(tx).toFixed(2)+' zł</span></div></div>';
+        let pfDetHtml = '<div id="pf-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Przychód Brutto ('+Number(g).toFixed(2)+' zł) * Prowizja ('+Number((cfg.ePct||0)*100).toFixed(1)+'%)</span><span>-'+Number(pf).toFixed(2)+' zł</span></div></div>';
+        let cfDetHtml = '<div id="cf-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Kartą ('+Number(cardEarned).toFixed(2)+' zł) * Prowizja Terminala ('+Number((cfg.cardF||0)*100).toFixed(1)+'%)</span><span>-'+Number(cf).toFixed(2)+' zł</span></div></div>';
+        let vfDetHtml = '<div id="vf-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);"><div style="display:flex; justify-content:space-between;"><span>Utarg Voucher ('+Number(vouchEarned).toFixed(2)+' zł) * Prowizja ('+Number((cfg.voucherF||0)*100).toFixed(1)+'%)</span><span>-'+Number(vf).toFixed(2)+' zł</span></div></div>';
+
+        let bC_tot = getDaily(cfg.bC, cfg.bPeriod, daysInCurrentMonth) * daysToCharge;
+        let iC_tot = getDaily(cfg.iC, cfg.iPeriod, daysInCurrentMonth) * daysToCharge;
+        let cC_tot = getDaily(cfg.cC, cfg.cType, daysInCurrentMonth) * daysToCharge;
+        let uC_tot = getDaily(cfg.uC, cfg.uType, daysInCurrentMonth) * daysToCharge;
+        let eC_tot = (cfg.eType === 'flat' ? getDaily(cfg.eC, cfg.ePeriod, daysInCurrentMonth) : 0) * daysToCharge;
+
+        let fixedDetailsHtml = '<div id="fixed-costs-det" style="display:none; margin-top:10px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); width:100%; font-size:0.7rem; color:var(--muted);">';
+        if(bC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Abonament za bazę / Korporację:</span><span>-'+Number(bC_tot).toFixed(2)+' zł</span></div>';
+        if(iC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>ZUS / Ubezpieczenie Pojazdu:</span><span>-'+Number(iC_tot).toFixed(2)+' zł</span></div>';
+        if(cC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Amortyzacja Auta (Rata/Wynajem):</span><span>-'+Number(cC_tot).toFixed(2)+' zł</span></div>';
+        if(uC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Księgowość / Inne usługi:</span><span>-'+Number(uC_tot).toFixed(2)+' zł</span></div>';
+        if(eC_tot > 0) fixedDetailsHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Abonament (Stała opłata partnerska):</span><span>-'+Number(eC_tot).toFixed(2)+' zł</span></div>';
+        fixedDetailsHtml += '</div>';
+
+        let makeRow = function(label, valueStr, valColor, detId, detHtml) {
+            let rowCode = "let el=document.getElementById('" + detId + "'); let icon=document.getElementById('" + detId + "-icon'); if(el.style.display==='none'){el.style.display='block'; icon.innerHTML='🔼'; this.style.transform='scale(1.02)';}else{el.style.display='none'; icon.innerHTML='🔽'; this.style.transform='scale(1)';}";
+            return '<div class="fin-row" style="flex-direction:column; align-items:stretch; font-size:0.85rem; margin-bottom:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:16px; border-radius:16px; border:1px solid rgba(255,255,255,0.05); backdrop-filter:blur(10px); transition:transform 0.2s;" onclick="' + rowCode + '">' +
+                '<div style="display:flex; justify-content:space-between; width:100%; align-items:center;">' +
+                    '<span class="fin-label" style="color:rgba(255,255,255,0.8); font-weight:600;">' + label + ' <span id="'+detId+'-icon" style="font-size:0.6rem; margin-left:6px; opacity:0.5;">🔽</span></span>' +
+                    '<span class="fin-val" style="color:'+valColor+'; font-weight:900; letter-spacing:0.5px;">' + valueStr + '</span>' +
+                '</div>' +
+                detHtml +
+            '</div>';
+        };
+
+        // P&L PANEL
+        act += '<div class="panel" style="padding:25px 20px; margin:0 15px 15px; border-radius:24px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 15px 40px rgba(0,0,0,0.6);">' +
+            '<div style="text-align:center; margin-bottom:20px;">' +
+                '<span style="font-size:0.75rem; color:rgba(255,255,255,0.3); font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">WODOSPAD FINANSOWY (P&L)</span>' +
+            '</div>' +
+            makeRow('Przychody Operacyjne Brutto', Number(g).toFixed(2)+' zł', '#10b981', 'brutto-det', bruttoDetHtml) +
+            makeRow('Koszty Eksploatacyjne (Serwis)', '-'+Number(ex).toFixed(2)+' zł', '#ef4444', 'ex-det', exDetHtml) +
+            makeRow('Koszty Paliwa (Całkowite)', '-'+Number(fc).toFixed(2)+' zł', '#f59e0b', 'fuel-det', fuelDetHtml) +
+            (cf > 0 ? makeRow('Prowizja Terminala (Karty)', '-'+Number(cf).toFixed(2)+' zł', '#ef4444', 'cf-det', cfDetHtml) : '') +
+            (vf > 0 ? makeRow('Prowizja Voucherów', '-'+Number(vf).toFixed(2)+' zł', '#ef4444', 'vf-det', vfDetHtml) : '') +
+            (pf > 0 ? makeRow('Prowizja Aplikacji', '-'+Number(pf).toFixed(2)+' zł', '#ef4444', 'pf-det', pfDetHtml) : '') +
+            makeRow('Zobowiązania Podatkowe (VAT/PIT)', '-'+Number(tx).toFixed(2)+' zł', '#ef4444', 'tax-det', taxDetHtml) +
+            makeRow('Koszty Stałe / Amortyzacja '+(!window.db.drv.showFixed ? '(Wyłączone)' : '(Za '+daysToCharge+' dni)'), '-'+Number(totalDynamicFix).toFixed(2)+' zł', '#ef4444', 'fixed-costs-det', (window.db.drv.showFixed ? fixedDetailsHtml : '')) +
+            '<div class="fin-row" style="background:rgba(0,0,0,0.4); padding:20px; border-radius:16px; border:1px inset rgba(255,255,255,0.05); margin-top:20px; box-shadow:inset 0 4px 15px rgba(0,0,0,0.3);">' +
+                '<span class="fin-label" style="color:#fff; font-size:0.95rem; font-weight:900; letter-spacing:1px; text-transform:uppercase;">ZYSK NETTO (OPERACYJNY)</span>' +
+                '<span class="fin-val" style="font-size:1.8rem; font-weight:900; letter-spacing:-1px; color:'+(n >= 0 ? '#10b981' : '#ef4444')+'">'+Number(n).toFixed(2)+' zł</span>' +
+            '</div>' +
+        '</div>';
+
+        // HISTORIA ZMIAN
+        act += '<div class="panel" style="margin:0 15px 15px; padding:25px 20px; border-radius:24px; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 15px 40px rgba(0,0,0,0.6);">' +
+            '<div style="text-align:center; margin-bottom:20px;">' +
+                '<span style="font-size:0.75rem; color:rgba(255,255,255,0.3); font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">HISTORIA ZMIAN</span>' +
+            '</div>';
+        
+        if(fs.length > 0) {
+            for(let i=0; i<fs.length; i++) {
+                let x = fs[i];
+                act += '<div class="log-item" style="border:none; border-left:4px solid '+(x.n >= 0 ? '#10b981' : '#ef4444')+'; flex-direction:column; align-items:flex-start; padding:16px; margin-bottom:12px; border-radius:16px; background:rgba(0,0,0,0.3); box-shadow:inset 0 2px 10px rgba(0,0,0,0.2);">' +
+                    '<div style="display:flex; justify-content:space-between; width:100%; margin-bottom:8px; align-items:center;">' +
+                        '<div><strong style="font-size:1rem; color:#fff; font-weight:800; letter-spacing:0.5px;">'+x.dt+'</strong></div>' +
+                        '<strong style="color:'+(x.n >= 0 ? '#10b981' : '#ef4444')+'; font-size:1.1rem; letter-spacing:-0.5px;">Netto: '+Number(x.n || 0).toFixed(2)+' zł</strong>' +
+                    '</div>' +
+                    '<div style="display:flex; justify-content:space-between; width:100%; align-items:center;">' +
+                        '<span style="color:rgba(255,255,255,0.4); font-size:0.75rem; font-weight:600;">Brutto: <span style="color:#fff;">'+Number(x.g || 0).toFixed(2)+' zł</span> | '+Number(x.k || 0).toFixed(1)+' km</span>' +
+                        '<div style="display:flex; gap:8px;">' +
+                            // Przycisk mapy
+                            (x.tr && x.tr[0] && x.tr[0].startPos && x.tr[0].endPos ? 
+                                '<a href="http://maps.google.com/maps?saddr='+x.tr[0].startPos.lat+','+x.tr[0].startPos.lng+'&daddr='+x.tr[0].endPos.lat+','+x.tr[0].endPos.lng+'" target="_blank" class="btn" style="padding:8px 12px; background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.3); border-radius:10px; font-size:0.8rem; cursor:pointer; text-decoration:none; outline:none;" title="Pokaż trasę GPS">🗺️</a>' 
+                            : '') +
+                            '<button class="btn" style="padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; font-size:0.8rem; cursor:pointer; outline:none;" onclick="if(typeof window.dEditHistory===\'function\') window.dEditHistory('+x.id+')">✏️</button>' +
+                            '<button class="btn-danger" style="padding:8px 12px; border:none; border-radius:10px; font-weight:bold; background:rgba(239,68,68,0.15); color:#ef4444; font-size:0.8rem; cursor:pointer; outline:none;" onclick="if(typeof window.dDelHistory===\'function\') window.dDelHistory('+x.id+')">🗑️</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }
+        } else {
+            act += '<div style="text-align:center;color:rgba(255,255,255,0.3);font-size:0.8rem;padding:30px 0; background:rgba(0,0,0,0.2); border-radius:16px; border:1px dashed rgba(255,255,255,0.05); font-weight:600;">Brak zapisanych zmian w tym okresie.</div>';
+        }
+        act += '</div>';
+
+        appContainer.innerHTML = hdr + act + '<div style="height:140px; width:100%; clear:both;"></div>' + nav;
+
+    } catch(err) {
+        console.error(err);
+        let appContainer = document.getElementById('app');
+        if(appContainer) {
+            appContainer.innerHTML = '<div style="padding:50px 20px; text-align:center; color:white;"><h3>Błąd (taxi_tab_stats.js)</h3><p style="color:var(--danger);">' + err.message + '</p><button style="padding:15px; background:#fff; color:#000; font-weight:bold; border-radius:12px; border:none; width:100%;" onclick="window.location.reload()">ODŚWIEŻ</button></div>';
+        }
+    }
+};
