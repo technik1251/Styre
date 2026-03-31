@@ -1,58 +1,56 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Terminal Premium V4 (Modułowy, Smart Netto, Bezpieczny Zapis)
+// PLIK: taxi_tab_term.js - Terminal Premium V5 (Ultra-Stabilny, Smart Netto, Bez-Laga)
 // ==========================================
 
-// --- 1. FUNKCJE POMOCNICZE I MATEMATYKA ---
 window.dTC = function(type, val) {
     if(type === 's') window.dTSrc = val;
     if(type === 'p') window.dTPay = val;
     if(typeof window.render === 'function') window.render();
 };
 
-window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
-    let R = 6371; 
-    let dLat = (lat2 - lat1) * Math.PI / 180;
-    let dLon = (lon2 - lon1) * Math.PI / 180;
-    let a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+window.getValSafe = function(id) {
+    let el = document.getElementById(id);
+    if(el && el.value !== '') return parseFloat(el.value) || 0;
+    return 0;
 };
 
-window.getFixedDailyCosts = function() {
-    let c = window.db.drv.cfg || {};
-    let rent = parseFloat(c.carRent || c.rent || c.costRent || 0); // Zakładamy tygodniowo
-    let zus = parseFloat(c.zus || c.costZus || 0); // Zakładamy miesięcznie
-    let eFix = (c.eType === 'fix') ? parseFloat(c.eFix || 0) : 0; // Tygodniowo
-    let other = parseFloat(c.fixedDaily || c.otherFix || 0); // Dziennie
-    return (rent / 7) + (zus / 30) + (eFix / 7) + other;
-};
-
-// --- 2. ZARZĄDZANIE ZMIANĄ I GPS ---
 window.dStartS = function() {
     let el = document.getElementById('ds-o');
-    if(!el || el.value === '') { if(window.sysAlert) window.sysAlert('Błąd', 'Wpisz stan licznika (KM).', 'error'); return; }
+    if(!el || el.value === '') { 
+        if(window.sysAlert) window.sysAlert('Błąd', 'Wpisz aktualny stan licznika (KM).', 'error'); 
+        return; 
+    }
     let o = parseFloat(el.value);
-    if(isNaN(o) || o <= 0) { if(window.sysAlert) window.sysAlert('Błąd', 'Stan licznika musi być poprawną liczbą!', 'error'); return; }
+    if(isNaN(o) || o <= 0) { 
+        if(window.sysAlert) window.sysAlert('Błąd', 'Stan licznika musi być poprawną liczbą!', 'error'); 
+        return; 
+    }
     
-    let initialFixedCosts = window.getFixedDailyCosts();
-
     if(!window.db.drv) window.db.drv = {};
     window.db.drv.odo = o;
     window.db.drv.sh = {
-        on: true, o: o, t: Date.now(), shiftStart: Date.now(), 
-        sPT: 0, sPS: null, rWT: 0, rWS: null, tr: [],
-        shiftDist: 0, fixedCosts: initialFixedCosts, lastGlobalSave: Date.now()
+        on: true, 
+        o: o, 
+        t: Date.now(), 
+        shiftStart: Date.now(), 
+        sPT: 0, 
+        sPS: null, 
+        rWT: 0, 
+        rWS: null, 
+        tr: [],
+        shiftDist: 0,
+        lastGlobalSave: Date.now()
     };
     window.db.drv.liveRideStart = null;
     
     window.initGlobalTracker();
+
     if(typeof window.save === 'function') window.save(); 
     if(typeof window.render === 'function') window.render();
 };
 
 window.dCancelShift = function() {
-    if(confirm('Czy na pewno chcesz anulować bieżącą zmianę? Zebrane dziś dane i dystans przepadną.')) {
+    if(confirm('Czy na pewno chcesz anulować bieżącą zmianę? Wszystkie zebrane dziś dane znikną bezpowrotnie.')) {
         let s = window.db.drv.sh;
         if(s && s.watchId) navigator.geolocation.clearWatch(s.watchId);
         if(s && s.globalWatchId) navigator.geolocation.clearWatch(s.globalWatchId);
@@ -65,10 +63,22 @@ window.dCancelShift = function() {
     }
 };
 
+window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
+    let R = 6371; 
+    let dLat = (lat2 - lat1) * Math.PI / 180;
+    let dLon = (lon2 - lon1) * Math.PI / 180;
+    let a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+};
+
+// --- NIEZAWODNY GLOBAL TRACKER ---
 window.initGlobalTracker = function() {
     if (!('geolocation' in navigator)) return;
     let s = window.db.drv.sh;
-    if (!s || !s.on || s.globalWatchId) return; 
+    if (!s || !s.on) return;
+    if (s.globalWatchId) return; 
 
     s.shiftDist = s.shiftDist || 0;
     
@@ -93,7 +103,7 @@ window.initGlobalTracker = function() {
             }
             s.lastShiftPos = {lat: lat, lng: lng};
         }
-    }, function(err) { console.warn('Global GPS:', err); }, { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 });
+    }, function(err) { console.warn('Global GPS:', err); }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
 };
 
 window.resumeLiveRide = function() {
@@ -117,7 +127,7 @@ window.resumeLiveRide = function() {
                     if (timeDelta > 0) s.currentSpeed = (dist / (timeDelta / 3600000));
                 }
 
-                if (dist > 0.002) { 
+                if (dist > 0.002 && s.currentSpeed < 160) { 
                     s.gpsDist += dist;
                     let currentRate = q[s.liveTariff || 't1'] || 3.2;
                     s.gpsMoney = (s.gpsMoney || 0) + (dist * currentRate);
@@ -126,12 +136,206 @@ window.resumeLiveRide = function() {
             s.lastPos = {lat: lat, lng: lng};
             s.lastGpsTime = now;
             window.updateLiveRideUI();
-        }, function(error) { console.error('Ride GPS:', error); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 });
+        }, function(error) { 
+            console.error('Ride GPS Error:', error); 
+        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
     }
     if(!window.liveRideTimer) window.liveRideTimer = setInterval(window.updateLiveRideUI, 1000);
 };
 
-// --- 3. DEDYKOWANY SILNIK ZAMYKANIA ZMIANY (BEZ BŁĘDÓW) ---
+// --- LOGIKA CELU I KOSZTÓW DZIENNYCH ---
+window.dGoalMode = window.dGoalMode || 'netto';
+window.toggleGoalMode = function() {
+    window.dGoalMode = (window.dGoalMode === 'brutto') ? 'netto' : 'brutto';
+    if(typeof window.render === 'function') window.render();
+};
+
+window.dSetGoal = function() {
+    let isNetto = window.dGoalMode === 'netto';
+    let current = isNetto ? ((window.db.drv.cfg && window.db.drv.cfg.goalNetto) || 300) : ((window.db.drv.cfg && window.db.drv.cfg.goalBrutto) || 400);
+    let modeName = isNetto ? 'NETTO (do kieszeni)' : 'BRUTTO (cały utarg)';
+    
+    let ng = prompt("Podaj swój DZIENNY CEL " + modeName + " (zł):", current);
+    if(ng !== null && ng !== '') {
+        let val = parseFloat(ng);
+        if(!isNaN(val) && val > 0) {
+            if(!window.db.drv.cfg) window.db.drv.cfg = {};
+            if(isNetto) window.db.drv.cfg.goalNetto = val;
+            else window.db.drv.cfg.goalBrutto = val;
+            
+            if(typeof window.save === 'function') window.save();
+            if(typeof window.render === 'function') window.render();
+        }
+    }
+};
+
+window.dSetFixedCosts = function() {
+    let current = (window.db.drv.cfg && window.db.drv.cfg.dailyFixedCosts) ? window.db.drv.cfg.dailyFixedCosts : 0;
+    let val = prompt("Podaj swoje CAŁKOWITE KOSZTY STAŁE na 1 dzień pracy (np. wynajem auta + ubezpieczenie na jeden dzień) w zł:\nTo pozwoli systemowi uciąć pasek na minus od samego startu zmiany.", current);
+    if(val !== null && val !== '') {
+        let pVal = parseFloat(val.replace(',','.'));
+        if(!isNaN(pVal) && pVal >= 0) {
+            if(!window.db.drv.cfg) window.db.drv.cfg = {};
+            window.db.drv.cfg.dailyFixedCosts = pVal;
+            if(typeof window.save === 'function') window.save();
+            if(typeof window.render === 'function') window.render();
+        }
+    }
+};
+
+window.toggleLiveTariff = function() {
+    if(window.db && window.db.drv && window.db.drv.sh && window.db.drv.liveRideStart) {
+        let current = window.db.drv.sh.liveTariff || 't1';
+        let next = 't1';
+        if(current === 't1') next = 't2';
+        else if(current === 't2') next = 't3';
+        else if(current === 't3') next = 't4';
+        else if(current === 't4') next = 't1';
+        
+        window.db.drv.sh.liveTariff = next;
+        window.updateLiveRideUI();
+        if(typeof window.save === 'function') window.save();
+        if(typeof window.render === 'function') window.render();
+    }
+};
+
+// --- SILNIK PRAWDZIWEGO TAKSOMETRU ---
+window.updateLiveRideUI = function() {
+    if (!window.db || !window.db.drv || !window.db.drv.liveRideStart) return;
+    let d = window.db.drv;
+    let s = d.sh;
+    let elTime = document.getElementById('live-ride-time');
+    let elDist = document.getElementById('live-ride-dist');
+    let elPrice = document.getElementById('live-ride-price'); 
+    let elStatus = document.getElementById('live-ride-status'); 
+
+    let isWaiting = s.rWS !== null;
+    let now = Date.now();
+    let diffMs = now - d.liveRideStart;
+    if(s.rWT) diffMs -= s.rWT;
+    if(isWaiting) diffMs -= (now - s.rWS);
+
+    if (!s.lastTick) s.lastTick = now;
+    let deltaTick = now - s.lastTick;
+    s.lastTick = now;
+
+    if (!isWaiting) {
+        if (now - (s.lastGpsTime || now) > 5000) s.currentSpeed = 0;
+        if ((s.currentSpeed || 0) <= 20) {
+            s.autoWaitMs = (s.autoWaitMs || 0) + deltaTick;
+        }
+    }
+
+    if (elTime) {
+        let totalSecs = Math.floor(diffMs / 1000);
+        let m = Math.floor(totalSecs / 60);
+        let sec = totalSecs % 60;
+        elTime.innerHTML = (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+    
+    if (elDist && s.gpsDist !== undefined) elDist.innerHTML = Number(s.gpsDist).toFixed(2);
+
+    let activeTariff = s.liveTariff || 't1';
+    let isAutoWaitActive = (!isWaiting && (s.currentSpeed || 0) <= 20);
+    
+    if (elStatus) {
+        if (isWaiting) {
+            elStatus.innerHTML = '<span style="font-size:0.65rem; color:#f59e0b; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); padding:4px 12px; border-radius:12px; font-weight:900; letter-spacing:1px;">⏸️ POSTÓJ RĘCZNY</span>';
+        } else if (isAutoWaitActive) {
+            elStatus.innerHTML = '<span style="font-size:0.65rem; color:#ef4444; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); padding:4px 12px; border-radius:12px; font-weight:900; letter-spacing:1px; animation: glowPulse 2s infinite;">⏱️ NALICZANIE POSTOJU (<20km/h)</span>';
+        } else {
+            elStatus.innerHTML = '<span style="font-size:0.65rem; color:var(--muted); font-weight:800; letter-spacing:1px;">SUGEROWANA CENA (' + activeTariff.toUpperCase() + ')</span>';
+        }
+    }
+
+    if (elPrice) {
+        let q = d.q || {s:9, w:39, t1:3.2, t2:4.0, t3:6.4, t4:8.0};
+        let manualWaitMs = s.rWT || 0;
+        if(isWaiting) manualWaitMs += (now - s.rWS);
+        let totalWaitMins = ((s.autoWaitMs || 0) + manualWaitMs) / 60000;
+        
+        let livePrice = q.s + (s.gpsMoney || 0) + (totalWaitMins * (q.w / 60));
+        if(livePrice < q.s) livePrice = q.s;
+        
+        elPrice.innerHTML = livePrice.toFixed(2);
+    }
+};
+
+window.startLiveRide = function() {
+    if(window.db && window.db.drv && window.db.drv.sh) {
+        window.db.drv.liveRideStart = Date.now();
+        let s = window.db.drv.sh;
+        s.rWS = null; s.rWT = 0; s.gpsDist = 0; s.gpsMoney = 0; s.lastPos = null;
+        s.liveTariff = 't1'; s.autoWaitMs = 0; s.currentSpeed = 0; s.lastTick = Date.now(); s.lastGpsTime = Date.now();
+        
+        if (!s.globalWatchId) window.initGlobalTracker();
+        window.resumeLiveRide();
+
+        if(typeof window.save === 'function') window.save();
+        if(typeof window.render === 'function') window.render();
+    }
+};
+
+window.stopLiveRide = function() {
+    if(window.db && window.db.drv && window.db.drv.sh) {
+        let s = window.db.drv.sh;
+        if (s.watchId) { navigator.geolocation.clearWatch(s.watchId); s.watchId = null; }
+        if(window.liveRideTimer) { clearInterval(window.liveRideTimer); window.liveRideTimer = null; }
+        
+        let diffMs = Date.now() - window.db.drv.liveRideStart;
+        if (s.rWT) diffMs -= s.rWT;
+        let finalMins = Math.max(0, Math.round(diffMs / 60000));
+        let finalDist = s.gpsDist || 0;
+
+        let q = window.db.drv.q || {s:9, w:39, t1:3.2};
+        let manualWaitMs = s.rWT || 0;
+        let totalWaitMins = ((s.autoWaitMs || 0) + manualWaitMs) / 60000;
+        let finalPrice = q.s + (s.gpsMoney || 0) + (totalWaitMins * (q.w / 60));
+
+        s.tempAutoMins = finalMins;
+        s.tempAutoKm = finalDist.toFixed(2);
+        s.tempAutoPrice = Math.max(q.s, finalPrice).toFixed(2);
+
+        window.db.drv.liveRideStart = null;
+        s.rWS = null; s.lastPos = null;
+
+        if(typeof window.save === 'function') window.save();
+        if(typeof window.render === 'function') window.render();
+
+        setTimeout(function() {
+            if(window.sysAlert) window.sysAlert('Trasa Zakończona!', 'Czas, Dystans i Kwota z taksometru GPS zostały uzupełnione.', 'success');
+        }, 100);
+    }
+};
+
+window.toggleRideWait = function() {
+    if(window.db && window.db.drv && window.db.drv.sh) {
+        if(window.db.drv.sh.rWS) {
+            window.db.drv.sh.rWT += (Date.now() - window.db.drv.sh.rWS);
+            window.db.drv.sh.rWS = null;
+        } else {
+            window.db.drv.sh.rWS = Date.now();
+        }
+        window.updateLiveRideUI();
+        if(typeof window.save === 'function') window.save();
+        if(typeof window.render === 'function') window.render();
+    }
+};
+
+window.toggleShiftPause = function() {
+    if(window.db && window.db.drv && window.db.drv.sh) {
+        if(window.db.drv.sh.sPS) {
+            window.db.drv.sh.sPT += (Date.now() - window.db.drv.sh.sPS);
+            window.db.drv.sh.sPS = null;
+        } else {
+            window.db.drv.sh.sPS = Date.now();
+        }
+        if(typeof window.save === 'function') window.save();
+        if(typeof window.render === 'function') window.render();
+    }
+};
+
+// --- BEZBŁĘDNY MODAL ZAMYKANIA ZMIANY (WŁASNY SILNIK ZAPISU) ---
 window.openEndShiftModal = function() {
     let s = window.db.drv.sh || {};
     let startOdo = s.o ? parseFloat(s.o) : 0;
@@ -146,7 +350,9 @@ window.openEndShiftModal = function() {
         diffMins = Math.floor((ms%3600000)/60000);
     }
     
-    let g = 0; if(s.tr) s.tr.forEach(x => g += (parseFloat(x.v)||0));
+    let g = 0;
+    if(s.tr) s.tr.forEach(function(x) { g += (parseFloat(x.v)||0); });
+
     let isApps = (window.db.drv.plat === 'apps');
 
     let html = '<div id="m-end-shift" class="modal-overlay" style="z-index:99999; position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(20px); overflow-y:auto; animation:fadeIn 0.2s ease;">' +
@@ -154,26 +360,39 @@ window.openEndShiftModal = function() {
             '<div style="text-align:center; margin-bottom:20px;">' +
                 '<div style="font-size:3rem; margin-bottom:10px; filter:drop-shadow(0 0 10px rgba(239,68,68,0.5));">🏁</div>' +
                 '<h3 style="color:#ef4444; margin:0 0 5px 0; font-size:1.4rem; font-weight:900; text-transform:uppercase;">Zakończ Zmianę</h3>' +
-                '<p style="color:var(--muted); font-size:0.75rem; margin-bottom:15px;">Wpisz dodatkowe zarobki z apek i podaj przebieg końcowy.</p>' +
+                '<p style="color:var(--muted); font-size:0.75rem; margin-bottom:15px;">Podsumuj swój dzień i zaktualizuj przebieg.</p>' +
+                
                 '<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.6); padding:12px; border-radius:12px; border:1px inset rgba(255,255,255,0.05);">' +
                     '<div style="text-align:center; flex:1;"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Czas</span><br><strong style="color:#0ea5e9; font-size:1.1rem;">'+diffHrs+'h '+diffMins+'m</strong></div>' +
-                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Utarg</span><br><strong style="color:#10b981; font-size:1.1rem;">'+g.toFixed(2)+' zł</strong></div>' +
+                    '<div style="text-align:center; flex:1; border-left:1px solid rgba(255,255,255,0.1);"><span style="font-size:0.6rem; color:var(--muted); text-transform:uppercase;">Utarg Dotychczas</span><br><strong style="color:#10b981; font-size:1.1rem;">'+g.toFixed(2)+' zł</strong></div>' +
                 '</div>' +
             '</div>' +
+            
             '<div style="background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.2); border-radius:16px; padding:15px; margin-bottom:20px;">' +
-                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:900; display:block; margin-bottom:10px; text-transform:uppercase; text-align:center;">DODATKOWE ZAROBKI (Z APEK / Z KASY)</label>' +
+                '<label style="font-size:0.65rem; color:#0ea5e9; font-weight:900; display:block; margin-bottom:10px; text-transform:uppercase; text-align:center;">Dodaj Zarobki z Aplikacji</label>' +
                 (isApps ? 
-                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"><input type="number" step="0.01" id="me-v-uber" placeholder="Uber (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-bolt" placeholder="Bolt (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-freenow" placeholder="FreeNow" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-inna" placeholder="Inna" class="compact-inp" style="padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka (Do ręki)" style="grid-column:span 2; padding:12px; font-size:1rem; color:#10b981; border-color:rgba(16,185,129,0.3);" class="compact-inp"></div>' 
+                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">' +
+                        '<input type="number" step="0.01" id="me-v-uber" placeholder="Uber (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-bolt" placeholder="Bolt (zł)" class="compact-inp" style="padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-freenow" placeholder="FreeNow" class="compact-inp" style="padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-inna" placeholder="Inna Apka" class="compact-inp" style="padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka (Do rączki)" style="grid-column:span 2; padding:12px; font-size:1rem; color:#10b981; border-color:rgba(16,185,129,0.3);" class="compact-inp">' +
+                    '</div>' 
                 : 
-                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"><input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-karta" placeholder="Terminal" class="compact-inp" style="color:#0ea5e9; padding:10px; font-size:0.9rem;"><input type="number" step="0.01" id="me-v-voucher" placeholder="Vouchery" style="grid-column:span 2; padding:10px; font-size:0.9rem; color:#a855f7;" class="compact-inp"></div>'
+                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">' +
+                        '<input type="number" step="0.01" id="me-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-karta" placeholder="Terminal" class="compact-inp" style="color:#0ea5e9; padding:10px; font-size:0.9rem;">' +
+                        '<input type="number" step="0.01" id="me-v-voucher" placeholder="Vouchery" style="grid-column:span 2; padding:10px; font-size:0.9rem; color:#a855f7;" class="compact-inp">' +
+                    '</div>'
                 ) +
             '</div>' +
+
             '<div style="background:#000; border-radius:16px; padding:20px; text-align:center; border:1px inset rgba(255,255,255,0.05); margin-bottom:20px; box-shadow:inset 0 4px 15px rgba(0,0,0,0.5);">' +
                 '<label style="font-size:0.65rem; color:#ef4444; font-weight:800; display:block; margin-bottom:10px; letter-spacing:1px;">STAN LICZNIKA POJAZDU (KONIEC)</label>' +
                 '<input type="number" id="de-o" value="'+predictedEndOdo+'" style="width:100%; background:transparent; border:none; color:#ef4444; font-size:3rem; font-weight:900; text-align:center; outline:none; padding:0; font-family:monospace; text-shadow: 0 0 15px rgba(239,68,68,0.4);">' +
                 '<div style="font-size:0.65rem; color:var(--muted); margin-top:5px; font-weight:700;">Start: '+startOdo+' km | Przejechano (GPS): '+shiftDist.toFixed(1)+' km</div>' +
             '</div>' +
-            '<div style="margin-bottom:20px;"><label style="font-size:0.65rem; color:rgba(255,255,255,0.6); font-weight:800; margin-bottom:8px; display:block; text-transform:uppercase;">Płatny Dystans (Aplikacje Płatne)</label><input type="number" step="0.1" id="dw-m-pk" placeholder="np. 85.5 (opcjonalnie)" class="compact-inp"></div>' +
+            
             '<button style="background:linear-gradient(135deg, #ef4444, #b91c1c); color:#fff; font-weight:900; padding:18px; border-radius:16px; border:none; width:100%; font-size:1.1rem; box-shadow:0 8px 25px rgba(239,68,68,0.4); cursor:pointer;" onclick="window.submitPremiumEndShift()">ROZLICZ ZMIANĘ</button>' +
             '<button style="background:transparent; color:rgba(255,255,255,0.4); margin-top:10px; border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:16px; width:100%; font-weight:bold; cursor:pointer;" onclick="document.getElementById(\'m-end-shift\').remove()">ANULUJ</button>' +
         '</div></div>';
@@ -186,40 +405,40 @@ window.submitPremiumEndShift = function() {
     let time = new Date().toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'});
     
     if(d.plat === 'apps') {
-        let u = parseFloat(document.getElementById('me-v-uber')?.value)||0;
-        let b = parseFloat(document.getElementById('me-v-bolt')?.value)||0;
-        let f = parseFloat(document.getElementById('me-v-freenow')?.value)||0;
-        let i = parseFloat(document.getElementById('me-v-inna')?.value)||0;
-        let c = parseFloat(document.getElementById('me-v-cash')?.value)||0;
+        let u = window.getValSafe('me-v-uber');
+        let b = window.getValSafe('me-v-bolt');
+        let f = window.getValSafe('me-v-freenow');
+        let i = window.getValSafe('me-v-inna');
+        let c = window.getValSafe('me-v-cash');
         if(u>0) s.tr.push({id:Date.now()+1, v:u, k:0, m:0, time:time, p:'Aplikacja', s:'Uber'});
         if(b>0) s.tr.push({id:Date.now()+2, v:b, k:0, m:0, time:time, p:'Aplikacja', s:'Bolt'});
         if(f>0) s.tr.push({id:Date.now()+3, v:f, k:0, m:0, time:time, p:'Aplikacja', s:'FreeNow'});
         if(i>0) s.tr.push({id:Date.now()+4, v:i, k:0, m:0, time:time, p:'Aplikacja', s:'Inna'});
         if(c>0) s.tr.push({id:Date.now()+5, v:c, k:0, m:0, time:time, p:'Gotówka', s:'Aplikacja'});
     } else {
-        let c = parseFloat(document.getElementById('me-v-cash')?.value)||0;
-        let k = parseFloat(document.getElementById('me-v-karta')?.value)||0;
-        let v = parseFloat(document.getElementById('me-v-voucher')?.value)||0;
+        let c = window.getValSafe('me-v-cash');
+        let k = window.getValSafe('me-v-karta');
+        let v = window.getValSafe('me-v-voucher');
         if(c>0) s.tr.push({id:Date.now()+1, v:c, k:0, m:0, time:time, p:'Gotówka', s:'Centrala'});
         if(k>0) s.tr.push({id:Date.now()+2, v:k, k:0, m:0, time:time, p:'Karta', s:'Terminal'});
         if(v>0) s.tr.push({id:Date.now()+3, v:v, k:0, m:0, time:time, p:'Voucher', s:'Korporacja'});
     }
 
-    let endOdo = parseFloat(document.getElementById('de-o')?.value);
-    if(isNaN(endOdo) || endOdo < s.o) endOdo = s.o;
+    let endOdo = window.getValSafe('de-o');
+    if(endOdo < s.o || endOdo === 0) endOdo = s.o;
     d.odo = endOdo;
     let distTotal = endOdo - s.o;
-    let pk = parseFloat(document.getElementById('dw-m-pk')?.value) || 0;
     
     if (s.watchId) navigator.geolocation.clearWatch(s.watchId);
     if (s.globalWatchId) navigator.geolocation.clearWatch(s.globalWatchId);
     if (window.liveRideTimer) clearInterval(window.liveRideTimer);
 
     let g = 0, sumCard = 0, sumVouch = 0;
-    s.tr.forEach(x => {
-        g += parseFloat(x.v)||0;
-        if(x.p === 'Karta') sumCard += parseFloat(x.v)||0;
-        if(x.p === 'Voucher') sumVouch += parseFloat(x.v)||0;
+    s.tr.forEach(function(x) {
+        let val = parseFloat(x.v)||0;
+        g += val;
+        if(x.p === 'Karta') sumCard += val;
+        if(x.p === 'Voucher') sumVouch += val;
     });
 
     let cfg = d.cfg || {};
@@ -235,7 +454,8 @@ window.submitPremiumEndShift = function() {
     let pFee = g * ePct;
     let fc = distTotal * fuelPx;
 
-    let fixedCosts = window.getFixedDailyCosts();
+    // Koszty zablokowane na stracie!
+    let fixedCosts = parseFloat(cfg.dailyFixedCosts) || 0;
     let n = g - fc - tax - pFee - cF - vF - fixedCosts;
     
     let hW = 0;
@@ -250,13 +470,14 @@ window.submitPremiumEndShift = function() {
     if(!d.h) d.h = [];
     d.h.push({
         id: Date.now(), dt: dtStr, rD: new Date().toISOString(),
-        g: g, n: n, k: distTotal, pk: pk, emptyK: Math.max(0, distTotal - pk),
+        g: g, n: n, k: distTotal, pk: 0, emptyK: distTotal,
         hW: hW, fc: fc, tx: tax, pF: pFee, cF: cF, vF: vF, tr: s.tr
     });
-    d.h.sort((a,b) => new Date(b.rD) - new Date(a.rD));
+    d.h.sort(function(a,b) { return new Date(b.rD) - new Date(a.rD); });
 
     d.sh = {on: false};
-    document.getElementById('m-end-shift')?.remove();
+    let mEl = document.getElementById('m-end-shift');
+    if(mEl) mEl.remove();
     
     if(typeof window.save === 'function') window.save(); 
     if(typeof window.render === 'function') window.render();
@@ -264,32 +485,29 @@ window.submitPremiumEndShift = function() {
 };
 
 
-// --- 4. RENDERER GŁÓWNY Z SZABLONAMI (CZYSTY I MAŁY KOD!) ---
-window.getOfflineHTML = function(d) {
-    let lblStyle = 'font-size:0.6rem; color:var(--muted); font-weight:800; text-transform:uppercase; margin-bottom:6px; display:block; text-align:left;';
-    let html = '<div style="color:#0ea5e9; margin-top:10px; font-size:0.75rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:15px;">⚡ ZALEGŁA ZMIANA (OFFLINE)</div><div class="glass-card" style="padding:25px 15px; border-color: rgba(14,165,233,0.3); margin-bottom:20px;">';
-    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;"><div><label style="'+lblStyle+'">Data Startu</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" class="compact-inp"></div><div><label style="'+lblStyle+'">Data Koniec</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" class="compact-inp"></div></div>';
-    html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#f59e0b; font-weight:900; text-align:center; display:block; margin-bottom:10px;">STAN LICZNIKA POJAZDU</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div><div><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div></div></div>';
-    
-    if(d.plat === 'apps') {
-        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" class="compact-inp"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma)" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3); font-size:1.2rem; padding:15px;"></div></div></div>';
-    } else {
-        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3);"></div><div><input type="number" step="0.01" id="dw-v-karta" placeholder="Karta/Terminal" class="compact-inp" style="color:#0ea5e9; border-color:rgba(14,165,233,0.3);"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" class="compact-inp" style="color:#a855f7; border-color:rgba(168,85,247,0.3);"></div></div></div>';
-    }
-    
-    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;"><div><label style="'+lblStyle+'">Dyst. Płatny (KM)</label><input type="number" id="dw-pk" placeholder="0.0" class="compact-inp"></div><div><label style="'+lblStyle+'">Czas Pracy (H)</label><input type="number" id="dw-h" placeholder="0" class="compact-inp"></div></div><button style="width:100%; padding:18px; border-radius:16px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3);" onclick="if(window.dAddOfflineWeekly) window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button><button style="width:100%; padding:16px; border-radius:16px; background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.1); margin-top:10px; font-weight:800; font-size:0.85rem;" onclick="window.dShowOff=false; window.render()">ANULUJ</button></div>';
-    return html;
-};
-
+// --- RENDER GŁÓWNY (UI) KOMPAKTOWY PREMIUM ---
 window.rDrvTerm = function(d, t, nav, hdr) {
     try {
         let appContainer = document.getElementById('app');
         if(!appContainer) return;
         
-        let html = [hdr];
-        html.push('<style>.glass-card { background: rgba(20, 20, 25, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); position: relative; overflow: hidden; padding: 20px; } .compact-inp { background: rgba(0,0,0,0.4); border: 1px inset rgba(255,255,255,0.05); color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-size: 1.1rem; font-weight: 700; outline: none; width: 100%; box-sizing: border-box; } .chip { flex: 0 0 auto; border-radius: 10px; font-weight: 800; padding: 8px 14px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; margin-right: 6px; } .chip.active.blue { background: rgba(14,165,233,0.15); color: #0ea5e9; border-color: rgba(14,165,233,0.4); } .chip.active.green { background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.4); } .chip.idle { background: transparent; color: rgba(255,255,255,0.4); } @keyframes glowPulse { 0% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(239,68,68,0.6); } 100% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } } .btn-taryfa { width:100%; height:100%; border-radius:10px; font-weight:900; font-size:1.1rem; background: linear-gradient(to bottom, #333, #111); box-shadow: 0 4px 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); cursor:pointer; outline:none; transition:all 0.1s; } .btn-taryfa:active { transform: translateY(4px); box-shadow: 0 0 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); }</style>');
+        let html = [];
+        html.push(hdr);
 
-        let panelProBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.sysAlert) window.sysAlert(\'PRO\', \'Automatyczne Zlecenia z apek i GPS w tle! 🚀\', \'info\')"><div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px rgba(217,70,239,0.5));">🚕</div><div><h4 style="color:#d946ef; margin:0 0 2px 0; font-size:0.85rem; font-weight:900;">Auto-Zlecenia (PRO)</h4><div style="font-size:0.65rem; color:var(--muted);">Integracja z APKAMI i GPS w tle.</div></div></div>';
+        // STYLE LUXURY KOMPAKT
+        html.push('<style>');
+        html.push('.glass-card { background: rgba(20, 20, 25, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); position: relative; overflow: hidden; padding: 20px; }');
+        html.push('.compact-inp { background: rgba(0,0,0,0.4); border: 1px inset rgba(255,255,255,0.05); color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-size: 1.1rem; font-weight: 700; outline: none; width: 100%; box-sizing: border-box; }');
+        html.push('.chip { flex: 0 0 auto; border-radius: 10px; font-weight: 800; padding: 8px 14px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; margin-right: 6px; }');
+        html.push('.chip.active.blue { background: rgba(14,165,233,0.15); color: #0ea5e9; border-color: rgba(14,165,233,0.4); }');
+        html.push('.chip.active.green { background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.4); }');
+        html.push('.chip.idle { background: transparent; color: rgba(255,255,255,0.4); }');
+        html.push('@keyframes glowPulse { 0% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(239,68,68,0.6); } 100% { opacity: 0.5; box-shadow: 0 0 5px rgba(239,68,68,0.2); } }');
+        html.push('.btn-taryfa { width:100%; height:100%; border-radius:10px; font-weight:900; font-size:1.1rem; background: linear-gradient(to bottom, #333, #111); box-shadow: 0 4px 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); cursor:pointer; outline:none; transition:all 0.1s; }');
+        html.push('.btn-taryfa:active { transform: translateY(4px); box-shadow: 0 0 0 #000, inset 0 2px 5px rgba(255,255,255,0.2); }');
+        html.push('</style>');
+
+        let panelProBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.sysAlert) window.sysAlert(\'PRO\', \'Automatyczne Zlecenia z apek i GPS w tle.🚀\', \'info\')"><div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px rgba(217,70,239,0.5));">🚕</div><div><h4 style="color:#d946ef; margin:0 0 2px 0; font-size:0.85rem; font-weight:900;">Auto-Zlecenia (PRO)</h4><div style="font-size:0.65rem; color:var(--muted);">Integracja z APKAMI i GPS w tle.</div></div></div>';
 
         if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; }
         if(!window.dTPay) { window.dTPay = d.plat === 'apps' ? 'Aplikacja' : 'Gotówka'; }
@@ -314,8 +532,9 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         if(d.sh && d.sh.on && d.sh.tr) {
             d.sh.tr.forEach(x => {
                 let val = parseFloat(x.v)||0; g += val; manualKm += parseFloat(x.k)||0;
-                if(x.p === 'Karta') sumCard += val;
-                if(x.p === 'Voucher') sumVouch += val;
+                if(x.p === 'Gotówka') sumCash += val;
+                else if(x.p === 'Karta') sumCard += val;
+                else if(x.p === 'Voucher') sumVouch += val;
             });
         }
 
@@ -333,27 +552,32 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         if (d.sh && d.sh.on) {
             html.push('<div style="padding:0 15px; margin-top:15px;">');
             
-            // --- SMART GOAL (Prawdziwe Netto startujące od minusa) ---
+            // ==========================================
+            // MODUŁ CELU DZIENNEGO (Prawdziwe Netto startujące od minusa)
+            // ==========================================
             window.dGoalMode = window.dGoalMode || 'netto';
             let isNetto = window.dGoalMode === 'netto';
+            
             let totalKm = (d.sh.shiftDist || 0) + manualKm;
             let taxRate = (d.cfg && d.cfg.tax) ? parseFloat(d.cfg.tax) : 0;
             let fuelPx = (d.cfg && d.cfg.fuelPx) ? parseFloat(d.cfg.fuelPx) : 0;
             let ePct = (d.cfg && d.cfg.eType === 'pct') ? (parseFloat(d.cfg.ePct) || 0) : 0;
             
-            let fixedCosts = d.sh.fixedCosts || window.getFixedDailyCosts(); 
+            let fixedCosts = (d.cfg && d.cfg.dailyFixedCosts) ? parseFloat(d.cfg.dailyFixedCosts) : 0; 
             let cardF = (d.cfg && d.cfg.cardF) ? parseFloat(d.cfg.cardF) : 0;
             let vouchF = (d.cfg && d.cfg.voucherF) ? parseFloat(d.cfg.voucherF) : 0;
 
             let varCosts = (totalKm * fuelPx) + (g * taxRate) + (g * ePct) + (sumCard * cardF) + (sumVouch * vouchF);
+
             let currentBrutto = g;
             let currentNetto = g - varCosts - fixedCosts;
             let currProg = isNetto ? currentNetto : currentBrutto;
 
-            let goalBrutto = (d.cfg && d.cfg.goalBrutto) ? parseFloat(d.cfg.goalBrutto) : ((d.cfg && d.cfg.dailyGoal) ? parseFloat(d.cfg.dailyGoal) : 400);
+            let goalBrutto = (d.cfg && d.cfg.goalBrutto) ? parseFloat(d.cfg.goalBrutto) : 400;
             let goalNetto = (d.cfg && d.cfg.goalNetto) ? parseFloat(d.cfg.goalNetto) : 300;
             let activeGoal = isNetto ? goalNetto : goalBrutto;
             
+            // Pasek startuje od ujemnej kwoty
             let startValue = isNetto ? -fixedCosts : 0;
             let totalJourney = activeGoal - startValue;
             let covered = currProg - startValue;
@@ -361,20 +585,22 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             pct = Math.min(Math.max(pct, 0), 100);
 
             let etaStr = '--:--';
-            let speedPerHour = activeHrs > 0 ? (currProg / activeHrs) : 0;
+            let speedPerHour = activeHrs > 0 ? ((currProg - startValue) / activeHrs) : 0; // Jak szybko realnie idzie w górę
+
             if (activeHrs > 0.25) { 
-                let hourlyMargin = isNetto ? ((g - varCosts) / activeHrs) : (g / activeHrs);
                 let remaining = activeGoal - currProg;
                 if (remaining <= 0) {
                     etaStr = 'Osiągnięto! 🎉';
-                } else if (hourlyMargin > 0) {
-                    let hoursLeft = remaining / hourlyMargin;
+                } else if (speedPerHour > 0) {
+                    let hoursLeft = remaining / speedPerHour;
                     let mLeft = Math.round(hoursLeft * 60);
                     etaStr = Math.floor(mLeft / 60) + 'h ' + (mLeft % 60) + 'm';
                 } else {
                     etaStr = 'Jazda na stracie...';
                 }
-            } else { etaStr = 'Kalibracja AI...'; }
+            } else {
+                etaStr = 'Kalibracja AI...';
+            }
 
             html.push('<div class="glass-card" style="padding:15px 20px; margin-bottom:15px; border-color:rgba(14,165,233,0.3);">');
             html.push('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">');
@@ -385,8 +611,9 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('</div></div>');
             html.push('<div style="display:flex; justify-content:space-between; font-size:1.1rem; font-weight:900; color:#fff; margin-bottom:8px;"><span id="goal-current-val">' + currProg.toFixed(2) + ' zł</span><span style="color:var(--muted);">' + activeGoal.toFixed(2) + ' zł</span></div>');
             html.push('<div style="height:10px; background:rgba(0,0,0,0.5); border-radius:5px; border:1px inset rgba(255,255,255,0.05); margin-bottom:12px;"><div id="goal-bar-fill" style="height:100%; width:'+pct+'%; background:linear-gradient(90deg, #f59e0b, #10b981); border-radius:5px; box-shadow:0 0 10px rgba(16,185,129,0.5); transition:width 0.5s ease;"></div></div>');
-            html.push('<div style="display:flex; justify-content:space-between; font-size:0.7rem; font-weight:800;"><span style="color:var(--muted);">EFEKTYWNOŚĆ: '+(speedPerHour).toFixed(2)+' zł/h</span><span style="color:#0ea5e9;">ETA DO CELU: '+etaStr+'</span></div></div>');
+            html.push('<div style="display:flex; justify-content:space-between; font-size:0.7rem; font-weight:800;"><span style="color:var(--muted); cursor:pointer;" onclick="window.dSetFixedCosts()">📉 KOSZTY STAŁE ⚙️</span><span style="color:#0ea5e9;">ETA DO CELU: '+etaStr+'</span></div></div>');
 
+            // Zwarty Pasek Informacyjny
             html.push('<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:15px;">');
             html.push('<div class="glass-card" style="padding:12px 10px; text-align:center; border-color:rgba(16,185,129,0.2);"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">UTARG BRUTTO</div><div style="font-size:1.2rem; font-weight:900; color:#10b981;">'+Number(g).toFixed(2)+' zł</div></div>');
             html.push('<div class="glass-card" style="padding:12px 10px; text-align:center; border-color:rgba(14,165,233,0.2);"><div style="font-size:0.55rem; color:var(--muted); font-weight:800; letter-spacing:1px; margin-bottom:2px;">CZAS ZMIANY</div><div style="font-size:1.2rem; font-weight:900; color:#0ea5e9;">'+diffHrs+'h '+diffMins+'m</div></div>');
@@ -399,76 +626,50 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('</div>');
             html.push('<div style="text-align:center; margin-bottom:15px;"><button style="background:transparent; color:#ef4444; border:none; font-size:0.65rem; font-weight:800; text-decoration:underline; cursor:pointer; opacity:0.8;" onclick="window.dCancelShift()">🗑️ Anuluj przypadkowo rozpoczętą zmianę</button></div>');
             
-            // --- TAKSOMETR LIVE ---
-            window.updateLiveRideUI = function() {
-                if (!window.db || !window.db.drv || !window.db.drv.liveRideStart) return;
-                let s = window.db.drv.sh;
-                let elTime = document.getElementById('live-ride-time');
-                let elDist = document.getElementById('live-ride-dist');
-                let elPrice = document.getElementById('live-ride-price'); 
-                let elStatus = document.getElementById('live-ride-status'); 
-
-                let isWaiting = s.rWS !== null;
-                let now = Date.now();
-                let diffMs = now - window.db.drv.liveRideStart;
-                if(s.rWT) diffMs -= s.rWT;
-                if(isWaiting) diffMs -= (now - s.rWS);
-
-                if (!s.lastTick) s.lastTick = now;
-                let deltaTick = now - s.lastTick;
-                s.lastTick = now;
-
-                if (!isWaiting) {
-                    if (now - (s.lastGpsTime || now) > 5000) s.currentSpeed = 0;
-                    if ((s.currentSpeed || 0) <= 20) s.autoWaitMs = (s.autoWaitMs || 0) + deltaTick;
-                }
-
-                if (elTime) {
-                    let totalSecs = Math.floor(diffMs / 1000);
-                    elTime.innerHTML = (Math.floor(totalSecs / 60) < 10 ? '0' : '') + Math.floor(totalSecs / 60) + ':' + (totalSecs % 60 < 10 ? '0' : '') + (totalSecs % 60);
-                }
-                if (elDist && s.gpsDist !== undefined) elDist.innerHTML = Number(s.gpsDist).toFixed(2);
-
-                let activeTariff = s.liveTariff || 't1';
-                if (elStatus) {
-                    if (isWaiting) elStatus.innerHTML = '<span style="font-size:0.65rem; color:#f59e0b; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); padding:4px 12px; border-radius:12px; font-weight:900;">⏸️ POSTÓJ RĘCZNY</span>';
-                    else if ((!isWaiting && (s.currentSpeed || 0) <= 20)) elStatus.innerHTML = '<span style="font-size:0.65rem; color:#ef4444; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); padding:4px 12px; border-radius:12px; font-weight:900; animation: glowPulse 2s infinite;">⏱️ NALICZANIE POSTOJU (<20km/h)</span>';
-                    else elStatus.innerHTML = '<span style="font-size:0.65rem; color:var(--muted); font-weight:800;">SUGEROWANA CENA (' + activeTariff.toUpperCase() + ')</span>';
-                }
-
-                if (elPrice) {
-                    let q = window.db.drv.q || {s:9, w:39, t1:3.2, t2:4.0, t3:6.4, t4:8.0};
-                    let totalWaitMins = ((s.autoWaitMs || 0) + (s.rWT || 0) + (isWaiting ? (now - s.rWS) : 0)) / 60000;
-                    let livePrice = q.s + (s.gpsMoney || 0) + (totalWaitMins * (q.w / 60));
-                    if(livePrice < q.s) livePrice = q.s;
-                    elPrice.innerHTML = livePrice.toFixed(2);
-                }
-            };
-
+            // MODUŁ GPS (LIVE TAKSOMETR MULTITARYFOWY)
             if(d.liveRideStart) {
+                let cTime = '00:00'; 
                 let startPrice = (d.q && d.q.s) ? d.q.s : 9.0;
                 let activeTariff = d.sh.liveTariff || 't1';
                 let tColor = (activeTariff==='t1')?'#10b981':(activeTariff==='t2')?'#3b82f6':(activeTariff==='t3')?'#f59e0b':'#ef4444';
 
                 html.push('<div class="glass-card" style="padding:20px 15px; margin-bottom:15px; border-color:rgba(16,185,129,0.4);">');
-                html.push('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:10px;"><div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; border-radius: 50%; background: #10b981;"></div><span style="color:#10b981; font-size: 0.8rem; font-weight: 900; text-transform:uppercase;">W Trasie</span></div><div id="live-ride-time" style="font-size: 1.1rem; font-weight: 900; color: #0ea5e9; font-family: monospace;">00:00</div></div>');
-                html.push('<div style="text-align:center; margin-bottom:15px; display:flex; flex-direction:column; align-items:center;"><div id="live-ride-status" style="min-height:22px; margin-bottom:8px;"></div><div style="display:flex; align-items:baseline; justify-content:center; gap:6px;"><span id="live-ride-price" style="font-size:4.2rem; font-weight:900; color:#10b981; font-family:monospace; line-height:1; text-shadow:0 0 25px rgba(16,185,129,0.4);">'+startPrice.toFixed(2)+'</span><span style="font-size:1.4rem; color:rgba(255,255,255,0.3);">zł</span></div></div>');
-                html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;"><div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center;"><span style="font-size:0.6rem; color:var(--muted); display:block;">DYSTANS (GPS)</span><strong id="live-ride-dist" style="font-size:1.5rem; color:#fff;">0.00</strong></div><div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center; display:flex; align-items:center; justify-content:center;"><button class="btn-taryfa" style="color: '+tColor+'; border: 1px solid '+tColor+'; text-shadow: 0 0 10px rgba(255,255,255,0.2);" onclick="if(window.toggleLiveTariff) window.toggleLiveTariff()">🔄 TARYFA: ' + activeTariff.toUpperCase() + '</button></div></div>');
+                html.push('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:10px;"><div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; border-radius: 50%; background: #10b981;"></div><span style="color:#10b981; font-size: 0.8rem; font-weight: 900; letter-spacing: 1px; text-transform:uppercase;">W Trasie</span></div><div id="live-ride-time" style="font-size: 1.1rem; font-weight: 900; color: #0ea5e9; font-family: monospace;">'+cTime+'</div></div>');
+
+                html.push('<div style="text-align:center; margin-bottom:15px; display:flex; flex-direction:column; align-items:center;">');
+                html.push('<div id="live-ride-status" style="min-height:22px; margin-bottom:8px;"></div>');
+                html.push('<div style="display:flex; align-items:baseline; justify-content:center; gap:6px;"><span id="live-ride-price" style="font-size:4.2rem; font-weight:900; color:#10b981; font-family:monospace; line-height:1; text-shadow:0 0 25px rgba(16,185,129,0.4);">'+startPrice.toFixed(2)+'</span><span style="font-size:1.4rem; color:rgba(255,255,255,0.3);">zł</span></div></div>');
+
+                html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">');
+                html.push('<div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center;"><span style="font-size:0.6rem; color:var(--muted); display:block;">DYSTANS (GPS)</span><strong id="live-ride-dist" style="font-size:1.5rem; color:#fff;">0.00</strong></div>');
+                html.push('<div style="background:rgba(0,0,0,0.5); padding:12px; border-radius:12px; text-align:center; display:flex; align-items:center; justify-content:center;"><button class="btn-taryfa" style="color: '+tColor+'; border: 1px solid '+tColor+'; text-shadow: 0 0 10px rgba(255,255,255,0.2);" onclick="if(window.toggleLiveTariff) window.toggleLiveTariff()">🔄 TARYFA: ' + activeTariff.toUpperCase() + '</button></div></div>');
+
                 html.push('<button style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; font-size: 0.95rem; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); cursor: pointer; outline:none;" onclick="if(window.stopLiveRide) window.stopLiveRide()">🛑 ZAKOŃCZ KURS</button></div>');
             } else {
                 html.push('<button style="width:100%; padding:18px; border-radius:16px; margin-bottom:15px; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(16,185,129,0.3);" onclick="if(window.startLiveRide) window.startLiveRide()">🛰️ ROZPOCZNIJ KURS (GPS)</button>');
             }
-
-            // KREATOR
+            
             let autoM = d.sh.tempAutoMins !== undefined ? d.sh.tempAutoMins : '';
             let autoK = d.sh.tempAutoKm !== undefined ? d.sh.tempAutoKm : '';
             let autoP = d.sh.tempAutoPrice !== undefined ? d.sh.tempAutoPrice : '';
             let isHighlight = autoM !== '' ? 'border-color:#10b981; color:#10b981;' : '';
             d.sh.tempAutoMins = undefined; d.sh.tempAutoKm = undefined; d.sh.tempAutoPrice = undefined;
 
-            html.push('<div class="glass-card" style="padding: 20px 15px; margin-bottom: 20px;"><div style="font-size: 0.7rem; color: #0ea5e9; font-weight: 900; text-transform: uppercase; margin-bottom: 12px; text-align: center;">Dodaj Kurs</div><div style="display:flex; overflow-x:auto; padding-bottom:5px; margin-bottom:5px; white-space:nowrap;">'+ch1+'</div>'+otherSrcHtml+'<div style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom:15px; white-space:nowrap;">'+ch2+'</div>');
-            html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;"><div style="grid-column: span 2; background:rgba(0,0,0,0.6); border-radius:14px; padding:15px; display:flex; justify-content:center; align-items:center; border:1px inset rgba(255,255,255,0.05);"><input type="number" id="dt-v" placeholder="0.00" value="'+autoP+'" style="background:transparent; border:none; color:#0ea5e9; font-size:2.8rem; font-weight:900; text-align:center; outline:none; width:150px;"><span style="font-size:1.2rem; color:var(--muted); font-weight:700;">zł</span></div><div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px;">CZAS (MIN)</label><input type="number" id="dt-m" placeholder="0" value="'+autoM+'" class="compact-inp" style="'+isHighlight+'"></div><div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px;">DYSTANS (KM)</label><input type="number" step="0.1" id="dt-k" placeholder="0.0" value="'+autoK+'" class="compact-inp" style="'+isHighlight+'"></div></div>');
-            html.push('<div class="inp-group" style="margin-bottom:15px;"><select id="dt-cid" class="compact-inp" style="appearance:none;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select></div><button style="width:100%; padding:16px; border-radius:14px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); outline:none;" onclick="window.dAddT()">ZAPISZ KURS</button></div>');
+            // KREATOR
+            html.push('<div class="glass-card" style="padding: 20px 15px; margin-bottom: 20px;">');
+            html.push('<div style="font-size: 0.7rem; color: #0ea5e9; font-weight: 900; text-transform: uppercase; margin-bottom: 12px; text-align: center;">Dodaj Kurs</div>');
+            html.push('<div style="display:flex; overflow-x:auto; padding-bottom:5px; margin-bottom:5px; white-space:nowrap;">'+ch1+'</div>');
+            html.push(otherSrcHtml);
+            html.push('<div style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom:15px; white-space:nowrap;">'+ch2+'</div>');
+            
+            html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">');
+            html.push('<div style="grid-column: span 2; background:rgba(0,0,0,0.6); border-radius:14px; padding:15px; display:flex; justify-content:center; align-items:center; border:1px inset rgba(255,255,255,0.05);"><input type="number" id="dt-v" placeholder="0.00" value="'+autoP+'" style="background:transparent; border:none; color:#0ea5e9; font-size:2.8rem; font-weight:900; text-align:center; outline:none; width:150px;"><span style="font-size:1.2rem; color:var(--muted); font-weight:700;">zł</span></div>');
+            html.push('<div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px;">CZAS (MIN)</label><input type="number" id="dt-m" placeholder="0" value="'+autoM+'" class="compact-inp" style="'+isHighlight+'"></div>');
+            html.push('<div><label style="font-size:0.6rem; color:var(--muted); font-weight:800; display:block; margin-bottom:4px;">DYSTANS (KM)</label><input type="number" step="0.1" id="dt-k" placeholder="0.0" value="'+autoK+'" class="compact-inp" style="'+isHighlight+'"></div>');
+            html.push('</div>');
+
+            html.push('<div class="inp-group" style="margin-bottom:15px;"><select id="dt-cid" class="compact-inp" style="appearance:none;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select></div>');
+            html.push('<button style="width:100%; padding:16px; border-radius:14px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3); outline:none;" onclick="if(window.dAddT) window.dAddT()">ZAPISZ KURS</button></div>');
             
             // DZIENNIK
             html.push('<div style="margin: 30px 15px 10px 15px; text-align: center;"><span style="font-size:0.7rem; color:var(--muted); font-weight:900; text-transform:uppercase;">DZIENNIK ZAROBKÓW</span></div>');
@@ -481,42 +682,33 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                     else if(x.p==='Karta') { icon='💳'; color='#0ea5e9'; bg='rgba(14,165,233,0.05)'; }
                     else if(x.p==='Voucher') { icon='🎫'; color='#a855f7'; bg='rgba(168,85,247,0.05)'; }
                     
-                    html.push('<div style="padding:15px; margin-bottom:10px; background:#18181b; border-radius:16px; border-left:4px solid '+color+'; display:flex; gap:12px; align-items:center;"><div style="font-size:1.2rem; width:40px; height:40px; background:rgba(0,0,0,0.5); border-radius:10px; display:flex; align-items:center; justify-content:center;">'+icon+'</div><div style="flex:1;"><strong style="font-size:1.1rem; color:#fff; display:block; margin-bottom:2px; font-weight:900;">'+Number(x.v||0).toFixed(2)+' zł</strong><div style="font-size:0.7rem; color:var(--muted); font-weight:700;"><span>'+(x.time||'--:--')+'</span> • <span style="color:'+color+';">'+x.p+'</span> • <span>'+x.s+'</span></div></div><button style="background:rgba(255,255,255,0.05); color:#fff; border:none; border-radius:10px; padding:8px; margin-right:5px;" onclick="if(window.dEditT) window.dEditT('+x.id+')">✏️</button><button style="background:rgba(239,68,68,0.15); color:#ef4444; border:none; border-radius:10px; padding:8px;" onclick="if(window.dDelT) window.dDelT('+x.id+')">🗑️</button></div>');
+                    html.push('<div style="padding:15px; margin-bottom:10px; background:#18181b; border-radius:16px; border-left:4px solid '+color+'; display:flex; gap:12px; align-items:center;">');
+                    html.push('<div style="font-size:1.2rem; width:40px; height:40px; background:rgba(0,0,0,0.5); border-radius:10px; display:flex; align-items:center; justify-content:center;">'+icon+'</div>');
+                    html.push('<div style="flex:1;"><strong style="font-size:1.1rem; color:#fff; display:block; margin-bottom:2px; font-weight:900;">'+Number(x.v||0).toFixed(2)+' zł</strong><div style="font-size:0.7rem; color:var(--muted); font-weight:700;"><span>'+(x.time||'--:--')+'</span> • <span style="color:'+color+';">'+x.p+'</span> • <span>'+x.s+'</span></div></div>');
+                    html.push('<button style="background:rgba(255,255,255,0.05); color:#fff; border:none; border-radius:10px; padding:8px; margin-right:5px;" onclick="if(window.dEditT) window.dEditT('+x.id+')">✏️</button><button style="background:rgba(239,68,68,0.15); color:#ef4444; border:none; border-radius:10px; padding:8px;" onclick="if(window.dDelT) window.dDelT('+x.id+')">🗑️</button></div>');
                 }
             } else {
                 html.push('<div style="text-align:center; color:var(--muted); padding:20px 0; font-size:0.8rem; background:rgba(0,0,0,0.3); border-radius:16px; font-weight:700;">Brak wpisów w tej zmianie.</div>');
             }
             html.push('</div>');
         } else {
-            // EKRAN STARTOWY I OFFLINE
+            // EKRAN STARTOWY
             html.push('<div style="padding: 30px 20px; text-align: center;"><div style="width:60px; height:60px; background:rgba(245,158,11,0.1); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2rem;">🚕</div><h1 style="font-size:2rem; font-weight:900; color:#fff; margin:0 0 5px 0;">Witaj!</h1><p style="color:var(--muted); font-size:0.85rem; margin-bottom:30px; font-weight:600;">Potwierdź licznik, aby zacząć pracę.</p>');
             html.push('<div class="glass-card" style="padding:25px 20px; margin-bottom:20px; border-color: rgba(245,158,11,0.3);"><div style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px; margin-bottom:10px;">STAN LICZNIKA (KM)</div><input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="000000" style="width:100%; background:rgba(0,0,0,0.4); border-radius:12px; padding:15px; color:#f59e0b; font-size:2.8rem; font-weight:900; text-align:center; outline:none; border:1px inset rgba(255,255,255,0.05);"></div>');
-            html.push('<button style="width:100%; padding:20px; border-radius:16px; font-size:1.1rem; font-weight:900; background:linear-gradient(135deg, #10b981, #059669); color:#000; border:none; margin-bottom:20px;" onclick="window.dStartS()">ROZPOCZNIJ PRACĘ</button>');
-            
-            if(!window.dShowOff) {
-                html.push('<button style="width:100%; padding:15px; border-radius:14px; font-size:0.8rem; font-weight:800; background:rgba(255,255,255,0.05); color:var(--muted); border:none; margin-bottom:20px;" onclick="window.dShowOff=true; window.render()">📥 ZAKSIĘGUJ ZALEGŁĄ ZMIANĘ (OFFLINE)</button>');
-                html.push(panelProBanner);
-            } else {
-                html.push(window.getOfflineHTML(d));
-            }
+            html.push('<button style="width:100%; padding:20px; border-radius:16px; font-size:1.1rem; font-weight:900; background:linear-gradient(135deg, #10b981, #059669); color:#000; border:none; margin-bottom:20px;" onclick="if(window.dStartS) window.dStartS()">ROZPOCZNIJ PRACĘ</button>');
             html.push('</div>');
         }
         
         appContainer.innerHTML = html.join('') + '<div style="height:150px;"></div>' + nav;
 
-        // Auto wznawianie po odświeżeniu UI
-        if (d.sh && d.sh.on && d.liveRideStart && (!d.sh.rWS)) {
+        // --- AUTO WZNOWIENIE (Po odświeżeniu/lock screenie) ---
+        if (d.liveRideStart && (!d.sh || !d.sh.rWS)) {
             if (!window.liveRideTimer) window.resumeLiveRide();
             setTimeout(window.updateLiveRideUI, 50);
         }
-    } catch(err) { 
-        console.error(err); 
-        let ac = document.getElementById('app');
-        if(ac) ac.innerHTML = '<div style="padding:40px 20px; text-align:center; color:white;"><h3>Błąd Panelu</h3><p style="color:#ef4444;">' + err.message + '</p><button style="padding:15px; background:#fff; color:#000; font-weight:bold; border-radius:12px; width:100%;" onclick="window.location.reload()">ODŚWIEŻ</button></div>';
-    }
+    } catch(err) { console.error(err); }
 };
 
-// --- LOGIKA DODAWANIA KURSU ---
 window.dAddT = function() {
     let v = parseFloat(document.getElementById('dt-v').value);
     if(isNaN(v) || v <= 0) { if(window.sysAlert) window.sysAlert("Brak Kwoty", "Podaj poprawną kwotę z apki!", "error"); return; }
@@ -538,18 +730,4 @@ window.dAddT = function() {
     document.getElementById('dt-v').value = ''; document.getElementById('dt-m').value = ''; document.getElementById('dt-k').value = '';
     window.db.drv.sh.tempAutoMins = undefined; window.db.drv.sh.tempAutoKm = undefined; window.db.drv.sh.tempAutoPrice = undefined;
     window.save(); window.render();
-};
-
-window.getOfflineHTML = function(d) {
-    let lblStyle = 'font-size:0.6rem; color:var(--muted); font-weight:800; text-transform:uppercase; margin-bottom:6px; display:block; text-align:left;';
-    let html = '<div style="color:#0ea5e9; margin-top:10px; font-size:0.75rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:15px;">⚡ ZALEGŁA ZMIANA (OFFLINE)</div><div class="glass-card" style="padding:25px 15px; border-color: rgba(14,165,233,0.3); margin-bottom:20px;">';
-    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;"><div><label style="'+lblStyle+'">Data Startu</label><input type="date" id="dw-d-from" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" class="compact-inp"></div><div><label style="'+lblStyle+'">Data Koniec</label><input type="date" id="dw-d-to" value="'+(window.getLocalYMD?window.getLocalYMD():'')+'" class="compact-inp"></div></div>';
-    html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#f59e0b; font-weight:900; text-align:center; display:block; margin-bottom:10px;">STAN LICZNIKA POJAZDU</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" id="dw-odo-s" value="'+(d.odo||0)+'" placeholder="Start (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div><div><input type="number" id="dw-odo-e" placeholder="Koniec (KM)" class="compact-inp" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);"></div></div></div>';
-    if(d.plat === 'apps') {
-        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-uber" placeholder="Uber" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-bolt" placeholder="Bolt" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-freenow" placeholder="FreeNow" class="compact-inp"></div><div><input type="number" step="0.01" id="dw-v-inna" placeholder="Inna Apka" class="compact-inp"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka (Suma)" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3); font-size:1.2rem; padding:15px;"></div></div></div>';
-    } else {
-        html += '<div style="background:rgba(0,0,0,0.3); border-radius:16px; padding:15px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.05);"><label style="font-size:0.7rem; color:#0ea5e9; font-weight:900; text-align:center; display:block; margin-bottom:10px;">ROZBICIE UTARGU (ZŁ)</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><input type="number" step="0.01" id="dw-v-cash" placeholder="Gotówka" class="compact-inp" style="color:#10b981; border-color:rgba(16,185,129,0.3);"></div><div><input type="number" step="0.01" id="dw-v-karta" placeholder="Karta/Terminal" class="compact-inp" style="color:#0ea5e9; border-color:rgba(14,165,233,0.3);"></div><div style="grid-column: span 2;"><input type="number" step="0.01" id="dw-v-voucher" placeholder="Vouchery" class="compact-inp" style="color:#a855f7; border-color:rgba(168,85,247,0.3);"></div></div></div>';
-    }
-    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;"><div><label style="'+lblStyle+'">Dyst. Płatny (KM)</label><input type="number" id="dw-pk" placeholder="0.0" class="compact-inp"></div><div><label style="'+lblStyle+'">Czas Pracy (H)</label><input type="number" id="dw-h" placeholder="0" class="compact-inp"></div></div><button style="width:100%; padding:18px; border-radius:16px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; font-weight:900; font-size:1rem; border:none; box-shadow:0 6px 20px rgba(14,165,233,0.3);" onclick="window.dAddOfflineWeekly()">ZAKSIĘGUJ ZMIANĘ</button><button style="width:100%; padding:16px; border-radius:16px; background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.1); margin-top:10px; font-weight:800; font-size:0.85rem;" onclick="window.dShowOff=false; window.render()">ANULUJ</button></div>';
-    return html;
 };
