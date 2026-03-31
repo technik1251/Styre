@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Terminal Premium V11 (Full Crystal Edition, Zero Lag)
+// PLIK: taxi_tab_term.js - Terminal Premium V11 (Crystal UI, Zero-Lag Pause & Tariff, Smart Netto)
 // ==========================================
 
 // --- 1. FUNKCJE POMOCNICZE I MATEMATYKA ---
@@ -173,7 +173,7 @@ window.resumeLiveRide = function() {
     if(!window.liveRideTimer) window.liveRideTimer = setInterval(window.updateLiveRideUI, 1000);
 };
 
-// --- 3. CELE I PRZERWY ---
+// --- 3. CELE, PRZERWY I TARYFY ---
 window.dGoalMode = window.dGoalMode || 'netto';
 window.toggleGoalMode = function(mode) {
     window.dGoalMode = mode;
@@ -235,7 +235,8 @@ window.toggleLiveTariff = function() {
         else if(current === 't4') next = 't1';
         
         window.db.drv.sh.liveTariff = next;
-        window.updateLiveRideUI();
+        window.updateLiveRideUI(); // Aktualizuje przycisk natychmiast bez przeładowania UI
+        
         setTimeout(function() { if(typeof window.save === 'function') window.save(); }, 10);
     }
 };
@@ -249,6 +250,7 @@ window.updateLiveRideUI = function() {
     let elDist = document.getElementById('live-ride-dist');
     let elPrice = document.getElementById('live-ride-price'); 
     let elStatus = document.getElementById('live-ride-status'); 
+    let elTariffBtn = document.getElementById('live-tariff-btn');
 
     let isWaiting = s.rWS !== null;
     let now = Date.now();
@@ -276,6 +278,14 @@ window.updateLiveRideUI = function() {
 
     let activeTariff = s.liveTariff || 't1';
     let isAutoWaitActive = (!isWaiting && (s.currentSpeed || 0) <= 20);
+    
+    // Zmiana przycisku TARYFY w locie (Zero Lag)
+    if (elTariffBtn) {
+        let tColor = (activeTariff==='t1')?'#10b981':(activeTariff==='t2')?'#3b82f6':(activeTariff==='t3')?'#f59e0b':'#ef4444';
+        elTariffBtn.innerHTML = '🔄 TARYFA: ' + activeTariff.toUpperCase();
+        elTariffBtn.style.color = tColor;
+        elTariffBtn.style.borderColor = tColor;
+    }
     
     if (elStatus) {
         if (isWaiting) elStatus.innerHTML = '<span style="font-size:0.65rem; color:#f59e0b; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); padding:4px 12px; border-radius:12px; font-weight:900;">⏸️ POSTÓJ RĘCZNY</span>';
@@ -372,7 +382,7 @@ window.openPremiumEndShiftModal = function() {
     if(s.tr) s.tr.forEach(function(x) { g += (parseFloat(x.v)||0); });
     let isApps = (window.db.drv.plat === 'apps');
 
-    let html = '<div id="m-end-shift-premium" class="modal-overlay" style="z-index:99999; position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:flex-start; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(20px); overflow-y:auto; padding:20px 0; box-sizing:border-box; animation:fadeIn 0.2s ease;">' +
+    let html = '<div id="m-end-shift-premium" class="modal-overlay" style="z-index:99999; position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:flex-start; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(20px); overflow-y:auto; padding:30px 0; box-sizing:border-box; animation:fadeIn 0.2s ease;">' +
         '<div class="crystal-card crystal-panel" style="width:90%; max-width:400px; padding:25px 20px; margin:auto; flex-shrink:0;">' +
             '<div style="text-align:center; margin-bottom:20px;">' +
                 '<div style="font-size:3rem; margin-bottom:10px; filter:drop-shadow(0 0 10px rgba(239,68,68,0.5));">🏁</div>' +
@@ -522,26 +532,9 @@ window.rDrvTerm = function(d, t, nav, hdr) {
         if(!appContainer) return;
         
         let html = [hdr];
-        
-        // Style Kryształowe V2 na wypadek braku pliku CSS
-        html.push('<style id="crystal-styles">');
-        html.push('.crystal-card { background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.2) 100%); border: 1px solid rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.3); border-radius: 16px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 8px 20px rgba(0,0,0,0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 15px 5px; text-align: center; position: relative; overflow: hidden; }');
-        html.push('.crystal-card::after { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%); transform: skewX(-25deg); animation: shine 6s infinite; }');
-        html.push('@keyframes shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }');
-        html.push('.crystal-uber { border-top-color: rgba(14,165,233,0.6); box-shadow: inset 0 1px 2px rgba(14,165,233,0.4), 0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(14,165,233,0.1); }');
-        html.push('.crystal-bolt { border-top-color: rgba(34,197,94,0.6); box-shadow: inset 0 1px 2px rgba(34,197,94,0.4), 0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(34,197,94,0.1); }');
-        html.push('.crystal-freenow { border-top-color: rgba(217,70,239,0.6); box-shadow: inset 0 1px 2px rgba(217,70,239,0.4), 0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(217,70,239,0.1); }');
-        html.push('.crystal-cash { border-top-color: rgba(16,185,129,0.6); box-shadow: inset 0 1px 2px rgba(16,185,129,0.4), 0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(16,185,129,0.1); }');
-        html.push('.crystal-main { border-top-color: rgba(255,255,255,0.4); background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.4) 100%); box-shadow: inset 0 1px 2px rgba(255,255,255,0.3), 0 10px 30px rgba(0,0,0,0.7), 0 0 20px rgba(255,255,255,0.05); }');
-        html.push('.crystal-time { border-top-color: rgba(14,165,233,0.6); box-shadow: inset 0 1px 2px rgba(14,165,233,0.4), 0 6px 15px rgba(0,0,0,0.5), 0 0 12px rgba(14,165,233,0.1); }');
-        html.push('.crystal-gross { border-top-color: rgba(16,185,129,0.6); box-shadow: inset 0 1px 2px rgba(16,185,129,0.4), 0 6px 15px rgba(0,0,0,0.5), 0 0 12px rgba(16,185,129,0.1); }');
-        html.push('.crystal-dist { border-top-color: rgba(245,158,11,0.6); box-shadow: inset 0 1px 2px rgba(245,158,11,0.4), 0 6px 15px rgba(0,0,0,0.5), 0 0 12px rgba(245,158,11,0.1); }');
-        html.push('.crystal-panel { border-top-color: rgba(255,255,255,0.2); box-shadow: inset 0 1px 2px rgba(255,255,255,0.1), 0 6px 15px rgba(0,0,0,0.5); }');
-        html.push('.compact-inp { background: rgba(0,0,0,0.4); border: 1px inset rgba(255,255,255,0.05); color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-size: 1.1rem; font-weight: 700; outline: none; width: 100%; box-sizing: border-box; transition: border 0.3s; } .compact-inp:focus { border-color: rgba(14,165,233,0.5); }');
-        html.push('.btn-taryfa { width:100%; height:100%; border-radius:10px; font-weight:900; font-size:1rem; background: linear-gradient(to bottom, #333, #111); box-shadow: 0 3px 0 #000, inset 0 2px 4px rgba(255,255,255,0.2); cursor:pointer; outline:none; transition:all 0.1s; } .btn-taryfa:active { transform: translateY(3px); box-shadow: 0 0 0 #000, inset 0 2px 4px rgba(255,255,255,0.2); }');
-        html.push('.chip-box { display: flex; gap: 6px; margin-bottom: 10px; padding-bottom: 2px; scrollbar-width: none; -ms-overflow-style: none; max-width: 100%; overflow-x:auto;} .chip { padding: 8px 12px; border-radius: 10px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.05); white-space: nowrap; flex: 1; text-align: center;} .chip.active { background: #3b82f6; color: #fff; border-color: #3b82f6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); transform: scale(1.02); } .chip.active.blue { background: rgba(14,165,233,0.15); color: #0ea5e9; border-color: rgba(14,165,233,0.4); box-shadow: 0 0 10px rgba(14,165,233,0.2); } .chip.active.green { background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.4); box-shadow: 0 0 10px rgba(16,185,129,0.2); } .chip.idle { background: rgba(255,255,255,0.02); color: rgba(255,255,255,0.4); }');
-        html.push('</style>');
 
+        // Usunięto style CSS z JS - używamy już tych przeniesionych do style.css
+        
         if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; }
         if(!window.dTPay) { window.dTPay = d.plat === 'apps' ? 'Aplikacja' : 'Gotówka'; }
         
@@ -766,7 +759,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
 
                 html.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">');
                 html.push('<div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:10px; text-align:center;"><span style="font-size:0.55rem; color:var(--muted); display:block;">DYSTANS (GPS)</span><strong id="live-ride-dist" style="font-size:1.3rem; color:#fff;">0.00</strong></div>');
-                html.push('<div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:10px; text-align:center; display:flex; align-items:center; justify-content:center;"><button class="btn-taryfa" style="color: '+tColor+'; border: 1px solid '+tColor+'; text-shadow: 0 0 10px rgba(255,255,255,0.2); font-size:0.95rem;" onclick="if(window.toggleLiveTariff) window.toggleLiveTariff()">🔄 TARYFA: ' + activeTariff.toUpperCase() + '</button></div></div>');
+                html.push('<div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:10px; text-align:center; display:flex; align-items:center; justify-content:center;"><button id="live-tariff-btn" class="btn-taryfa" style="color: '+tColor+'; border: 1px solid '+tColor+'; text-shadow: 0 0 10px rgba(255,255,255,0.2); font-size:0.95rem;" onclick="if(window.toggleLiveTariff) window.toggleLiveTariff()">🔄 TARYFA: ' + activeTariff.toUpperCase() + '</button></div></div>');
 
                 html.push('<button style="width: 100%; padding: 12px; border-radius: 10px; font-weight: 900; font-size: 0.9rem; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); cursor: pointer; outline:none;" onclick="if(window.stopLiveRide) window.stopLiveRide()">🛑 ZAKOŃCZ KURS</button></div>');
             } else {
@@ -818,7 +811,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             html.push('</div>'); // End padding container
         } else {
             // EKRAN STARTOWY
-            let proBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.showProInfo) window.showProInfo()"><div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px rgba(217,70,239,0.5));">🚕</div><div><h4 style="color:#d946ef; margin:0 0 2px 0; font-size:0.85rem; font-weight:900;">Auto-Zlecenia (PRO)</h4><div style="font-size:0.65rem; color:var(--muted);">Integracja z APKAMI i GPS w tle.</div></div></div>';
+            let proBanner = '<div style="margin: 0 0 20px 0; padding: 15px; background: linear-gradient(135deg, #130a1c, #000); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 16px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="if(window.sysAlert) window.sysAlert(\'PRO\', \'Automatyczne Zlecenia z apek i Pełen GPS w tle.🚀\', \'info\')"><div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px rgba(217,70,239,0.5));">🚕</div><div><h4 style="color:#d946ef; margin:0 0 2px 0; font-size:0.85rem; font-weight:900;">Auto-Zlecenia (PRO)</h4><div style="font-size:0.65rem; color:var(--muted);">Integracja z APKAMI i GPS w tle.</div></div></div>';
             
             html.push('<div style="padding: 30px 20px; text-align: center;"><div style="width:60px; height:60px; background:rgba(245,158,11,0.1); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2rem;">🚕</div><h1 style="font-size:2.2rem; font-weight:900; color:#fff; margin:0 0 5px 0;">Witaj!</h1><p style="color:var(--muted); font-size:0.85rem; margin-bottom:30px; font-weight:600;">Potwierdź licznik, aby zacząć pracę.</p>');
             html.push('<div class="crystal-card crystal-panel" style="padding:25px 20px; margin-bottom:20px;"><div style="font-size:0.65rem; color:#f59e0b; font-weight:800; letter-spacing:1px; margin-bottom:10px; text-transform:uppercase;">STAN LICZNIKA (KM)</div><input type="number" id="ds-o" value="'+((d.odo||0)>0?d.odo:'')+'" placeholder="000000" style="width:100%; background:rgba(0,0,0,0.4); border-radius:12px; padding:15px; color:#f59e0b; font-size:3.5rem; font-weight:900; text-align:center; outline:none; border:1px inset rgba(255,255,255,0.05);"></div>');
