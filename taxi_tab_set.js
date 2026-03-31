@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_set.js - Zakładka Opcje (Ustawienia Premium i Koszty Operacyjne)
+// PLIK: taxi_tab_set.js - Zakładka Opcje (Ustawienia Premium i Dynamiczne Koszty)
 // ==========================================
 
 window.toggleAccordion = function(id) {
@@ -20,31 +20,57 @@ window.toggleAccordion = function(id) {
     }
 };
 
+// --- DYNAMICZNY KALKULATOR KOSZTÓW ---
+window.getFixedDailyCosts = function() {
+    let c = window.db.drv.cfg || {};
+    let now = new Date();
+    // Pobiera dokładną liczbę dni w bieżącym miesiącu (uwzględnia lata przestępne!)
+    let daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+    let calc = function(val, period) {
+        val = parseFloat(val) || 0;
+        if (period === 'week') return val / 7;
+        if (period === 'month') return val / daysInMonth;
+        return val; // default: day
+    };
+
+    let rent = calc(c.carRent || c.rent || c.costRent, c.carRentPeriod || 'week');
+    let zus = calc(c.zus || c.costZus, c.zusPeriod || 'month');
+    let eFix = (c.eType === 'fix') ? calc(c.eFix, c.ePeriod || 'week') : 0;
+    let other = calc(c.fixedDaily || c.otherFix, c.fixedOtherPeriod || 'day');
+
+    return rent + zus + eFix + other;
+};
+
 window.rDrvSet = function(d, t, nav, hdr) {
     try {
         let appContainer = document.getElementById('app');
         if(!appContainer) return;
 
-        let goalBrutto = (d.cfg && d.cfg.goalBrutto) ? d.cfg.goalBrutto : 400;
+        // --- POBIERANIE DANYCH Z BAZY ---
+        let goalBrutto = (d.cfg && d.cfg.goalBrutto) ? d.cfg.goalBrutto : ((d.cfg && d.cfg.dailyGoal) ? d.cfg.dailyGoal : 400);
         let goalNetto = (d.cfg && d.cfg.goalNetto) ? d.cfg.goalNetto : 300;
         let city = (d.cfg && d.cfg.defCity) ? d.cfg.defCity : 'Warszawa';
         let fuelSource = (d.cfg && d.cfg.fuelSource) ? d.cfg.fuelSource : 'garage';
         let fTypes = (d.cfg && Array.isArray(d.cfg.fTypes)) ? d.cfg.fTypes : ['pb']; 
         
         let mF = (d.cfg && d.cfg.mFuel) ? d.cfg.mFuel : {
-            pb: {c: 7.0, p: 6.50},
-            on: {c: 6.0, p: 6.00},
-            lpg: {c: 10.0, p: 3.00},
-            ev: {c: 15.0, p: 1.00}
+            pb: {c: 7.0, p: 6.50}, on: {c: 6.0, p: 6.00},
+            lpg: {c: 10.0, p: 3.00}, ev: {c: 15.0, p: 1.00}
         };
         
-        // Pobrane bezpiecznie wartości do formularzy
         let carRent = (d.cfg && d.cfg.carRent) ? d.cfg.carRent : 0;
+        let carRentPeriod = (d.cfg && d.cfg.carRentPeriod) ? d.cfg.carRentPeriod : 'week';
+        
         let zusCost = (d.cfg && d.cfg.zus) ? d.cfg.zus : 0;
+        let zusPeriod = (d.cfg && d.cfg.zusPeriod) ? d.cfg.zusPeriod : 'month';
+        
         let fixedDaily = (d.cfg && d.cfg.fixedDaily) ? d.cfg.fixedDaily : 0;
+        let fixedOtherPeriod = (d.cfg && d.cfg.fixedOtherPeriod) ? d.cfg.fixedOtherPeriod : 'day';
         
         let empType = (d.cfg && d.cfg.eType) ? d.cfg.eType : 'flat';
         let eFix = (d.cfg && d.cfg.eFix) ? d.cfg.eFix : 0;
+        let ePeriod = (d.cfg && d.cfg.ePeriod) ? d.cfg.ePeriod : 'week';
         let ePct = (d.cfg && d.cfg.ePct) ? (d.cfg.ePct * 100) : 0;
         
         let tax = (d.cfg && d.cfg.tax) ? (d.cfg.tax * 100) : 8.5;
@@ -53,13 +79,18 @@ window.rDrvSet = function(d, t, nav, hdr) {
 
         let q = d.q || {s:9, w:39, t1:3.2, t2:4, t3:6.4, t4:8};
 
-        let inpStyle = 'background:rgba(255,255,255,0.03); border-radius:14px; padding:16px; font-size:0.95rem; border:1px solid rgba(255,255,255,0.08); color:#fff; width:100%; box-sizing:border-box; outline:none; font-weight:700;';
+        // --- WSPÓLNE STYLE ---
+        let inpStyle = 'background:rgba(0,0,0,0.4); border-radius:12px; padding:16px; font-size:0.95rem; border:1px inset rgba(255,255,255,0.05); color:#fff; width:100%; box-sizing:border-box; outline:none; font-weight:700;';
         let lblStyle = 'font-size:0.65rem; color:var(--muted); font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; display:block;';
 
         let html = [];
         
         html.push('<style>');
         html.push('@keyframes steamRise { 0% { transform: translateY(0) scale(1); opacity: 0.8; } 100% { transform: translateY(-25px) scale(1.5); opacity: 0; } }');
+        html.push('.panel-pro { margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s; }');
+        html.push('.grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }');
+        html.push('.grid-3 { display:grid; grid-template-columns: 2fr 1fr; gap: 12px; }'); // 2/3 dla inputu, 1/3 dla selecta
+        html.push('@media(max-width:360px){ .grid-2{grid-template-columns:1fr;} .grid-3{grid-template-columns:1fr; gap:8px;} }');
         html.push('</style>');
         
         html.push(hdr);
@@ -81,7 +112,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
         html.push('</button></div>');
 
         // BANER PRO
-        html.push('<div class="pro-teaser-panel" style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(window.sysAlert) window.sysAlert(\'Multi-Profile PRO\', \'W wersji PRO będziesz mógł stworzyć kilka osobnych profili dla różnych samochodów, a nawet zarządzać statystykami całej floty z jednego miejsca! 👥🚀\', \'info\')">');
+        html.push('<div class="panel-pro" onclick="if(window.sysAlert) window.sysAlert(\'Wersja PRO\', \'Automatyczna integracja z APKAMI oraz GPS w tle nadchodzi. Bądź gotowy na rewolucję! 🚀\', \'info\')">');
         html.push('<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>');
         html.push('<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>');
         html.push('<div style="display: flex; align-items: center; gap: 15px;">');
@@ -97,14 +128,14 @@ window.rDrvSet = function(d, t, nav, hdr) {
         html.push('<strong style="color:#d946ef; font-size:0.85rem; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center;"><span style="font-size:1.5rem; margin-right:12px; filter:drop-shadow(0 0 8px rgba(217,70,239,0.4));">🧮</span> Taksometr i Wycena</strong>');
         html.push('<span id="acc-tar-icon" style="color:var(--muted); font-size:0.8rem;">🔽</span></div>');
         html.push('<div id="acc-tar" style="display:none; padding:20px; border-top:1px solid rgba(255,255,255,0.05);">');
-        html.push('<div class="inp-row" style="margin-bottom:15px; gap:12px;">');
-        html.push('<div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Opłata Początkowa (zł)</label><input type="number" step="0.1" id="q-cfg-s" value="'+(q.s||0)+'" style="'+inpStyle+' text-align:center; color:#d946ef;"></div>');
-        html.push('<div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Postój (zł/h)</label><input type="number" step="0.1" id="q-cfg-w" value="'+(q.w||0)+'" style="'+inpStyle+' text-align:center; color:#d946ef;"></div></div>');
+        html.push('<div class="grid-2" style="margin-bottom:15px;">');
+        html.push('<div><label style="'+lblStyle+'">Opłata Początkowa (zł)</label><input type="number" step="0.1" id="q-cfg-s" value="'+(q.s||0)+'" style="'+inpStyle+' text-align:center; color:#d946ef;"></div>');
+        html.push('<div><label style="'+lblStyle+'">Postój (zł/h)</label><input type="number" step="0.1" id="q-cfg-w" value="'+(q.w||0)+'" style="'+inpStyle+' text-align:center; color:#d946ef;"></div></div>');
         html.push('<div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-top:10px;">');
-        html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+' text-align:center;">T1</label><input type="number" step="0.1" id="q-cfg-t1" value="'+(q.t1||0)+'" style="'+inpStyle+' text-align:center;"></div>');
-        html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+' text-align:center;">T2</label><input type="number" step="0.1" id="q-cfg-t2" value="'+(q.t2||0)+'" style="'+inpStyle+' text-align:center;"></div>');
-        html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+' text-align:center;">T3</label><input type="number" step="0.1" id="q-cfg-t3" value="'+(q.t3||0)+'" style="'+inpStyle+' text-align:center;"></div>');
-        html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+' text-align:center;">T4</label><input type="number" step="0.1" id="q-cfg-t4" value="'+(q.t4||0)+'" style="'+inpStyle+' text-align:center;"></div>');
+        html.push('<div><label style="'+lblStyle+' text-align:center;">T1</label><input type="number" step="0.1" id="q-cfg-t1" value="'+(q.t1||0)+'" style="'+inpStyle+' text-align:center; padding:16px 5px;"></div>');
+        html.push('<div><label style="'+lblStyle+' text-align:center;">T2</label><input type="number" step="0.1" id="q-cfg-t2" value="'+(q.t2||0)+'" style="'+inpStyle+' text-align:center; padding:16px 5px;"></div>');
+        html.push('<div><label style="'+lblStyle+' text-align:center;">T3</label><input type="number" step="0.1" id="q-cfg-t3" value="'+(q.t3||0)+'" style="'+inpStyle+' text-align:center; padding:16px 5px;"></div>');
+        html.push('<div><label style="'+lblStyle+' text-align:center;">T4</label><input type="number" step="0.1" id="q-cfg-t4" value="'+(q.t4||0)+'" style="'+inpStyle+' text-align:center; padding:16px 5px;"></div>');
         html.push('</div></div></div>');
 
         // 2. PERSONALIZACJA CELÓW
@@ -113,13 +144,13 @@ window.rDrvSet = function(d, t, nav, hdr) {
         html.push('<strong style="color:#10b981; font-size:0.85rem; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center;"><span style="font-size:1.5rem; margin-right:12px; filter:drop-shadow(0 0 8px rgba(16,185,129,0.4));">👤</span> Personalizacja Celów</strong>');
         html.push('<span id="acc-pers-icon" style="color:var(--muted); font-size:0.8rem;">🔽</span></div>');
         html.push('<div id="acc-pers" style="display:none; padding:20px; border-top:1px solid rgba(255,255,255,0.05);">');
-        html.push('<div class="inp-group" style="margin-bottom:15px;"><label style="'+lblStyle+'">Twoje Imię</label><input type="text" id="us-name" value="'+(window.db.userName || '')+'" placeholder="np. Jan" style="'+inpStyle+'"></div>');
+        html.push('<div style="margin-bottom:15px;"><label style="'+lblStyle+'">Twoje Imię</label><input type="text" id="us-name" value="'+(window.db.userName || '')+'" placeholder="np. Jan" style="'+inpStyle+'"></div>');
         
-        html.push('<div class="inp-row" style="margin-bottom:15px; gap:12px;">');
-        html.push('<div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Cel Utargu (Brutto)</label><input type="number" id="us-goal-brutto" value="'+goalBrutto+'" style="'+inpStyle+' color:#0ea5e9;"></div>');
-        html.push('<div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Cel Zarobku (Netto)</label><input type="number" id="us-goal-netto" value="'+goalNetto+'" style="'+inpStyle+' color:#10b981;"></div></div>');
+        html.push('<div class="grid-2" style="margin-bottom:15px;">');
+        html.push('<div><label style="'+lblStyle+'">Cel Utargu (Brutto)</label><input type="number" id="us-goal-brutto" value="'+goalBrutto+'" style="'+inpStyle+' color:#0ea5e9;"></div>');
+        html.push('<div><label style="'+lblStyle+'">Cel Zarobku (Netto)</label><input type="number" id="us-goal-netto" value="'+goalNetto+'" style="'+inpStyle+' color:#10b981;"></div></div>');
         
-        html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+'">Miasto Główne (Dla Modułu Map)</label><input type="text" id="us-city" value="'+city+'" placeholder="np. Szczecin" style="'+inpStyle+'"></div>');
+        html.push('<div><label style="'+lblStyle+'">Miasto Główne (Dla Map)</label><input type="text" id="us-city" value="'+city+'" placeholder="np. Szczecin" style="'+inpStyle+'"></div>');
         html.push('</div></div>');
 
         // 3. PALIWO
@@ -136,36 +167,36 @@ window.rDrvSet = function(d, t, nav, hdr) {
         html.push('<span id="acc-fuel-icon" style="color:var(--muted); font-size:0.8rem;">🔽</span></div>');
         html.push('<div id="acc-fuel" style="display:none; padding:20px; border-top:1px solid rgba(255,255,255,0.05);">');
         
-        html.push('<div class="inp-group" style="margin-bottom:20px; border-bottom:1px dashed rgba(255,255,255,0.1); padding-bottom:20px;">');
+        html.push('<div style="margin-bottom:20px; border-bottom:1px dashed rgba(255,255,255,0.1); padding-bottom:20px;">');
         html.push('<label style="'+lblStyle+' color:#f59e0b;">Zasilanie Twojego Pojazdu</label>');
-        html.push('<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">');
-        html.push('<label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); cursor:pointer; flex:1; min-width:40%; font-size:0.85rem; font-weight:700;"><input type="checkbox" id="cb-ftype-pb" value="pb" '+cPb+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Benzyna</label>');
-        html.push('<label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); cursor:pointer; flex:1; min-width:40%; font-size:0.85rem; font-weight:700;"><input type="checkbox" id="cb-ftype-on" value="on" '+cOn+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Diesel</label>');
-        html.push('<label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); cursor:pointer; flex:1; min-width:40%; font-size:0.85rem; font-weight:700;"><input type="checkbox" id="cb-ftype-lpg" value="lpg" '+cLpg+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Gaz (LPG)</label>');
-        html.push('<label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); cursor:pointer; flex:1; min-width:40%; font-size:0.85rem; font-weight:700;"><input type="checkbox" id="cb-ftype-ev" value="ev" '+cEv+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#0ea5e9; width:18px; height:18px;"> Prąd (EV)</label>');
+        html.push('<div class="grid-2" style="margin-top:10px;">');
+        html.push('<label style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.4); padding:15px; border-radius:12px; border:1px inset rgba(255,255,255,0.05); cursor:pointer; font-size:0.85rem; font-weight:700;"><input type="checkbox" id="cb-ftype-pb" value="pb" '+cPb+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Benzyna</label>');
+        html.push('<label style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.4); padding:15px; border-radius:12px; border:1px inset rgba(255,255,255,0.05); cursor:pointer; font-size:0.85rem; font-weight:700;"><input type="checkbox" id="cb-ftype-on" value="on" '+cOn+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Diesel</label>');
+        html.push('<label style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.4); padding:15px; border-radius:12px; border:1px inset rgba(255,255,255,0.05); cursor:pointer; font-size:0.85rem; font-weight:700;"><input type="checkbox" id="cb-ftype-lpg" value="lpg" '+cLpg+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Gaz (LPG)</label>');
+        html.push('<label style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.4); padding:15px; border-radius:12px; border:1px inset rgba(255,255,255,0.05); cursor:pointer; font-size:0.85rem; font-weight:700;"><input type="checkbox" id="cb-ftype-ev" value="ev" '+cEv+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#0ea5e9; width:18px; height:18px;"> Prąd (EV)</label>');
         html.push('</div></div>');
         
-        html.push('<div class="inp-group" style="margin-bottom:10px;"><label style="'+lblStyle+' color:#f59e0b;">Zarządzanie Cennikiem Paliwa</label><select id="us-fuel-src" onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="'+inpStyle+' border-color:rgba(245,158,11,0.3);"><option value="garage" '+selGar+'>Obliczaj dynamicznie (Z Dziennika Garażu)</option><option value="manual" '+selMan+'>Ustawienie ręczne (Na sztywno)</option></select></div>');
+        html.push('<div style="margin-bottom:10px;"><label style="'+lblStyle+' color:#f59e0b;">Zarządzanie Cennikiem Paliwa</label><select id="us-fuel-src" onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="'+inpStyle+' border-color:rgba(245,158,11,0.3);"><option value="garage" '+selGar+'>Obliczaj dynamicznie (Z Dziennika Garażu)</option><option value="manual" '+selMan+'>Ustawienie ręczne (Na sztywno)</option></select></div>');
         
         let mWrap = fuelSource === 'manual' ? 'block' : 'none';
         html.push('<div id="manual-fuel-wrapper" style="display:'+mWrap+'; margin-top:20px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:20px;">');
         html.push('<p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-bottom:15px; font-weight:600;">System wyliczy średni koszt paliwa za 1 km.</p>');
         
         let dPb = cPb !== '' ? 'block' : 'none';
-        html.push('<div id="mf-box-pb" style="display:'+dPb+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#f59e0b; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⛽ Benzyna</div><div class="inp-row" style="margin:0; gap:12px;"><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">Spalanie (L/100km)</label><input type="number" step="0.1" id="mf-c-pb" value="'+(mF.pb.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">Cena (zł/L)</label><input type="number" step="0.01" id="mf-p-pb" value="'+(mF.pb.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
+        html.push('<div id="mf-box-pb" style="display:'+dPb+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#f59e0b; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⛽ Benzyna</div><div class="grid-2"><div><label style="'+lblStyle+' text-align:center;">Spalanie (L/100km)</label><input type="number" step="0.1" id="mf-c-pb" value="'+(mF.pb.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div><label style="'+lblStyle+' text-align:center;">Cena (zł/L)</label><input type="number" step="0.01" id="mf-p-pb" value="'+(mF.pb.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
         
         let dOn = cOn !== '' ? 'block' : 'none';
-        html.push('<div id="mf-box-on" style="display:'+dOn+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#f59e0b; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⛽ Diesel</div><div class="inp-row" style="margin:0; gap:12px;"><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">Spalanie (L/100km)</label><input type="number" step="0.1" id="mf-c-on" value="'+(mF.on.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">Cena (zł/L)</label><input type="number" step="0.01" id="mf-p-on" value="'+(mF.on.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
+        html.push('<div id="mf-box-on" style="display:'+dOn+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#f59e0b; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⛽ Diesel</div><div class="grid-2"><div><label style="'+lblStyle+' text-align:center;">Spalanie (L/100km)</label><input type="number" step="0.1" id="mf-c-on" value="'+(mF.on.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div><label style="'+lblStyle+' text-align:center;">Cena (zł/L)</label><input type="number" step="0.01" id="mf-p-on" value="'+(mF.on.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
         
         let dLpg = cLpg !== '' ? 'block' : 'none';
-        html.push('<div id="mf-box-lpg" style="display:'+dLpg+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#f59e0b; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⛽ Gaz LPG</div><div class="inp-row" style="margin:0; gap:12px;"><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">Spalanie (L/100km)</label><input type="number" step="0.1" id="mf-c-lpg" value="'+(mF.lpg.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">Cena (zł/L)</label><input type="number" step="0.01" id="mf-p-lpg" value="'+(mF.lpg.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
+        html.push('<div id="mf-box-lpg" style="display:'+dLpg+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#f59e0b; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⛽ Gaz LPG</div><div class="grid-2"><div><label style="'+lblStyle+' text-align:center;">Spalanie (L/100km)</label><input type="number" step="0.1" id="mf-c-lpg" value="'+(mF.lpg.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div><label style="'+lblStyle+' text-align:center;">Cena (zł/L)</label><input type="number" step="0.01" id="mf-p-lpg" value="'+(mF.lpg.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
         
         let dEv = cEv !== '' ? 'block' : 'none';
-        html.push('<div id="mf-box-ev" style="display:'+dEv+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#0ea5e9; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⚡ Prąd (EV)</div><div class="inp-row" style="margin:0; gap:12px;"><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">Zużycie (kWh/100km)</label><input type="number" step="0.1" id="mf-c-ev" value="'+(mF.ev.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">Cena (zł/kWh)</label><input type="number" step="0.01" id="mf-p-ev" value="'+(mF.ev.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
+        html.push('<div id="mf-box-ev" style="display:'+dEv+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#0ea5e9; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⚡ Prąd (EV)</div><div class="grid-2"><div><label style="'+lblStyle+' text-align:center;">Zużycie (kWh/100km)</label><input type="number" step="0.1" id="mf-c-ev" value="'+(mF.ev.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div><label style="'+lblStyle+' text-align:center;">Cena (zł/kWh)</label><input type="number" step="0.01" id="mf-p-ev" value="'+(mF.ev.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
         
         html.push('</div></div></div>');
 
-        // 4. KOSZTY STAŁE (FLOTOWE / ZUS / INNE) - Inteligentne mapowanie dni
+        // 4. KOSZTY STAŁE I FLOTOWE (DYNAMICZNE DNI/MIESIĄCE)
         html.push('<div id="acc-car-parent" class="panel" style="padding:0; border-radius:24px; margin-bottom:15px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 10px 30px rgba(0,0,0,0.4); transition: border-color 0.3s;">');
         html.push('<div onclick="window.toggleAccordion(\'acc-car\')" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(255,255,255,0.02);">');
         html.push('<strong style="color:var(--driver); font-size:0.85rem; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center;"><span style="font-size:1.5rem; margin-right:12px;">🚗</span> Koszty Stałe i Flotowe</strong>');
@@ -173,41 +204,72 @@ window.rDrvSet = function(d, t, nav, hdr) {
         html.push('<div id="acc-car" style="display:none; padding:20px; border-top:1px solid rgba(255,255,255,0.05);">');
         
         html.push('<div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05); margin-bottom:15px;">');
-        html.push('<p style="font-size:0.75rem; color:#10b981; margin-top:0; font-weight:700;">Te koszty potrącamy od razu przy starcie zmiany, aby pasek Celu Netto rósł od minusa (zawsze wiesz ile musisz odrobić!).</p>');
+        html.push('<p style="font-size:0.75rem; color:#10b981; margin-top:0; font-weight:700;">Wpisz kwoty tak, jak je płacisz w rzeczywistości. System sam podzieli je na dni i obciąży nimi Twoją zmianę zaraz po starcie (zobaczysz to na Pasku Netto jako minus).</p>');
         
-        html.push('<div class="inp-group" style="margin-bottom:15px;"><label style="'+lblStyle+'">Wynajem Auta (Opłata Tygodniowa)</label><div style="position:relative;"><input type="number" id="us-car-rent" value="'+carRent+'" placeholder="np. 600" style="'+inpStyle+' padding-right:40px;"><span style="position:absolute; right:15px; top:16px; color:var(--muted); font-weight:700;">zł</span></div></div>');
+        // RENT
+        let sCR_D = carRentPeriod === 'day' ? 'selected' : '';
+        let sCR_W = carRentPeriod === 'week' ? 'selected' : '';
+        let sCR_M = carRentPeriod === 'month' ? 'selected' : '';
+        html.push('<label style="'+lblStyle+'">KOSZT AUTA (WYNAJEM / LEASING)</label>');
+        html.push('<div class="grid-3" style="margin-bottom:15px;">');
+        html.push('<div style="position:relative;"><input type="number" id="us-car-rent" value="'+carRent+'" placeholder="np. 600" style="'+inpStyle+' padding-right:40px;"><span style="position:absolute; right:15px; top:16px; color:var(--muted); font-weight:700;">zł</span></div>');
+        html.push('<select id="us-car-rent-period" style="'+inpStyle+'"><option value="day" '+sCR_D+'>Dzień</option><option value="week" '+sCR_W+'>Tydz</option><option value="month" '+sCR_M+'>M-c</option></select>');
+        html.push('</div>');
         
-        html.push('<div class="inp-group" style="margin-bottom:15px;"><label style="'+lblStyle+'">ZUS i Księgowość (Opłata Miesięczna)</label><div style="position:relative;"><input type="number" id="us-zus" value="'+zusCost+'" placeholder="np. 1800" style="'+inpStyle+' padding-right:40px;"><span style="position:absolute; right:15px; top:16px; color:var(--muted); font-weight:700;">zł</span></div></div>');
+        // ZUS
+        let sZUS_D = zusPeriod === 'day' ? 'selected' : '';
+        let sZUS_W = zusPeriod === 'week' ? 'selected' : '';
+        let sZUS_M = zusPeriod === 'month' ? 'selected' : '';
+        html.push('<label style="'+lblStyle+'">ZUS I KSIĘGOWOŚĆ</label>');
+        html.push('<div class="grid-3" style="margin-bottom:15px;">');
+        html.push('<div style="position:relative;"><input type="number" id="us-zus" value="'+zusCost+'" placeholder="np. 1800" style="'+inpStyle+' padding-right:40px;"><span style="position:absolute; right:15px; top:16px; color:var(--muted); font-weight:700;">zł</span></div>');
+        html.push('<select id="us-zus-period" style="'+inpStyle+'"><option value="day" '+sZUS_D+'>Dzień</option><option value="week" '+sZUS_W+'>Tydz</option><option value="month" '+sZUS_M+'>M-c</option></select>');
+        html.push('</div>');
         
-        html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+'">Inne stałe (Opłata Dzienna)</label><div style="position:relative;"><input type="number" id="us-fixed-daily" value="'+fixedDaily+'" placeholder="np. 20" style="'+inpStyle+' padding-right:40px;"><span style="position:absolute; right:15px; top:16px; color:var(--muted); font-weight:700;">zł</span></div></div>');
+        // INNE STAŁE
+        let sFIX_D = fixedOtherPeriod === 'day' ? 'selected' : '';
+        let sFIX_W = fixedOtherPeriod === 'week' ? 'selected' : '';
+        let sFIX_M = fixedOtherPeriod === 'month' ? 'selected' : '';
+        html.push('<label style="'+lblStyle+'">INNE OPŁATY STAŁE</label>');
+        html.push('<div class="grid-3" style="margin-bottom:15px;">');
+        html.push('<div style="position:relative;"><input type="number" id="us-fixed-daily" value="'+fixedDaily+'" placeholder="np. 20" style="'+inpStyle+' padding-right:40px;"><span style="position:absolute; right:15px; top:16px; color:var(--muted); font-weight:700;">zł</span></div>');
+        html.push('<select id="us-fixed-daily-period" style="'+inpStyle+'"><option value="day" '+sFIX_D+'>Dzień</option><option value="week" '+sFIX_W+'>Tydz</option><option value="month" '+sFIX_M+'>M-c</option></select>');
+        html.push('</div>');
         
         html.push('</div></div></div>');
 
-        // 5. PODATKI I PROWIZJE (Zmienne potrącane w locie)
+        // 5. PODATKI I PROWIZJE OD OBROTU
         let sEFlat = empType === 'flat' ? 'selected' : '';
         let sEPct = empType === 'pct' ? 'selected' : '';
         
         html.push('<div id="acc-tax-parent" class="panel" style="padding:0; border-radius:24px; margin-bottom:25px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 10px 30px rgba(0,0,0,0.4); transition: border-color 0.3s;">');
         html.push('<div onclick="window.toggleAccordion(\'acc-tax\')" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(14,165,233,0.05);">');
-        html.push('<strong style="color:#0ea5e9; font-size:0.85rem; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center;"><span style="font-size:1.5rem; margin-right:12px; filter:drop-shadow(0 0 8px rgba(14,165,233,0.4));">⚖️</span> Prowizje i Podatki (Od obrotu)</strong>');
+        html.push('<strong style="color:#0ea5e9; font-size:0.85rem; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center;"><span style="font-size:1.5rem; margin-right:12px; filter:drop-shadow(0 0 8px rgba(14,165,233,0.4));">⚖️</span> Prowizje i Podatki (Zmienne)</strong>');
         html.push('<span id="acc-tax-icon" style="color:var(--muted); font-size:0.8rem;">🔽</span></div>');
         html.push('<div id="acc-tax" style="display:none; padding:20px; border-top:1px solid rgba(255,255,255,0.05);">');
         
-        html.push('<div class="inp-group" style="margin-bottom:15px;"><label style="'+lblStyle+'">Model Rozliczenia z Partnerem</label><select id="us-etype" onchange="if(window.dCheckEPct) window.dCheckEPct()" style="'+inpStyle+'"><option value="flat" '+sEFlat+'>Opłata Stała / Abonamentowa</option><option value="pct" '+sEPct+'>Prowizja Procentowa od Utargu</option></select></div>');
+        html.push('<div style="margin-bottom:15px;"><label style="'+lblStyle+'">Model Rozliczenia z Partnerem</label><select id="us-etype" onchange="if(window.dCheckEPct) window.dCheckEPct()" style="'+inpStyle+'"><option value="flat" '+sEFlat+'>Opłata Stała / Abonamentowa</option><option value="pct" '+sEPct+'>Prowizja Procentowa od Utargu</option></select></div>');
         
         html.push('<div id="us-ep-box" style="margin-bottom:20px; background:rgba(14,165,233,0.05); padding:15px; border-radius:14px; border:1px solid rgba(14,165,233,0.2);">');
         if(empType === 'pct') {
-            html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+' color:#0ea5e9;">Opłata Partnera (%)</label><input type="number" id="us-epct" value="'+ePct+'" style="'+inpStyle+' border-color:rgba(14,165,233,0.4);"></div>');
+            html.push('<div><label style="'+lblStyle+' color:#0ea5e9;">Opłata Partnera (%)</label><input type="number" id="us-epct" value="'+ePct+'" style="'+inpStyle+' border-color:rgba(14,165,233,0.4);"></div>');
         } else {
-            html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+' color:#0ea5e9;">Opłata Partnera za Rozliczenie (Tygodniowo)</label><input type="number" id="us-efix" value="'+eFix+'" placeholder="np. 50" style="'+inpStyle+' border-color:rgba(14,165,233,0.4);"></div>');
+            let sEF_W = ePeriod === 'week' ? 'selected' : '';
+            let sEF_M = ePeriod === 'month' ? 'selected' : '';
+            let sEF_D = ePeriod === 'day' ? 'selected' : '';
+            html.push('<label style="'+lblStyle+' color:#0ea5e9;">KOSZTY PARTNERA (ROZLICZENIE)</label>');
+            html.push('<div class="grid-3">');
+            html.push('<div style="position:relative;"><input type="number" id="us-efix" value="'+eFix+'" placeholder="np. 50" style="'+inpStyle+' border-color:rgba(14,165,233,0.4); padding-right:40px;"><span style="position:absolute; right:15px; top:16px; color:var(--muted); font-weight:700;">zł</span></div>');
+            html.push('<select id="us-efix-period" style="'+inpStyle+' border-color:rgba(14,165,233,0.4);"><option value="day" '+sEF_D+'>Dzień</option><option value="week" '+sEF_W+'>Tydz</option><option value="month" '+sEF_M+'>M-c</option></select>');
+            html.push('</div>');
         }
         html.push('</div>');
         
-        html.push('<div class="inp-row" style="margin-bottom:15px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.1); gap:12px;">');
-        html.push('<div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Podatek Dochodowy (%)</label><input type="number" id="us-tax" value="'+tax+'" step="0.1" style="'+inpStyle+'"></div>');
-        html.push('<div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Prowizja Terminala (%)</label><input type="number" id="us-cardf" value="'+cardF+'" step="0.1" style="'+inpStyle+'"></div>');
+        html.push('<div class="grid-2" style="margin-bottom:15px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.1);">');
+        html.push('<div><label style="'+lblStyle+'">Podatek Dochodowy (%)</label><input type="number" id="us-tax" value="'+tax+'" step="0.1" style="'+inpStyle+'"></div>');
+        html.push('<div><label style="'+lblStyle+'">Prowizja Karta/Terminal (%)</label><input type="number" id="us-cardf" value="'+cardF+'" step="0.1" style="'+inpStyle+'"></div>');
         html.push('</div>');
-        html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+'">Prowizja Voucherów (%)</label><input type="number" id="us-voucherf" value="'+vouchF+'" step="0.1" style="'+inpStyle+'"></div>');
+        html.push('<div><label style="'+lblStyle+'">Prowizja Voucherów (%) (Opcjonalnie)</label><input type="number" id="us-voucherf" value="'+vouchF+'" step="0.1" style="'+inpStyle+'"></div>');
         html.push('</div></div>');
 
         // 6. WSPARCIE (KUP KAWĘ)
@@ -273,13 +335,17 @@ window.dCheckEPct = function() {
     if(!tEl || !b) return;
     
     let t = tEl.value;
-    let inpStyle = 'background:rgba(255,255,255,0.03); border-radius:14px; padding:16px; font-size:0.95rem; border:1px solid rgba(255,255,255,0.08); color:#fff; width:100%; box-sizing:border-box; outline:none; font-weight:700; border-color:rgba(14,165,233,0.4);';
+    let inpStyle = 'background:rgba(0,0,0,0.4); border-radius:12px; padding:16px; font-size:0.95rem; border:1px inset rgba(255,255,255,0.05); color:#fff; width:100%; box-sizing:border-box; outline:none; font-weight:700; border-color:rgba(14,165,233,0.4);';
     let lblStyle = 'font-size:0.65rem; color:#0ea5e9; font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; display:block;';
     
     if(t === 'pct') {
-        b.innerHTML = '<div class="inp-group" style="margin:0;"><label style="'+lblStyle+'">Opłata Partnera (%)</label><input type="number" id="us-epct" placeholder="np. 8.5" style="'+inpStyle+'"></div>';
+        b.innerHTML = '<div><label style="'+lblStyle+'">Opłata Partnera (%)</label><input type="number" id="us-epct" placeholder="np. 8.5" style="'+inpStyle+'"></div>';
     } else {
-        b.innerHTML = '<div class="inp-group" style="margin:0;"><label style="'+lblStyle+'">Opłata Partnera za Rozliczenie (Tygodniowo)</label><input type="number" id="us-efix" placeholder="np. 50" style="'+inpStyle+'"></div>';
+        b.innerHTML = '<label style="'+lblStyle+'">KOSZTY PARTNERA (ROZLICZENIE)</label>' +
+        '<div class="grid-3">' +
+        '<div style="position:relative;"><input type="number" id="us-efix" placeholder="np. 50" style="'+inpStyle+' padding-right:40px;"><span style="position:absolute; right:15px; top:16px; color:var(--muted); font-weight:700;">zł</span></div>' +
+        '<select id="us-efix-period" style="'+inpStyle+'"><option value="day">Dzień</option><option value="week" selected>Tydz</option><option value="month">M-c</option></select>' +
+        '</div>';
     }
 };
 
@@ -289,6 +355,12 @@ window.dSaveUS = function() {
         if(el && el.value !== '') return parseFloat(el.value.replace(',', '.')) || (def || 0);
         return def || 0;
     };
+    
+    let safeStr = function(id, def) {
+        let el = document.getElementById(id);
+        if(el && el.value !== '') return el.value;
+        return def || '';
+    }
 
     let nameEl = document.getElementById('us-name');
     if(nameEl) window.db.userName = nameEl.value;
@@ -303,7 +375,7 @@ window.dSaveUS = function() {
 
     window.db.drv.cfg.goalBrutto = safeVal('us-goal-brutto', 400);
     window.db.drv.cfg.goalNetto = safeVal('us-goal-netto', 300);
-    window.db.drv.cfg.dailyGoal = safeVal('us-goal-brutto', 400); // Backward compatibility
+    window.db.drv.cfg.dailyGoal = safeVal('us-goal-brutto', 400); // Kompatybilność wsteczna
     
     let cityEl = document.getElementById('us-city');
     window.db.drv.cfg.defCity = cityEl ? cityEl.value : 'Warszawa';
@@ -342,21 +414,29 @@ window.dSaveUS = function() {
         }
     }
     
-    // Zapisywanie ZUNIFIKOWANYCH Kosztów Stałych i Zmiennych
+    // ZAPISYWANIE DYNAMICZNYCH KOSZTÓW I ICH OKRESÓW
     window.db.drv.cfg.carRent = safeVal('us-car-rent');
+    window.db.drv.cfg.carRentPeriod = safeStr('us-car-rent-period', 'week');
+    
     window.db.drv.cfg.zus = safeVal('us-zus');
+    window.db.drv.cfg.zusPeriod = safeStr('us-zus-period', 'month');
+    
     window.db.drv.cfg.fixedDaily = safeVal('us-fixed-daily');
+    window.db.drv.cfg.fixedOtherPeriod = safeStr('us-fixed-daily-period', 'day');
     
     let eTypeEl = document.getElementById('us-etype');
     window.db.drv.cfg.eType = eTypeEl ? eTypeEl.value : 'flat';
+    
     window.db.drv.cfg.eFix = safeVal('us-efix');
+    window.db.drv.cfg.ePeriod = safeStr('us-efix-period', 'week');
+    
     window.db.drv.cfg.ePct = safeVal('us-epct') / 100;
     
     window.db.drv.cfg.tax = safeVal('us-tax') / 100;
     window.db.drv.cfg.cardF = safeVal('us-cardf') / 100;
     window.db.drv.cfg.voucherF = safeVal('us-voucherf') / 100;
     
-    // Nadpisz zmienną z błędu (czyszczenie starych zmiennych aby parser nie wariował)
+    // Resetujemy ręczny override, żeby działał mądry system dni
     window.db.drv.cfg.dailyFixedCosts = undefined;
     
     if(typeof window.save === 'function') window.save(); 
@@ -364,7 +444,7 @@ window.dSaveUS = function() {
     
     let dailyCosts = window.getFixedDailyCosts();
     if(window.sysAlert) {
-        window.sysAlert("Zapisano Ustawienia!", "Twoje stałe koszty dzienne to: " + dailyCosts.toFixed(2) + " zł. Pasek Netto zacznie obliczenia od tej kwoty.", "success");
+        window.sysAlert("Zapisano Ustawienia!", "Twoje koszty stałe po rozbiciu na dni to: " + dailyCosts.toFixed(2) + " zł/dzień.", "success");
     } else {
         alert("Zapisano! Codzienne stałe koszty operacyjne: " + dailyCosts.toFixed(2) + " zł");
     }
