@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_set.js - Zakładka Opcje (Akordeony Premium + Kawa)
+// PLIK: taxi_tab_set.js - Zakładka Opcje (Ustawienia Premium)
 // ==========================================
 
 window.toggleAccordion = function(id) {
@@ -26,7 +26,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
         if(!appContainer) return;
 
         let goal = (d.cfg && d.cfg.goal) ? d.cfg.goal : 350;
-        let city = (d.cfg && d.cfg.defCity) ? d.cfg.defCity : 'Szczecin';
+        let city = (d.cfg && d.cfg.defCity) ? d.cfg.defCity : 'Warszawa';
         let fuelSource = (d.cfg && d.cfg.fuelSource) ? d.cfg.fuelSource : 'garage';
         let fTypes = (d.cfg && Array.isArray(d.cfg.fTypes)) ? d.cfg.fTypes : ['pb']; 
         
@@ -66,6 +66,12 @@ window.rDrvSet = function(d, t, nav, hdr) {
         let lblStyle = 'font-size:0.65rem; color:var(--muted); font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; display:block;';
 
         let html = [];
+        
+        // Styl dla pary z kawy
+        html.push('<style>');
+        html.push('@keyframes steamRise { 0% { transform: translateY(0) scale(1); opacity: 0.8; } 100% { transform: translateY(-25px) scale(1.5); opacity: 0; } }');
+        html.push('</style>');
+        
         html.push(hdr);
         html.push('<div class="dash-hero" style="padding-bottom: 10px;">');
         html.push('<div style="width:70px; height:70px; background:rgba(255, 255, 255, 0.05); border:1px solid rgba(255, 255, 255, 0.1); border-radius:24px; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:2.2rem; box-shadow:0 8px 25px rgba(0,0,0,0.4);">⚙️</div>');
@@ -75,15 +81,25 @@ window.rDrvSet = function(d, t, nav, hdr) {
 
         html.push('<div style="padding:0 15px;">');
 
-        // BANER PRO
-        html.push('<div class="pro-teaser-panel" style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(window.sysAlert) window.sysAlert(\'Chmura i Profile PRO\', \'W wersji PRO Twoje dane będą bezpiecznie synchronizowane w chmurze! Dodatkowo będziesz mógł stworzyć kilka osobnych profili dla różnych samochodów lub flot. ☁️🚀\', \'info\')">');
+        // --- ZALOGUJ PRZEZ GOOGLE (KONTO I CHMURA) ---
+        html.push('<div class="panel" style="padding:25px 20px; border-radius:24px; margin-bottom:15px; background:linear-gradient(145deg, #18181b, #09090b); border:1px solid rgba(14,165,233,0.3); box-shadow:0 10px 30px rgba(0,0,0,0.4); text-align:center;">');
+        html.push('<div style="font-size:2.5rem; margin-bottom:10px; filter:drop-shadow(0 0 10px rgba(14,165,233,0.4));">☁️</div>');
+        html.push('<h3 style="color:#0ea5e9; font-size:1.1rem; margin:0 0 5px 0; font-weight:900; letter-spacing:1px; text-transform:uppercase;">Konto i Kopia Zapasowa</h3>');
+        html.push('<p style="font-size:0.75rem; color:var(--muted); margin-bottom:20px;">Zaloguj się kontem Google, aby automatycznie zapisywać zarobki w darmowej chmurze.</p>');
+        html.push('<button class="btn" style="background:#fff; color:#000; font-weight:900; padding:18px; border-radius:18px; width:100%; display:flex; align-items:center; justify-content:center; gap:12px; box-shadow:0 8px 20px rgba(255,255,255,0.2); outline:none;" onclick="if(window.sysLoginGoogle) window.sysLoginGoogle(); else if(window.loginWithGoogle) window.loginWithGoogle(); else if(window.sysAlert) window.sysAlert(\'Info\', \'Moduł Google w trakcie konfiguracji.\', \'info\');">');
+        html.push('<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" style="width:20px;"> ZALOGUJ PRZEZ GOOGLE');
+        html.push('</button>');
+        html.push('</div>');
+
+        // --- ZAPOWIEDŹ PRO: SKANER KOSZTÓW OCR ---
+        html.push('<div class="pro-teaser-panel" style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(window.sysAlert) window.sysAlert(\'Skaner OCR PRO\', \'W wersji PRO zrobisz zdjęcie paragonu ze stacji, a Sztuczna Inteligencja sama rozliczy koszty paliwa! 📸🚀\', \'info\')">');
         html.push('<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>');
         html.push('<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>');
         html.push('<div style="display: flex; align-items: center; gap: 15px;">');
-        html.push('<div style="font-size: 2.5rem; filter: drop-shadow(0 0 15px rgba(217,70,239,0.4));">☁️✨</div>');
+        html.push('<div style="font-size: 2.5rem; filter: drop-shadow(0 0 15px rgba(217,70,239,0.4));">📸✨</div>');
         html.push('<div style="text-align: left;">');
-        html.push('<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Chmura i Multi-Profile</h4>');
-        html.push('<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Backup AI:</b> Dane bezpieczne na serwerze.<br>✅ <b>Wiele aut:</b> Osobne statystyki dla flot!</div>');
+        html.push('<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Inteligentny Skaner (OCR)</h4>');
+        html.push('<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Zdjęcia paragonów:</b> AI samo doda koszty!<br>✅ <b>Raporty PDF:</b> Gotowe pliki dla księgowej.</div>');
         html.push('</div></div></div>');
 
         // 1. TARYFIKATOR
@@ -141,16 +157,16 @@ window.rDrvSet = function(d, t, nav, hdr) {
         html.push('<div id="manual-fuel-wrapper" style="display:'+mWrap+'; margin-top:20px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:20px;">');
         html.push('<p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-bottom:15px; font-weight:600;">Podaj parametry paliw. Wyliczymy średni koszt na 1 KM.</p>');
         
-        let dPb = cPb ? 'block' : 'none';
+        let dPb = cPb !== '' ? 'block' : 'none';
         html.push('<div id="mf-box-pb" style="display:'+dPb+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#f59e0b; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⛽ Benzyna</div><div class="inp-row" style="margin:0; gap:12px;"><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">L/100km</label><input type="number" step="0.1" id="mf-c-pb" value="'+(mF.pb.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">ZŁ / L</label><input type="number" step="0.01" id="mf-p-pb" value="'+(mF.pb.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
         
-        let dOn = cOn ? 'block' : 'none';
+        let dOn = cOn !== '' ? 'block' : 'none';
         html.push('<div id="mf-box-on" style="display:'+dOn+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#f59e0b; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⛽ Diesel</div><div class="inp-row" style="margin:0; gap:12px;"><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">L/100km</label><input type="number" step="0.1" id="mf-c-on" value="'+(mF.on.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">ZŁ / L</label><input type="number" step="0.01" id="mf-p-on" value="'+(mF.on.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
         
-        let dLpg = cLpg ? 'block' : 'none';
+        let dLpg = cLpg !== '' ? 'block' : 'none';
         html.push('<div id="mf-box-lpg" style="display:'+dLpg+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#f59e0b; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⛽ Gaz LPG</div><div class="inp-row" style="margin:0; gap:12px;"><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">L/100km</label><input type="number" step="0.1" id="mf-c-lpg" value="'+(mF.lpg.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">ZŁ / L</label><input type="number" step="0.01" id="mf-p-lpg" value="'+(mF.lpg.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
         
-        let dEv = cEv ? 'block' : 'none';
+        let dEv = cEv !== '' ? 'block' : 'none';
         html.push('<div id="mf-box-ev" style="display:'+dEv+'; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:15px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);"><div style="color:#0ea5e9; font-size:0.75rem; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⚡ Prąd (EV)</div><div class="inp-row" style="margin:0; gap:12px;"><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">kWh/100km</label><input type="number" step="0.1" id="mf-c-ev" value="'+(mF.ev.c||0)+'" style="'+inpStyle+' text-align:center;"></div><div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+' text-align:center;">ZŁ / kWh</label><input type="number" step="0.01" id="mf-p-ev" value="'+(mF.ev.p||0)+'" style="'+inpStyle+' text-align:center;"></div></div></div>');
         
         html.push('</div></div></div>');
@@ -221,15 +237,22 @@ window.rDrvSet = function(d, t, nav, hdr) {
         html.push('<div class="inp-group" style="margin:0;"><label style="'+lblStyle+'">Prowizja Voucherów (%) (Opcj.)</label><input type="number" id="us-vf" value="'+vouchF+'" placeholder="0" step="0.1" style="'+inpStyle+'"></div>');
         html.push('</div></div>');
 
-        // 6. WSPARCIE (KUP KAWĘ)
-        html.push('<div class="panel" style="padding:35px 20px; border-radius:24px; margin-bottom:20px; text-align:center; border:1px solid rgba(245,158,11,0.4); background:linear-gradient(145deg, #2a1505 0%, #090500 100%); box-shadow:0 15px 40px rgba(245,158,11,0.15); position:relative; overflow:hidden;">');
-        html.push('<div style="font-size:4rem; margin-bottom:15px; filter: drop-shadow(0 4px 15px rgba(245,158,11,0.6)); animation: pulse 2s infinite;">☕</div>');
+        // 6. WSPARCIE (KUP KAWĘ) - Teraz z animacją CSS Pary, bez zielonej ramki
+        html.push('<div class="panel" style="padding:35px 20px; border-radius:24px; margin-bottom:20px; text-align:center; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #2a1505 0%, #090500 100%); box-shadow:0 15px 40px rgba(245,158,11,0.15); position:relative; overflow:hidden;">');
+        
+        // Magiczna sztuczka na animację pary z użyciem znaków
+        html.push('<div style="position:relative; display:inline-block; font-size:4rem; margin-bottom:15px; filter: drop-shadow(0 4px 15px rgba(245,158,11,0.6));">');
+        html.push('<div style="position:absolute; top:-20px; left:10px; font-size:1.5rem; opacity:0; animation: steamRise 2s infinite linear; color:#f59e0b;">〰️</div>');
+        html.push('<div style="position:absolute; top:-25px; left:30px; font-size:1.5rem; opacity:0; animation: steamRise 2s infinite linear 0.7s; color:#f59e0b;">〰️</div>');
+        html.push('<div style="position:absolute; top:-15px; left:50px; font-size:1.5rem; opacity:0; animation: steamRise 2s infinite linear 1.4s; color:#f59e0b;">〰️</div>');
+        html.push('☕</div>');
+        
         html.push('<h3 style="color:#f59e0b; margin:0 0 10px 0; font-size:1.4rem; letter-spacing:1px; text-transform:uppercase; font-weight:900;">Postaw nam kawę!</h3>');
         html.push('<p style="font-size:0.85rem; color:rgba(255,255,255,0.7); margin-bottom:25px; line-height:1.6; font-weight:600;">StyreOS to narzędzie tworzone z pasji, zupełnie za darmo. Jeśli pomaga Ci zarabiać więcej na Taxi, dorzuć się do serwerów i przyspiesz tworzenie wersji PRO!</p>');
         html.push('<a href="https://buycoffee.to/styreos" target="_blank" style="background:linear-gradient(135deg, #ffdd00, #f59e0b); color:#000; font-weight:900; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:10px; padding:18px; border-radius:20px; box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4); font-size:1.05rem; letter-spacing:1px; text-transform:uppercase;">');
         html.push('<span style="font-size:1.4rem;">☕</span> WESPRZYJ PROJEKT</a></div>');
 
-        html.push('</div>'); // Koniec padding kontenera
+        html.push('</div>'); // Koniec kontenera
 
         // Przyciski zapisywania i kopii zapasowej
         html.push('<div style="padding:10px 15px; margin-top:10px; margin-bottom:10px;">');
