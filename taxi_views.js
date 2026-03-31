@@ -84,8 +84,6 @@ window.rDrv = function() {
             '.pf-item.act .pf-lbl { opacity:1; transform:translateY(-2px); }' +
             '</style>';
 
-        // Lewitujące Emotki bez tła, ultra mini
-        // ZMIANA: Taksometr (📍) zamiast Wycena (🧮)
         let nav = navStyle + '<div class="pure-float-nav">' +
             '<div class="pf-item '+(t==='term'?'act':'')+'" onclick="window.switchTab(\'term\')"><span class="pf-icon">🚕</span><span class="pf-lbl">Panel</span></div>' +
             '<div class="pf-item '+(t==='quote'?'act':'')+'" onclick="window.switchTab(\'quote\')"><span class="pf-icon">📍</span><span class="pf-lbl">Taksometr</span></div>' +
@@ -94,7 +92,6 @@ window.rDrv = function() {
             '<div class="pf-item '+(t==='set'?'act':'')+'" onclick="window.switchTab(\'set\')"><span class="pf-icon">⚙️</span><span class="pf-lbl">Opcje</span></div>' +
         '</div>';
 
-        // Górny nagłówek
         let hdr = '<header style="background:transparent; border:none; padding:15px 20px; position:absolute; top:0; width:100%; z-index:10; display:flex; justify-content:space-between; box-sizing:border-box; pointer-events:none;">' +
             '<button class="logo" style="pointer-events:auto; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); backdrop-filter:blur(10px); box-shadow:0 6px 20px rgba(0,0,0,0.5); font-weight:900; color:#fff;" onclick="if(typeof window.openSwitcher===\'function\') window.openSwitcher()">S</button>' +
             '<div class="header-actions">' +
@@ -102,13 +99,19 @@ window.rDrv = function() {
             '</div>' +
         '</header>' + '<div style="height:80px;"></div>';
 
-        // DELEGOWANIE WIDOKÓW
-        if (t === 'term' || t === 'stats') {
-            if(typeof window.rDrvPanel === 'function') window.rDrvPanel(d, t, nav, hdr);
+        // --- DELEGOWANIE WIDOKÓW (NOWA ARCHITEKTURA MODULARNA) ---
+        if (t === 'term') {
+            if(typeof window.rDrvTerm === 'function') window.rDrvTerm(d, t, nav, hdr);
         } 
-        else if (t === 'quote' || t === 'garage') {
-            if(typeof window.rDrvTools === 'function') window.rDrvTools(d, t, nav, hdr);
-        } 
+        else if (t === 'stats') {
+            if(typeof window.rDrvStats === 'function') window.rDrvStats(d, t, nav, hdr);
+        }
+        else if (t === 'quote') {
+            if(typeof window.rDrvQuote === 'function') window.rDrvQuote(d, t, nav, hdr);
+        }
+        else if (t === 'garage') {
+            if(typeof window.rDrvGarage === 'function') window.rDrvGarage(d, t, nav, hdr);
+        }
         else if (t === 'set') {
             if(typeof window.rDrvSet === 'function') window.rDrvSet(d, t, nav, hdr);
         }
