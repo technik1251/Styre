@@ -1,15 +1,15 @@
 // ==========================================
-// PLIK: taxi_modal_actions.js - Garaż, Historia, Klienci, Backup, Opcje
+// PLIK: taxi_modal_actions.js - Edycja Wydatków, Historii, CRM i Backup (Premium)
 // ==========================================
 
-// --- BACKUP DANYCH ---
+// --- BACKUP DANYCH (EKSPORT/IMPORT) ---
 window.dExport = function() { 
     let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.db)); 
     let dlAnchorElem = document.createElement('a'); 
     dlAnchorElem.setAttribute("href", dataStr); 
-    dlAnchorElem.setAttribute("download", "styreos_taxi_backup_" + window.getLocalYMD() + ".json"); 
+    dlAnchorElem.setAttribute("download", "styreos_taxi_backup_" + (window.getLocalYMD ? window.getLocalYMD() : "data") + ".json"); 
     dlAnchorElem.click(); 
-    if(window.sysAlert) window.sysAlert("Pobrano!", "Plik kopii zapasowej został pobrany na urządzenie.", "success"); 
+    if(window.sysAlert) window.sysAlert("Pobrano!", "Plik kopii zapasowej został zapisany.", "success"); 
 };
 
 window.dImport = function(event) { 
@@ -21,448 +21,173 @@ window.dImport = function(event) {
             let importedDb = JSON.parse(e.target.result); 
             if(importedDb && importedDb.drv) { 
                 if(window.sysConfirm) { 
-                    window.sysConfirm("Uwaga", "To nadpisze obecne dane z tego telefonu. Kontynuować?", () => { 
+                    window.sysConfirm("Przywracanie Danych", "To nadpisze obecne dane na tym urządzeniu. Czy na pewno kontynuować?", function() { 
                         localStorage.setItem('styre_v101_db', JSON.stringify(importedDb)); 
-                        window.sysAlert("Sukces!", "Dane przywrócone. Trwa restart...", "success"); 
-                        setTimeout(() => location.reload(), 1500); 
+                        if(window.sysAlert) window.sysAlert("Sukces!", "Dane przywrócone. Restartuję...", "success"); 
+                        setTimeout(function() { location.reload(); }, 1200); 
                     }); 
                 } else { 
                     localStorage.setItem('styre_v101_db', JSON.stringify(importedDb)); 
                     location.reload(); 
                 } 
-            } else throw new Error("Błędny plik"); 
+            } else throw new Error("Błędny format"); 
         } catch(err) { 
-            if(window.sysAlert) window.sysAlert("Błąd", "Nieprawidłowy plik kopii zapasowej."); 
+            if(window.sysAlert) window.sysAlert("Błąd", "Nieprawidłowy plik kopii zapasowej.", "error"); 
         } 
     }; 
     reader.readAsText(file); 
 };
 
-// --- GARAŻ (TANKOWANIA I WYDATKI) ---
-window.dAF = function() {
-    let o = window.safeVal('df-o');
-    let l = window.safeVal('df-l');
-    let v = window.safeVal('df-v');
-    
-    // Pobieranie typu paliwa i checkboxa "Do pełna" z nowego interfejsu Fuelio
-    let fTypeEl = document.getElementById('df-type');
-    let type = fTypeEl ? fTypeEl.value : 'pb';
-    
-    let fFullEl = document.getElementById('df-full');
-    let isFullCheck = fFullEl ? fFullEl.checked : true;
-    
-    // Budowanie flagi dla algorytmu (np. 'pb_full', 'lpg_part')
-    let f = isFullCheck ? type + '_full' : type + '_part';
-
-    if(!o || !l || !v) { 
-        if(window.sysAlert) return window.sysAlert("Błąd", "Wypełnij dane!"); 
-        return; 
-    }
-    
-    let dVal = document.getElementById('df-date').value;
-    let dObj = dVal ? new Date(dVal) : new Date();
-    if(dVal) dObj.setHours(12,0,0);
-    
-    let dist=0, l100=0, cpkm=0;
-    if(!window.db.drv.fuel) window.db.drv.fuel = [];
-    
-    let prevF = window.db.drv.fuel.filter(x => x.o < o).sort((a,b) => b.o - a.o)[0];
-    if(prevF) {
-        dist = o - prevF.o;
-        if(dist > 0) {
-            l100 = (l / dist) * 100;
-            cpkm = v / dist;
-        }
-    }
-    
-    window.db.drv.odo = o;
-    window.db.drv.fuel.push({o: o, l: l, v: v, isF: f, rD: dObj.toISOString()});
-    window.db.drv.fuel.sort((a,b) => b.o - a.o);
-    
-    if(!window.db.drv.exp) window.db.drv.exp = [];
-    window.db.drv.exp.push({
-        id: Date.now(), rD: dObj.toISOString(), d: `⛽ Tankowanie`, 
-        v: v, dt: dObj.toLocaleDateString('pl-PL'), ty: 'f', 
-        l: l, odo: o, dist: dist, l100: l100, cpkm: cpkm, isF: f
-    });
-    window.db.drv.exp.sort((a,b) => new Date(b.rD) - new Date(a.rD));
-    
-    // Przeliczenie i zapis kosztu na 1KM dla całej apki
-    if(window.db.drv.cfg && window.db.drv.cfg.fuelSource !== 'manual' && window.calcFuelioStats) {
-         let fs = window.calcFuelioStats();
-         if(fs.ck > 0) window.db.drv.cfg.fuelPx = fs.ck;
-    }
-    
-    window.save(); 
-    window.render();
-};
-
-window.dAE = function() {
-    let v = window.safeVal('de-v');
-    let cEl = document.getElementById('de-c');
-    let c = cEl ? cEl.value : 'Wydatki';
-    
-    if(!v) { 
-        if(window.sysAlert) return window.sysAlert("Błąd", "Wpisz kwotę!"); 
-        return; 
-    }
-    
-    let dVal = document.getElementById('de-date').value;
-    let dObj = dVal ? new Date(dVal) : new Date();
-    if(dVal) dObj.setHours(12,0,0);
-    
-    if(!window.db.drv.exp) window.db.drv.exp = [];
-    window.db.drv.exp.push({
-        id: Date.now(), rD: dObj.toISOString(), d: c, 
-        v: v, dt: dObj.toLocaleDateString('pl-PL'), ty: 'e'
-    });
-    window.db.drv.exp.sort((a,b) => new Date(b.rD) - new Date(a.rD));
-    
-    window.save(); 
-    window.render();
-};
-
-window.dQuickExp = function(c,v) {
-    let dObj = new Date();
-    if(!window.db.drv.exp) window.db.drv.exp = [];
-    window.db.drv.exp.push({
-        id: Date.now(), rD: dObj.toISOString(), d: c, 
-        v: v, dt: dObj.toLocaleDateString('pl-PL'), ty: 'e'
-    });
-    window.db.drv.exp.sort((a,b) => new Date(b.rD) - new Date(a.rD));
-    
-    window.save(); 
-    window.render();
-    if(window.sysAlert) window.sysAlert("Szybki wydatek", `Dodano: ${c} (-${Number(v||0).toFixed(2)}zł)`, "success");
-};
-
-window.dDelExp = function(id) {
-    if(window.sysConfirm) {
-        window.sysConfirm("Usuwanie", "Na pewno usunąć ten wpis?", () => {
-            let expList = window.db.drv.exp || [];
-            let e = expList.find(x => x.id === id);
-            if(e && e.ty === 'f') {
-                window.db.drv.fuel = (window.db.drv.fuel || []).filter(f => f.o !== e.odo);
-            }
-            window.db.drv.exp = expList.filter(x => x.id !== id);
-            
-            if(window.db.drv.cfg && window.db.drv.cfg.fuelSource !== 'manual' && window.calcFuelioStats) {
-                let fs = window.calcFuelioStats();
-                window.db.drv.cfg.fuelPx = fs.ck > 0 ? fs.ck : 0;
-            }
-
-            window.save(); 
-            window.render();
-        });
-    }
-};
-
+// --- MODAL: EDYCJA WYDATKU Z GARAŻU (Premium Style) ---
 window.dEditExp = function(id) {
     let expList = window.db.drv.exp || [];
-    let e = expList.find(x => x.id === id);
+    let e = expList.find(function(x) { return x.id === id; });
     if(!e) return;
     
-    let html = `
-    <div id="m-edit-e" class="modal-overlay" style="z-index: 30000; animation: fadeIn 0.2s;">
-        <div class="panel" style="width:100%; max-width:380px; background: #09090b;">
-            <h3 style="margin-top:0;">Edytuj Wydatek</h3>
-            <div class="inp-group"><label>Kwota (zł)</label><input type="number" step="0.01" id="ee-v" value="${Number(e.v||0).toFixed(2)}"></div>
-            <button class="btn btn-danger" style="margin-top:15px; padding:15px;" onclick="window.dSaveEditExp(${id})">ZAPISZ ZMIANY</button>
-            <button class="btn" style="background:transparent; color:var(--muted); box-shadow:none; margin-top:5px;" onclick="document.getElementById('m-edit-e').remove()">ANULUJ</button>
-        </div>
-    </div>`;
+    let existing = document.getElementById('m-edit-exp');
+    if(existing) existing.remove();
+
+    let inpStyle = 'background:rgba(255,255,255,0.03); border-radius:14px; padding:16px; font-size:1.1rem; border:1px solid rgba(255,255,255,0.08); color:#f59e0b; width:100%; box-sizing:border-box; outline:none; font-weight:800; text-align:center;';
+    
+    let html = '<div id="m-edit-exp" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:99999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); animation:fadeIn 0.2s ease;">' +
+        '<div style="background:linear-gradient(145deg, #18181b, #09090b); width:85%; max-width:320px; border-radius:28px; box-shadow:0 30px 60px rgba(0,0,0,0.8); text-align:center; overflow:hidden; border:1px solid rgba(245,158,11,0.3);">' +
+            '<div style="padding:25px 20px 20px;">' +
+                '<div style="font-size:2.5rem; margin-bottom:10px;">🔧</div>' +
+                '<h3 style="color:#fff; margin:0 0 5px 0; font-size:1.2rem; font-weight:900; letter-spacing:0.5px;">Edytuj Wydatek</h3>' +
+                '<p style="color:rgba(255,255,255,0.5); font-size:0.75rem; margin-bottom:20px;">Zmień kwotę wpisu: <br><strong>' + e.d + '</strong></p>' +
+                '<div style="background:#000; border-radius:18px; padding:10px; border:1px inset rgba(255,255,255,0.05);">' +
+                    '<input type="number" step="0.01" id="ee-v" value="'+Number(e.v||0).toFixed(2)+'" style="'+inpStyle+'">' +
+                '</div>' +
+            '</div>' +
+            '<div style="display:flex; padding:0 20px 25px 20px; gap:10px;">' +
+                '<button style="flex:1; padding:16px; background:transparent; border:1px solid rgba(255,255,255,0.1); border-radius:18px; color:rgba(255,255,255,0.5); font-size:0.9rem; font-weight:700; cursor:pointer;" onclick="document.getElementById(\'m-edit-exp\').remove()">Anuluj</button>' +
+                '<button style="flex:1; padding:16px; background:linear-gradient(135deg, #f59e0b, #d97706); border:none; border-radius:18px; color:#000; font-size:0.9rem; font-weight:900; letter-spacing:0.5px; cursor:pointer;" onclick="window.dSaveEditExp('+id+')">Zapisz</button>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
+
     document.body.insertAdjacentHTML('beforeend', html);
 };
 
 window.dSaveEditExp = function(id) {
+    let nv = parseFloat(document.getElementById('ee-v').value);
+    if(isNaN(nv) || nv <= 0) return;
+
     let expList = window.db.drv.exp || [];
-    let e = expList.find(x => x.id === id);
+    let e = expList.find(function(x) { return x.id === id; });
     if(e) {
-        let nv = window.safeVal('ee-v');
-        if(nv > 0) {
-            e.v = nv;
-            if(e.ty === 'f') {
-                let fuelList = window.db.drv.fuel || [];
-                let f = fuelList.find(x => x.o === e.odo);
-                if(f) f.v = nv;
-                if(e.dist > 0) e.cpkm = nv / e.dist;
-                
-                if(window.db.drv.cfg && window.db.drv.cfg.fuelSource !== 'manual' && window.calcFuelioStats) {
-                    let fs = window.calcFuelioStats();
-                    if(fs.ck > 0) window.db.drv.cfg.fuelPx = fs.ck;
-                }
-            }
-            window.save(); 
-            window.render();
+        e.v = nv;
+        if(e.ty === 'f') {
+            let fuelList = window.db.drv.fuel || [];
+            let f = fuelList.find(function(x) { return x.o === e.odo; });
+            if(f) f.v = nv;
+            if(e.dist > 0) e.cpkm = nv / e.dist;
         }
+        if(typeof window.save === 'function') window.save(); 
+        if(typeof window.render === 'function') window.render();
     }
-    let modal = document.getElementById('m-edit-e');
+    let modal = document.getElementById('m-edit-exp');
     if(modal) modal.remove();
 };
 
-// --- HISTORIA ---
-window.dDelHistory = function(id) {
-    if(window.sysConfirm) {
-        window.sysConfirm("Usuwanie Dnia", "Trwale usunąć to rozliczenie?", () => {
-            window.db.drv.h = (window.db.drv.h || []).filter(x => x.id !== id);
-            window.save(); 
-            window.render();
-        });
-    }
-};
-
+// --- MODAL: KOREKTA HISTORII (P&L) ---
 window.dEditHistory = function(id) {
     let hList = window.db.drv.h || [];
-    let h = hList.find(x => x.id === id);
+    let h = hList.find(function(x) { return x.id === id; });
     if(!h) return;
     
-    let html = `
-    <div id="m-edit-h" class="modal-overlay" style="z-index: 30000; animation: fadeIn 0.2s;">
-        <div class="panel" style="width:100%; max-width:380px; background: #09090b;">
-            <h3 style="margin-top:0;">Korekta Rozliczenia</h3>
-            <div class="inp-group"><label>Utarg Brutto (zł)</label><input type="number" step="0.01" id="eh-g" value="${Number(h.g||0).toFixed(2)}"></div>
-            <div class="inp-group"><label>Przejechany Dystans (KM)</label><input type="number" step="0.1" id="eh-k" value="${Number(h.k||0).toFixed(1)}"></div>
-            <button class="btn btn-success" style="margin-top:15px; padding:15px;" onclick="window.dSaveEditHistory(${id})">PRZELICZ I ZAPISZ</button>
-            <button class="btn" style="background:transparent; color:var(--muted); box-shadow:none; margin-top:5px;" onclick="document.getElementById('m-edit-h').remove()">ANULUJ</button>
-        </div>
-    </div>`;
+    let existing = document.getElementById('m-edit-history');
+    if(existing) existing.remove();
+
+    let inpStyle = 'background:rgba(255,255,255,0.03); border-radius:14px; padding:15px; font-size:1rem; border:1px solid rgba(255,255,255,0.08); color:#fff; width:100%; box-sizing:border-box; outline:none; font-weight:700; text-align:center;';
+    let lblStyle = 'font-size:0.6rem; color:var(--muted); font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; display:block;';
+
+    let html = '<div id="m-edit-history" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:99999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); animation:fadeIn 0.2s ease;">' +
+        '<div style="background:linear-gradient(145deg, #18181b, #09090b); width:90%; max-width:350px; border-radius:28px; box-shadow:0 30px 60px rgba(0,0,0,0.8); text-align:center; overflow:hidden; border:1px solid rgba(16,185,129,0.3);">' +
+            '<div style="padding:25px 20px 20px;">' +
+                '<div style="font-size:2.5rem; margin-bottom:10px;">📊</div>' +
+                '<h3 style="color:#10b981; margin:0 0 5px 0; font-size:1.2rem; font-weight:900; letter-spacing:0.5px;">Korekta Rozliczenia</h3>' +
+                '<p style="color:rgba(255,255,255,0.5); font-size:0.75rem; margin-bottom:20px;">Data: <strong>' + h.dt + '</strong></p>' +
+                
+                '<div style="margin-bottom:15px; text-align:left;">' +
+                    '<label style="'+lblStyle+'">Utarg Brutto (zł)</label>' +
+                    '<input type="number" step="0.01" id="eh-g" value="'+Number(h.g||0).toFixed(2)+'" style="'+inpStyle+' color:#10b981;">' +
+                '</div>' +
+                '<div style="margin-bottom:20px; text-align:left;">' +
+                    '<label style="'+lblStyle+'">Dystans (KM)</label>' +
+                    '<input type="number" step="0.1" id="eh-k" value="'+Number(h.k||0).toFixed(1)+'" style="'+inpStyle+'">' +
+                '</div>' +
+            '</div>' +
+            '<div style="display:flex; padding:0 20px 25px 20px; gap:10px;">' +
+                '<button style="flex:1; padding:16px; background:transparent; border:1px solid rgba(255,255,255,0.1); border-radius:18px; color:rgba(255,255,255,0.5); font-size:0.9rem; font-weight:700; cursor:pointer;" onclick="document.getElementById(\'m-edit-history\').remove()">ANULUJ</button>' +
+                '<button style="flex:1; padding:16px; background:linear-gradient(135deg, #10b981, #059669); border:none; border-radius:18px; color:#000; font-size:0.9rem; font-weight:900; letter-spacing:0.5px; cursor:pointer;" onclick="window.dSaveEditHistory('+id+')">PRZELICZ</button>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
+
     document.body.insertAdjacentHTML('beforeend', html);
 };
 
 window.dSaveEditHistory = function(id) {
+    let ng = parseFloat(document.getElementById('eh-g').value);
+    let nk = parseFloat(document.getElementById('eh-k').value);
+    
     let hList = window.db.drv.h || [];
-    let h = hList.find(x => x.id === id);
-    if(h) {
-        let ng = window.safeVal('eh-g');
-        let nk = window.safeVal('eh-k', 0);
-        if(ng >= 0) {
-            h.g = ng; 
-            h.k = nk;
-            let taxRate = (window.db.drv.cfg && window.db.drv.cfg.tax) ? window.db.drv.cfg.tax : 0;
-            let fuelPx = (window.db.drv.cfg && window.db.drv.cfg.fuelPx) ? window.db.drv.cfg.fuelPx : 0;
-            let isPct = (window.db.drv.cfg && window.db.drv.cfg.eType === 'pct');
-            let ePct = (window.db.drv.cfg && window.db.drv.cfg.ePct) ? window.db.drv.cfg.ePct : 0;
-            
-            let tax = h.g * taxRate;
-            let pFee = isPct ? h.g * ePct : 0;
-            let fc = h.k * fuelPx;
-            
-            h.tx = tax; 
-            h.pF = pFee; 
-            h.fc = fc;
-            h.n = h.g - h.fc - h.tx - h.pF - (h.cF || 0) - (h.vF || 0);
-            
-            window.save(); 
-            window.render();
-        }
+    let h = hList.find(function(x) { return x.id === id; });
+    if(h && !isNaN(ng)) {
+        h.g = ng; 
+        h.k = isNaN(nk) ? 0 : nk;
+        
+        let d = window.db.drv;
+        let taxRate = (d.cfg && d.cfg.tax) ? d.cfg.tax : 0;
+        let fuelPx = (d.cfg && d.cfg.fuelPx) ? d.cfg.fuelPx : 0;
+        let isPct = (d.cfg && d.cfg.eType === 'pct');
+        let ePct = (d.cfg && d.cfg.ePct) ? d.cfg.ePct : 0;
+        
+        h.tx = h.g * taxRate; 
+        h.pF = isPct ? h.g * ePct : 0; 
+        h.fc = h.k * fuelPx;
+        h.n = h.g - h.fc - h.tx - h.pF - (h.cF || 0) - (h.vF || 0);
+        
+        if(typeof window.save === 'function') window.save(); 
+        if(typeof window.render === 'function') window.render();
     }
-    let modal = document.getElementById('m-edit-h');
+    let modal = document.getElementById('m-edit-history');
     if(modal) modal.remove();
 };
 
-// --- SYNCHRONIZACJA Z DOMEM (TRANSFER GOTÓWKI) ---
-window.dTransferToHomeModal = function() {
-    let accOpts = (window.db.home && window.db.home.accs) ? window.db.home.accs.map(a => `<option value="${a.id}">${a.n}</option>`).join('') : '';
-    if(!accOpts) { 
-        if(window.sysAlert) return window.sysAlert('Błąd', 'Brak kont w Budżecie Domowym! Dodaj je najpierw w module domowym.', 'error'); 
-        return; 
-    }
-    
-    let totalCashEarned = 0;
-    if(window.db.drv && window.db.drv.h) {
-        window.db.drv.h.forEach(s => { 
-            if(s.tr) s.tr.forEach(t => { if(t.p === 'Gotówka') totalCashEarned += (parseFloat(t.v)||0); }); 
-        });
-    }
-    if(window.db.drv && window.db.drv.sh && window.db.drv.sh.tr) {
-        window.db.drv.sh.tr.forEach(t => { if(t.p === 'Gotówka') totalCashEarned += (parseFloat(t.v)||0); });
-    }
-    
-    let totalTransferred = 0;
-    if(window.db.home && window.db.home.trans) {
-        window.db.home.trans.forEach(t => {
-            if(t.cat === 'Wypłata z Etatu' && t.d === 'Utarg z Taxi') {
-                totalTransferred += (parseFloat(t.v)||0);
-            }
-        });
-    }
-    
-    let availableCash = totalCashEarned - totalTransferred;
-    if (availableCash <= 0) {
-        if(window.sysAlert) return window.sysAlert('Brak środków', 'Rozliczyłeś już całą gotówkę z Taxi w Budżecie Domowym!', 'info');
-        return;
-    }
-    
-    let html = `
-    <div id="m-transfer-home" class="modal-overlay" style="z-index: 30000; animation: fadeIn 0.2s;">
-        <div class="panel" style="width:100%; max-width:320px; background:#09090b; border-color:var(--success);">
-            <h3 style="margin-top:0; color:var(--success);">💸 Wypłata Utargu</h3>
-            <p style="font-size:0.8rem; color:var(--muted); margin-bottom:15px;">Przelej zarobioną gotówkę do portfela domowego.</p>
-            
-            <div style="font-size:0.75rem; color:var(--success); margin-bottom:15px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); padding:10px; border-radius:8px; text-align:center;">
-                Nierozliczona gotówka w portfelu:<br>
-                <strong style="font-size:1.2rem;">${Number(availableCash).toFixed(2)} zł</strong>
-            </div>
-            
-            <div class="inp-group" style="margin-bottom:15px;">
-                <label>Kwota do przelania (zł)</label>
-                <input type="number" step="0.01" id="dth-v" max="${availableCash}" placeholder="np. 250" value="${Number(availableCash).toFixed(2)}" class="big-inp" style="color:var(--success); background:rgba(0,0,0,0.5);">
-            </div>
-            <div class="inp-group" style="margin-bottom:20px;">
-                <label>Do jakiego portfela?</label>
-                <select id="dth-acc" style="background:#18181b;">${accOpts}</select>
-            </div>
-            <button class="btn btn-success" style="padding:15px; font-weight:bold;" onclick="window.dExecTransferToHome()">ZAKSIĘGUJ W DOMU</button>
-            <button class="btn" style="background:transparent; color:var(--muted); margin-top:5px; box-shadow:none;" onclick="document.getElementById('m-transfer-home').remove()">ANULUJ</button>
-        </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
-};
-
-window.dExecTransferToHome = function() {
-    let inputEl = document.getElementById('dth-v');
-    let v = parseFloat(inputEl.value);
-    let maxV = parseFloat(inputEl.getAttribute('max'));
-    let accId = document.getElementById('dth-acc').value;
-    
-    if(!v || v <= 0) { 
-        if(window.sysAlert) window.sysAlert('Błąd', 'Podaj poprawną kwotę!', 'error'); 
-        return; 
-    }
-    
-    if(v > maxV + 0.05) {
-        if(window.sysAlert) window.sysAlert('Odmowa', `Próbujesz przelać więcej, niż masz w gotówce z Taxi! (Max: ${Number(maxV).toFixed(2)} zł)`, 'error'); 
-        return;
-    }
-    
-    let dObj = new Date(); 
-    dObj.setHours(12,0,0);
-    
-    if(!window.db.home) window.db.home = {trans: []};
-    if(!window.db.home.trans) window.db.home.trans = [];
-    
-    window.db.home.trans.push({
-        id: Date.now(), type: 'inc', cat: 'Wypłata z Etatu', acc: accId,
-        d: 'Utarg z Taxi', v: v, who: window.db.userName,
-        dt: dObj.toLocaleDateString('pl-PL'), rD: dObj.toISOString(), isPlanned: false
-    });
-    
-    window.db.home.trans.sort((a,b) => new Date(b.rD) - new Date(a.rD));
-    window.save();
-    
-    let modal = document.getElementById('m-transfer-home');
-    if(modal) modal.remove();
-    window.render();
-    
-    if(window.sysAlert) {
-        setTimeout(() => {
-            window.sysAlert('Sukces!', `Przelałeś ${Number(v).toFixed(2)} zł do Budżetu!`, 'success');
-        }, 100);
-    }
-};
-
-// --- KLIENCI VIP ---
+// --- LOGIKA CRM: KLIENCI VIP ---
 window.dAddCrm = function() {
     let n = document.getElementById('dc-n').value;
     let ph = document.getElementById('dc-p').value;
-    let d = window.safeVal('dc-d');
-    
-    if(!n) {
-        if(window.sysAlert) return window.sysAlert("Błąd", "Wpisz imię klienta!");
-        return;
-    }
+    if(!n) { if(window.sysAlert) window.sysAlert("Błąd", "Wpisz imię klienta!", "error"); return; }
     
     if(!window.db.drv.clients) window.db.drv.clients = [];
-    window.db.drv.clients.unshift({id: Date.now(), n: n, ph: ph, d: d, bl: false});
-    window.save(); 
-    window.render();
-    if(window.sysAlert) window.sysAlert("Sukces", "Dodano do bazy!", "success");
+    window.db.drv.clients.unshift({id: Date.now(), n: n, ph: ph, bl: false});
+    if(typeof window.save === 'function') window.save(); 
+    if(typeof window.render === 'function') window.render();
+    if(window.sysAlert) window.sysAlert("VIP", "Klient dodany do bazy.", "success");
 };
 
 window.dCrmDel = function(id) {
     if(window.sysConfirm) {
-        window.sysConfirm("Baza Klientów", "Usunąć?", () => {
-            window.db.drv.clients = (window.db.drv.clients || []).filter(x => x.id !== id);
-            window.save(); 
-            window.render();
+        window.sysConfirm("Baza Klientów", "Czy na pewno usunąć tego klienta?", function() {
+            window.db.drv.clients = (window.db.drv.clients || []).filter(function(x) { return x.id !== id; });
+            if(typeof window.save === 'function') window.save(); 
+            if(typeof window.render === 'function') window.render();
         });
     }
 };
 
-// --- ZAPIS USTAWIEŃ (TARYFY I ZAAWANSOWANE PALIWO) ---
-window.dSaveUS = function() {
-    window.db.userName = document.getElementById('us-name').value;
-    if(!window.db.drv.cfg) window.db.drv.cfg = {};
-
-    window.db.drv.q = {
-        s: parseFloat(document.getElementById('q-cfg-s').value) || 0,
-        w: parseFloat(document.getElementById('q-cfg-w').value) || 0,
-        t1: parseFloat(document.getElementById('q-cfg-t1').value) || 0,
-        t2: parseFloat(document.getElementById('q-cfg-t2').value) || 0,
-        t3: parseFloat(document.getElementById('q-cfg-t3').value) || 0,
-        t4: parseFloat(document.getElementById('q-cfg-t4').value) || 0
-    };
-
-    window.db.drv.cfg.goal = window.safeVal('us-goal');
-    window.db.drv.cfg.defCity = document.getElementById('us-city') ? document.getElementById('us-city').value : 'Szczecin';
-    
-    // Zapisywanie wybranch rodzajów zasilania z checkboxów!
-    let selectedF = [];
-    ['pb', 'on', 'lpg', 'ev'].forEach(t => {
-        let cb = document.getElementById('cb-ftype-' + t);
-        if(cb && cb.checked) selectedF.push(t);
+// --- LOGIKA: SZYBKI WYDATEK (Z BANERÓW) ---
+window.dQuickExp = function(c, v) {
+    if(!window.db.drv.exp) window.db.drv.exp = [];
+    let dObj = new Date();
+    window.db.drv.exp.unshift({
+        id: Date.now(), rD: dObj.toISOString(), d: c, 
+        v: v, dt: dObj.toLocaleDateString('pl-PL'), ty: 'e'
     });
-    if(selectedF.length === 0) selectedF = ['pb']; // Zabezpieczenie przed usunięciem wszystkiego
-    window.db.drv.cfg.fTypes = selectedF;
-
-    // Zbieranie i zapisywanie wpisów z ręcznych "Ryczałtów"
-    let mF = {
-        pb: {c: window.safeVal('mf-c-pb', 7.0), p: window.safeVal('mf-p-pb', 6.50)},
-        on: {c: window.safeVal('mf-c-on', 6.0), p: window.safeVal('mf-p-on', 6.00)},
-        lpg: {c: window.safeVal('mf-c-lpg', 10.0), p: window.safeVal('mf-p-lpg', 3.00)},
-        ev: {c: window.safeVal('mf-c-ev', 15.0), p: window.safeVal('mf-p-ev', 1.00)}
-    };
-    window.db.drv.cfg.mFuel = mF;
-
-    // Zapisz wybrane źródło i wylicz koszt łączny
-    let fSrcEl = document.getElementById('us-fuel-src');
-    window.db.drv.cfg.fuelSource = fSrcEl ? fSrcEl.value : 'garage';
-
-    if(window.db.drv.cfg.fuelSource === 'manual') {
-        let totalCostPerKm = 0;
-        selectedF.forEach(t => {
-            // (spalanie na 100km * cena za litr) / 100 = koszt 1 km dla tego paliwa
-            totalCostPerKm += (mF[t].c * mF[t].p) / 100;
-        });
-        window.db.drv.cfg.fuelPx = totalCostPerKm;
-    } else {
-        // Jeśli 'garage', zaktualizuj na podstawie realnych paragonów
-        if(window.calcFuelioStats) {
-            let fs = window.calcFuelioStats();
-            if(fs.ck > 0) window.db.drv.cfg.fuelPx = fs.ck;
-        }
-    }
-    
-    // Reszta ustawień (Podatki, leasingi itp.)
-    window.db.drv.cfg.cC = window.safeVal('us-cc');
-    window.db.drv.cfg.cType = document.getElementById('us-ctype') ? document.getElementById('us-ctype').value : 'month';
-    window.db.drv.cfg.bC = window.safeVal('us-bc');
-    window.db.drv.cfg.bPeriod = document.getElementById('us-b-period') ? document.getElementById('us-b-period').value : 'month';
-    window.db.drv.cfg.iC = window.safeVal('us-ic');
-    window.db.drv.cfg.iPeriod = document.getElementById('us-i-period') ? document.getElementById('us-i-period').value : 'month';
-    window.db.drv.cfg.uC = window.safeVal('us-uc');
-    window.db.drv.cfg.uType = document.getElementById('us-utype') ? document.getElementById('us-utype').value : 'week';
-    
-    window.db.drv.cfg.eType = document.getElementById('us-etype') ? document.getElementById('us-etype').value : 'flat';
-    window.db.drv.cfg.eC = window.safeVal('us-ec');
-    window.db.drv.cfg.ePeriod = document.getElementById('us-e-period') ? document.getElementById('us-e-period').value : 'month';
-    window.db.drv.cfg.ePct = window.safeVal('us-epct') / 100;
-    
-    window.db.drv.cfg.tax = window.safeVal('us-tx') / 100;
-    window.db.drv.cfg.cardF = window.safeVal('us-cf') / 100;
-    window.db.drv.cfg.voucherF = window.safeVal('us-vf') / 100;
-    
-    window.save(); 
-    window.render();
-    if(window.sysAlert) window.sysAlert("Zapisano!", "Opcje zaktualizowane. Garaż dopasowany!", "success");
+    if(typeof window.save === 'function') window.save(); 
+    if(typeof window.render === 'function') window.render();
+    if(window.sysAlert) window.sysAlert("Zapisano", "Dodano wydatek: " + c, "success");
 };
