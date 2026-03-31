@@ -1,4 +1,3 @@
-
 // ==========================================
 // PLIK: taxi_tab_set.js - Zakładka Opcje (Akordeony Premium + Kawa)
 // ==========================================
@@ -77,7 +76,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
         '<div style="padding:0 15px;">';
 
         // --- ZAPOWIEDŹ PRO W USTAWIENIACH (Chmura i Profile) ---
-        let proBannerSettings = '<div class="pro-teaser-panel" style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="window.sysAlert && window.sysAlert(&quot;Chmura i Profile PRO&quot;, &quot;W wersji PRO Twoje dane będą bezpiecznie synchronizowane w chmurze! Dodatkowo będziesz mógł stworzyć kilka osobnych profili dla różnych samochodów lub flot. ☁️🚀&quot;, &quot;info&quot;)">' +
+        let proBannerSettings = '<div class="pro-teaser-panel" style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(window.sysAlert) window.sysAlert(\'Chmura i Profile PRO\', \'W wersji PRO Twoje dane będą bezpiecznie synchronizowane w chmurze! Dodatkowo będziesz mógł stworzyć kilka osobnych profili dla różnych samochodów lub flot. ☁️🚀\', \'info\')">' +
             '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
             '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
             '<div style="display: flex; align-items: center; gap: 15px;">' +
@@ -93,7 +92,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
 
         // 1. TARYFIKATOR
         html += '<div id="acc-tar-parent" class="panel" style="padding:0; border-radius:24px; margin-bottom:15px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 10px 30px rgba(0,0,0,0.4); transition: border-color 0.3s;">' +
-            '<div onclick="window.toggleAccordion(&quot;acc-tar&quot;)" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(217, 70, 239, 0.05);">' +
+            '<div onclick="window.toggleAccordion(\'acc-tar\')" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(217, 70, 239, 0.05);">' +
                 '<strong style="color:#d946ef; font-size:0.85rem; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center;"><span style="font-size:1.5rem; margin-right:12px; filter:drop-shadow(0 0 8px rgba(217,70,239,0.4));">🧮</span> Ustawienia Wyceny</strong>' +
                 '<span id="acc-tar-icon" style="color:var(--muted); font-size:0.8rem;">🔽</span>' +
             '</div>' +
@@ -113,7 +112,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
 
         // 2. PERSONALIZACJA I MIASTO
         html += '<div id="acc-pers-parent" class="panel" style="padding:0; border-radius:24px; margin-bottom:15px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 10px 30px rgba(0,0,0,0.4); transition: border-color 0.3s;">' +
-            '<div onclick="window.toggleAccordion(&quot;acc-pers&quot;)" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(16, 185, 129, 0.05);">' +
+            '<div onclick="window.toggleAccordion(\'acc-pers\')" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(16, 185, 129, 0.05);">' +
                 '<strong style="color:#10b981; font-size:0.85rem; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center;"><span style="font-size:1.5rem; margin-right:12px; filter:drop-shadow(0 0 8px rgba(16,185,129,0.4));">👤</span> Personalizacja</strong>' +
                 '<span id="acc-pers-icon" style="color:var(--muted); font-size:0.8rem;">🔽</span>' +
             '</div>' +
@@ -132,7 +131,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
         // 3. PALIWO
         let chk = function(val) { return fTypes.indexOf(val) !== -1 ? 'checked' : ''; };
         html += '<div id="acc-fuel-parent" class="panel" style="padding:0; border-radius:24px; margin-bottom:15px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 10px 30px rgba(0,0,0,0.4); transition: border-color 0.3s;">' +
-            '<div onclick="window.toggleAccordion(&quot;acc-fuel&quot;)" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(245, 158, 11, 0.05);">' +
+            '<div onclick="window.toggleAccordion(\'acc-fuel\')" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(245, 158, 11, 0.05);">' +
                 '<strong style="color:#f59e0b; font-size:0.85rem; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center;"><span style="font-size:1.5rem; margin-right:12px; filter:drop-shadow(0 0 8px rgba(245,158,11,0.4));">⛽</span> Koszty Paliwa</strong>' +
                 '<span id="acc-fuel-icon" style="color:var(--muted); font-size:0.8rem;">🔽</span>' +
             '</div>' +
@@ -141,22 +140,22 @@ window.rDrvSet = function(d, t, nav, hdr) {
                     '<label style="'+lblStyle+' color:#f59e0b;">Jakimi paliwami zasilane jest auto?</label>' +
                     '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">' +
                         '<label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); cursor:pointer; flex:1; min-width:40%; font-size:0.85rem; font-weight:700;">' +
-                            '<input type="checkbox" id="cb-ftype-pb" value="pb" '+chk('pb')+' onchange="window.toggleManualFuelBoxes && window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Benzyna' +
+                            '<input type="checkbox" id="cb-ftype-pb" value="pb" '+chk('pb')+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Benzyna' +
                         '</label>' +
                         '<label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); cursor:pointer; flex:1; min-width:40%; font-size:0.85rem; font-weight:700;">' +
-                            '<input type="checkbox" id="cb-ftype-on" value="on" '+chk('on')+' onchange="window.toggleManualFuelBoxes && window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Diesel' +
+                            '<input type="checkbox" id="cb-ftype-on" value="on" '+chk('on')+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Diesel' +
                         '</label>' +
                         '<label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); cursor:pointer; flex:1; min-width:40%; font-size:0.85rem; font-weight:700;">' +
-                            '<input type="checkbox" id="cb-ftype-lpg" value="lpg" '+chk('lpg')+' onchange="window.toggleManualFuelBoxes && window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Gaz (LPG)' +
+                            '<input type="checkbox" id="cb-ftype-lpg" value="lpg" '+chk('lpg')+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#f59e0b; width:18px; height:18px;"> Gaz (LPG)' +
                         '</label>' +
                         '<label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); cursor:pointer; flex:1; min-width:40%; font-size:0.85rem; font-weight:700;">' +
-                            '<input type="checkbox" id="cb-ftype-ev" value="ev" '+chk('ev')+' onchange="window.toggleManualFuelBoxes && window.toggleManualFuelBoxes()" style="accent-color:#0ea5e9; width:18px; height:18px;"> Prąd (EV)' +
+                            '<input type="checkbox" id="cb-ftype-ev" value="ev" '+chk('ev')+' onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="accent-color:#0ea5e9; width:18px; height:18px;"> Prąd (EV)' +
                         '</label>' +
                     '</div>' +
                 '</div>' +
                 '<div class="inp-group" style="margin-bottom:10px;">' +
                     '<label style="'+lblStyle+' color:#f59e0b;">Skąd brać dane o kosztach?</label>' +
-                    '<select id="us-fuel-src" onchange="window.toggleManualFuelBoxes && window.toggleManualFuelBoxes()" style="'+inpStyle+' border-color:rgba(245,158,11,0.3);">' +
+                    '<select id="us-fuel-src" onchange="if(window.toggleManualFuelBoxes) window.toggleManualFuelBoxes()" style="'+inpStyle+' border-color:rgba(245,158,11,0.3);">' +
                         '<option value="garage" '+(fuelSource==='garage'?'selected':'')+'>Dziennik Garażu (Zalecane / Dokładne)</option>' +
                         '<option value="manual" '+(fuelSource==='manual'?'selected':'')+'>Z ryczałtu wpisanego poniżej</option>' +
                     '</select>' +
@@ -197,7 +196,7 @@ window.rDrvSet = function(d, t, nav, hdr) {
 
         // 4. KOSZTY AUTA I BAZY
         html += '<div id="acc-car-parent" class="panel" style="padding:0; border-radius:24px; margin-bottom:15px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 10px 30px rgba(0,0,0,0.4); transition: border-color 0.3s;">' +
-            '<div onclick="window.toggleAccordion(&quot;acc-car&quot;)" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(255,255,255,0.02);">' +
+            '<div onclick="window.toggleAccordion(\'acc-car\')" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(255,255,255,0.02);">' +
                 '<strong style="color:var(--driver); font-size:0.85rem; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center;"><span style="font-size:1.5rem; margin-right:12px;">🚗</span> Koszty Auta i Bazy</strong>' +
                 '<span id="acc-car-icon" style="color:var(--muted); font-size:0.8rem;">🔽</span>' +
             '</div>' +
@@ -229,14 +228,14 @@ window.rDrvSet = function(d, t, nav, hdr) {
 
         // 5. PODATKI I PROWIZJE PŁATNOŚCI
         html += '<div id="acc-tax-parent" class="panel" style="padding:0; border-radius:24px; margin-bottom:25px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); background:linear-gradient(145deg, #18181b, #09090b); box-shadow:0 10px 30px rgba(0,0,0,0.4); transition: border-color 0.3s;">' +
-            '<div onclick="window.toggleAccordion(&quot;acc-tax&quot;)" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(14,165,233,0.05);">' +
+            '<div onclick="window.toggleAccordion(\'acc-tax\')" style="padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:rgba(14,165,233,0.05);">' +
                 '<strong style="color:#0ea5e9; font-size:0.85rem; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center;"><span style="font-size:1.5rem; margin-right:12px; filter:drop-shadow(0 0 8px rgba(14,165,233,0.4));">⚖️</span> Podatki i Prowizje</strong>' +
                 '<span id="acc-tax-icon" style="color:var(--muted); font-size:0.8rem;">🔽</span>' +
             '</div>' +
             '<div id="acc-tax" style="display:none; padding:20px; border-top:1px solid rgba(255,255,255,0.05);">' +
                 '<div class="inp-row" style="margin-bottom:15px; gap:12px;">' +
                     '<div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Zatrudnienie</label><input type="text" value="'+(emp==='partner'?'U Partnera':'JDG')+'" disabled style="'+inpStyle+' background:rgba(0,0,0,0.3); color:var(--muted);"></div>' +
-                    '<div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Rodzaj Rozliczenia</label><select id="us-etype" onchange="window.dCheckEPct && window.dCheckEPct()" style="'+inpStyle+'">' +
+                    '<div class="inp-group" style="margin:0; flex:1;"><label style="'+lblStyle+'">Rodzaj Rozliczenia</label><select id="us-etype" onchange="if(window.dCheckEPct) window.dCheckEPct()" style="'+inpStyle+'">' +
                         '<option value="flat" '+(empType==='flat'?'selected':'')+'>Stała (ZUS/Umowa)</option>' +
                         '<option value="pct" '+(empType==='pct'?'selected':'')+'>% Utargu</option>' +
                     '</select></div>' +
@@ -273,13 +272,13 @@ window.rDrvSet = function(d, t, nav, hdr) {
 
         // Przycisk Zapisz zawsze widoczny na dole
         html += '<div style="padding:10px 15px; margin-top:10px; margin-bottom:10px;">' +
-            '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; padding:20px; font-size:1.1rem; border-radius:24px; font-weight:900; letter-spacing:1px; box-shadow:0 10px 30px rgba(14,165,233,0.3); width:100%; text-transform:uppercase; border:none; outline:none;" onclick="window.dSaveUS && window.dSaveUS()">💾 ZAPISZ USTAWIENIA</button>' +
+            '<button class="btn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; padding:20px; font-size:1.1rem; border-radius:24px; font-weight:900; letter-spacing:1px; box-shadow:0 10px 30px rgba(14,165,233,0.3); width:100%; text-transform:uppercase; border:none; outline:none;" onclick="if(window.dSaveUS) window.dSaveUS()">💾 ZAPISZ USTAWIENIA</button>' +
         '</div>' +
         
         // Opcje Backup & Restore
         '<div style="display:flex; gap:12px; padding: 0 15px 25px 15px;">' +
-            '<button class="btn" style="flex:1; background:#18181b; color:#0ea5e9; border:1px solid rgba(14,165,233,0.3); padding:16px; border-radius:20px; font-weight:800; font-size:0.85rem; box-shadow:none; outline:none;" onclick="window.dExport && window.dExport()">📤 KOPIA ZAPASOWA</button>' +
-            '<label class="btn" style="flex:1; background:#18181b; color:#f59e0b; border:1px solid rgba(245,158,11,0.3); padding:16px; border-radius:20px; font-weight:800; font-size:0.85rem; box-shadow:none; text-align:center; cursor:pointer; margin-top:0; outline:none; display:flex; align-items:center; justify-content:center;">📥 PRZYWRÓĆ DANE<input type="file" style="display:none;" onchange="window.dImport && window.dImport(event)"></label>' +
+            '<button class="btn" style="flex:1; background:#18181b; color:#0ea5e9; border:1px solid rgba(14,165,233,0.3); padding:16px; border-radius:20px; font-weight:800; font-size:0.85rem; box-shadow:none; outline:none;" onclick="if(window.dExport) window.dExport()">📤 KOPIA ZAPASOWA</button>' +
+            '<label class="btn" style="flex:1; background:#18181b; color:#f59e0b; border:1px solid rgba(245,158,11,0.3); padding:16px; border-radius:20px; font-weight:800; font-size:0.85rem; box-shadow:none; text-align:center; cursor:pointer; margin-top:0; outline:none; display:flex; align-items:center; justify-content:center;">📥 PRZYWRÓĆ DANE<input type="file" style="display:none;" onchange="if(window.dImport) window.dImport(event)"></label>' +
         '</div>' +
 
         '<div style="text-align:center; padding: 20px 0; padding-bottom: 80px;">' +
@@ -287,8 +286,8 @@ window.rDrvSet = function(d, t, nav, hdr) {
             '<p style="color:var(--muted); font-size:0.6rem; margin-top:8px; text-transform:uppercase; letter-spacing:2px; line-height:1.4;">StyreOS PWA 1.0 Beta<br><span style="opacity:0.6;">Powered by GnomekOK</span></p>' +
         '</div>' +
         
-        '<input type="file" id="h-import-file" style="display:none;" onchange="window.dImport && window.dImport(event)">' +
-        '<input type="file" id="d-import-file" style="display:none;" onchange="window.dImport && window.dImport(event)">' +
+        '<input type="file" id="h-import-file" style="display:none;" onchange="if(window.dImport) window.dImport(event)">' +
+        '<input type="file" id="d-import-file" style="display:none;" onchange="if(window.dImport) window.dImport(event)">' +
         
         (nav || '');
 
