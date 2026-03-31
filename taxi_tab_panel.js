@@ -37,6 +37,112 @@ window.updateLiveRideUI = function() {
     }
 };
 
+// --- NOWY SILNIK KSIĘGOWANIA ZBIORCZEGO ---
+window.dAddOfflineWeekly = function() {
+    let dFrom = document.getElementById('dw-d-from') ? document.getElementById('dw-d-from').value : '';
+    let dTo = document.getElementById('dw-d-to') ? document.getElementById('dw-d-to').value : '';
+    
+    let oS = parseFloat(document.getElementById('dw-odo-s') ? document.getElementById('dw-odo-s').value : 0) || 0;
+    let oE = parseFloat(document.getElementById('dw-odo-e') ? document.getElementById('dw-odo-e').value : 0) || 0;
+    
+    let pk = parseFloat(document.getElementById('dw-pk') ? document.getElementById('dw-pk').value : 0) || 0; 
+    let h = parseFloat(document.getElementById('dw-h') ? document.getElementById('dw-h').value : 0) || 0; 
+    
+    let d = window.db.drv;
+    let plat = d.plat;
+    
+    let sumV = 0;
+    let trList = [];
+    
+    let rDateStr = dTo || (window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0]);
+    let rDateObj = new Date(rDateStr);
+    rDateObj.setHours(12,0,0,0);
+    
+    let cf = 0, vf = 0;
+    
+    if (plat === 'apps') {
+        let vUber = parseFloat(document.getElementById('dw-v-uber').value) || 0;
+        let vBolt = parseFloat(document.getElementById('dw-v-bolt').value) || 0;
+        let vFree = parseFloat(document.getElementById('dw-v-freenow').value) || 0;
+        let vInna = parseFloat(document.getElementById('dw-v-inna').value) || 0;
+        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
+        
+        if (vUber > 0) trList.push({id: Date.now()+1, p: 'Aplikacja', s: 'Uber', v: vUber, k: 0, time: '--:--'});
+        if (vBolt > 0) trList.push({id: Date.now()+2, p: 'Aplikacja', s: 'Bolt', v: vBolt, k: 0, time: '--:--'});
+        if (vFree > 0) trList.push({id: Date.now()+3, p: 'Aplikacja', s: 'FreeNow', v: vFree, k: 0, time: '--:--'});
+        if (vInna > 0) trList.push({id: Date.now()+4, p: 'Aplikacja', s: 'Inna', v: vInna, k: 0, time: '--:--'});
+        if (vCash > 0) trList.push({id: Date.now()+5, p: 'Gotówka', s: 'Aplikacja', v: vCash, k: 0, time: '--:--'});
+        
+        sumV = vUber + vBolt + vFree + vInna + vCash;
+    } else {
+        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
+        let vKarta = parseFloat(document.getElementById('dw-v-karta').value) || 0;
+        let vVouch = parseFloat(document.getElementById('dw-v-voucher').value) || 0;
+        
+        if (vCash > 0) trList.push({id: Date.now()+1, p: 'Gotówka', s: 'Postój/Centrala', v: vCash, k: 0, time: '--:--'});
+        if (vKarta > 0) trList.push({id: Date.now()+2, p: 'Karta', s: 'Terminal', v: vKarta, k: 0, time: '--:--'});
+        if (vVouch > 0) trList.push({id: Date.now()+3, p: 'Voucher', s: 'Korporacja', v: vVouch, k: 0, time: '--:--'});
+        
+        sumV = vCash + vKarta + vVouch;
+        
+        cf = vKarta * (d.cfg.cardF || 0);
+        vf = vVouch * (d.cfg.voucherF || 0);
+    }
+    
+    if (sumV <= 0 && oS === 0 && oE === 0) {
+        if(window.sysAlert) window.sysAlert("Błąd", "Wprowadź chociaż jedną kwotę utargu lub stan licznika!", "error");
+        return;
+    }
+    
+    let distTotal = 0;
+    if (oE > 0 && oS > 0 && oE >= oS) {
+        distTotal = oE - oS;
+        window.db.drv.odo = oE; 
+    }
+    
+    let emptyK = distTotal > pk ? (distTotal - pk) : 0;
+    
+    let taxRate = (d.cfg && d.cfg.tax) ? d.cfg.tax : 0;
+    let fuelPx = (d.cfg && d.cfg.fuelPx) ? d.cfg.fuelPx : 0;
+    let isPct = (d.cfg && d.cfg.eType === 'pct');
+    let ePct = (d.cfg && d.cfg.ePct) ? d.cfg.ePct : 0;
+    
+    let tax = sumV * taxRate;
+    let pFee = isPct ? sumV * ePct : 0;
+    let fc = distTotal * fuelPx; 
+    
+    let n = sumV - fc - tax - pFee - cf - vf;
+    
+    let periodStr = dFrom === dTo ? dFrom : (dFrom + ' do ' + dTo);
+    if (!periodStr) periodStr = window.getLocalYMD ? window.getLocalYMD() : 'Zaległa Zmiana';
+    
+    if (!window.db.drv.h) window.db.drv.h = [];
+    window.db.drv.h.push({
+        id: Date.now(),
+        dt: periodStr,
+        rD: rDateObj.toISOString(),
+        g: sumV,
+        n: n,
+        k: distTotal,
+        pk: pk,
+        emptyK: emptyK,
+        hW: h,
+        fc: fc,
+        tx: tax,
+        pF: pFee,
+        cF: cf,
+        vF: vf,
+        tr: trList
+    });
+    
+    window.db.drv.h.sort((a,b) => new Date(b.rD) - new Date(a.rD));
+    window.dShowOff = false;
+    
+    if(typeof window.save === 'function') window.save();
+    if(typeof window.render === 'function') window.render();
+    if(window.sysAlert) window.sysAlert("Zaksięgowano!", "Rozliczenie dodane. Puste kilometry zostały wyliczone.", "success");
+};
+
 // --- LOGIKA STOPERA I GPS ---
 window.startLiveRide = window.startLiveRide || function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
@@ -55,7 +161,7 @@ window.startLiveRide = window.startLiveRide || function() {
                 
                 if (window.db.drv.sh.lastPos) {
                     let dist = window.getDistanceFromLatLonInKm(window.db.drv.sh.lastPos.lat, window.db.drv.sh.lastPos.lng, lat, lng);
-                    if (dist > 0.01) { // Dokładność
+                    if (dist > 0.01) { // Dokładność pow. 10m
                         window.db.drv.sh.gpsDist += dist;
                         window.updateLiveRideUI();
                     }
@@ -143,6 +249,19 @@ window.rDrvPanel = function(d, t, nav, hdr) {
         if(!appContainer) return;
         
         let act = ''; 
+
+        // --- DEFINICJA BRAKUJĄCEJ ZMIENNEJ (NAPRAWA BŁĘDU KRYTYCZNEGO) ---
+        let panelProBanner = '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
+            '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
+            '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
+            '<div style="display: flex; align-items: center; gap: 15px;">' +
+                '<div style="font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(217,70,239,0.4));">🚕✨</div>' +
+                '<div style="text-align: left;">' +
+                    '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Usługi Taxi</h4>' +
+                    '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Automatyczne Zlecenia:</b> Kursy wpadają same.<br>✅ <b>Pełen GPS w Tle:</b> Prawdziwy Tracker tras!</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
 
         // Style dla radaru GPS
         let animStyle = '<style>' +
@@ -280,6 +399,14 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 // --- NOWY MODUŁ RADARU GPS (Apple Premium Style) ---
                 if(d.liveRideStart) {
                     let isWaiting = d.sh.rWS !== null;
+                    let diffRideMs = Date.now() - d.liveRideStart;
+                    if(d.sh.rWT) diffRideMs -= d.sh.rWT;
+                    if(isWaiting) diffRideMs -= (Date.now() - d.sh.rWS); // odliczenie trwającej pauzy
+                    
+                    let rMins = Math.floor(diffRideMs/60000);
+                    let rSecs = Math.floor((diffRideMs%60000)/1000);
+                    let timeFmt = (rMins < 10 ? "0"+rMins : rMins) + ":" + (rSecs < 10 ? "0"+rSecs : rSecs);
+
                     act += '<div style="background: linear-gradient(145deg, #09090b, #111116); border: 1px solid '+(isWaiting?'rgba(245,158,11,0.3)':'rgba(16,185,129,0.3)')+'; padding: 25px 20px; border-radius: 24px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position:relative; overflow:hidden;">' +
                         '<div style="position:absolute; top:-30px; left:50%; transform:translateX(-50%); width:150px; height:150px; background:'+(isWaiting?'rgba(245,158,11,0.1)':'rgba(16,185,129,0.1)')+'; border-radius:50%; filter:blur(40px);"></div>' +
                         
@@ -288,7 +415,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                                 '<div style="width:14px; height:14px; border-radius:50%; background:'+(isWaiting?'#f59e0b':'#10b981')+'; animation: '+(isWaiting?'waitPulse':'radarPulse')+' 2s infinite;"></div>' +
                                 '<span style="font-size:0.75rem; font-weight:900; color:'+(isWaiting?'#f59e0b':'#10b981')+'; text-transform:uppercase; letter-spacing:1px;">'+(isWaiting?'Oczekiwanie':'W Trasie')+'</span>' +
                             '</div>' +
-                            '<div style="font-size:1rem; font-weight:900; color:#fff; font-family:monospace; background:rgba(255,255,255,0.1); padding:6px 12px; border-radius:12px; border:1px inset rgba(255,255,255,0.1);">⏱️ <span id="live-ride-time">00:00</span></div>' +
+                            '<div style="font-size:1rem; font-weight:900; color:#fff; font-family:monospace; background:rgba(255,255,255,0.1); padding:6px 12px; border-radius:12px; border:1px inset rgba(255,255,255,0.1);">⏱️ <span id="live-ride-time">'+timeFmt+'</span></div>' +
                         '</div>' +
 
                         '<div style="position:relative; z-index:2; margin: 25px 0;">' +
@@ -303,6 +430,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                             '<button style="flex:1; padding:18px; border-radius:18px; font-size:0.9rem; font-weight:900; letter-spacing:0.5px; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); outline:none;" onclick="if(typeof window.stopLiveRide===\'function\') window.stopLiveRide()">🔴 ZAKOŃCZ</button>' +
                         '</div>' +
                     '</div>';
+                    
                 } else {
                     act += '<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:20px; margin-bottom:15px; text-align:center;">' +
                            '<div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; line-height:1.5;">⚠️ PWA usypia moduł GPS, gdy wyłączysz ekran.<br><span style="color:#d946ef; font-weight:900;">Pełen GPS działający w tle tylko w aplikacji PRO.</span></div>' +
@@ -444,8 +572,8 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 }
             }
             
-            // --- Uruchomienie update timera na koniec renderowania Panelu ---
-            if (t === 'term' && d.liveRideStart) {
+            // --- Uruchomienie update timera po wyrenderowaniu ---
+            if (t === 'term' && d.liveRideStart && !d.sh.rWS) {
                 setTimeout(window.updateLiveRideUI, 50);
             }
 
@@ -475,8 +603,9 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 else if(fM === 'today' && sd.toDateString() === now.toDateString()) fs.push(s);
                 else if(fM === 'month' && sd.getMonth() === now.getMonth() && sd.getFullYear() === now.getFullYear()) fs.push(s);
                 else if(fM === 'week') {
-                    let diff = now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1);
-                    let st = new Date(now.setDate(diff)); st.setHours(0,0,0,0);
+                    let wN = new Date();
+                    let diff = wN.getDate() - wN.getDay() + (wN.getDay() === 0 ? -6 : 1);
+                    let st = new Date(wN.setDate(diff)); st.setHours(0,0,0,0);
                     if(sd >= st) fs.push(s);
                 }
                 else if(fM === 'custom' && sd >= dF && sd <= dT) fs.push(s);
@@ -490,8 +619,9 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 else if(fM === 'today' && ed.toDateString() === now.toDateString()) fe.push(e);
                 else if(fM === 'month' && ed.getMonth() === now.getMonth() && ed.getFullYear() === now.getFullYear()) fe.push(e);
                 else if(fM === 'week') {
-                    let diff = now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1);
-                    let st = new Date(now.setDate(diff)); st.setHours(0,0,0,0);
+                    let wN = new Date();
+                    let diff = wN.getDate() - wN.getDay() + (wN.getDay() === 0 ? -6 : 1);
+                    let st = new Date(wN.setDate(diff)); st.setHours(0,0,0,0);
                     if(ed >= st) fe.push(e);
                 }
                 else if(fM === 'custom' && ed >= dF && ed <= dT) fe.push(e);
