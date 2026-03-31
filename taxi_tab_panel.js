@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_panel.js - Zakładki Panel (Term) i Wyniki (Stats) + MODUŁ GPS PREMIUM
+// PLIK: taxi_tab_panel.js - Zakładki Panel (Term) i Wyniki (Stats) + GPS PREMIUM
 // ==========================================
 
 // --- SILNIK MATEMATYCZNY GPS (Krzywizna Ziemi - Wzór Haversine) ---
@@ -14,113 +14,30 @@ window.getDistanceFromLatLonInKm = function(lat1, lon1, lat2, lon2) {
     return R * c;
 };
 
-// --- NOWY SILNIK KSIĘGOWANIA ZBIORCZEGO ---
-window.dAddOfflineWeekly = function() {
-    let dFrom = document.getElementById('dw-d-from') ? document.getElementById('dw-d-from').value : '';
-    let dTo = document.getElementById('dw-d-to') ? document.getElementById('dw-d-to').value : '';
-    
-    let oS = parseFloat(document.getElementById('dw-odo-s') ? document.getElementById('dw-odo-s').value : 0) || 0;
-    let oE = parseFloat(document.getElementById('dw-odo-e') ? document.getElementById('dw-odo-e').value : 0) || 0;
-    
-    let pk = parseFloat(document.getElementById('dw-pk') ? document.getElementById('dw-pk').value : 0) || 0; 
-    let h = parseFloat(document.getElementById('dw-h') ? document.getElementById('dw-h').value : 0) || 0; 
-    
+// --- SILNIK AKTUALIZACJI ZEGARA NA ŻYWO ---
+window.updateLiveRideUI = function() {
+    if (!window.db || !window.db.drv || !window.db.drv.liveRideStart) return;
     let d = window.db.drv;
-    let plat = d.plat;
-    
-    let sumV = 0;
-    let trList = [];
-    
-    let rDateStr = dTo || (window.getLocalYMD ? window.getLocalYMD() : new Date().toISOString().split('T')[0]);
-    let rDateObj = new Date(rDateStr);
-    rDateObj.setHours(12,0,0,0);
-    
-    let cf = 0, vf = 0;
-    
-    if (plat === 'apps') {
-        let vUber = parseFloat(document.getElementById('dw-v-uber').value) || 0;
-        let vBolt = parseFloat(document.getElementById('dw-v-bolt').value) || 0;
-        let vFree = parseFloat(document.getElementById('dw-v-freenow').value) || 0;
-        let vInna = parseFloat(document.getElementById('dw-v-inna').value) || 0;
-        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
-        
-        if (vUber > 0) trList.push({id: Date.now()+1, p: 'Aplikacja', s: 'Uber', v: vUber, k: 0, time: '--:--'});
-        if (vBolt > 0) trList.push({id: Date.now()+2, p: 'Aplikacja', s: 'Bolt', v: vBolt, k: 0, time: '--:--'});
-        if (vFree > 0) trList.push({id: Date.now()+3, p: 'Aplikacja', s: 'FreeNow', v: vFree, k: 0, time: '--:--'});
-        if (vInna > 0) trList.push({id: Date.now()+4, p: 'Aplikacja', s: 'Inna', v: vInna, k: 0, time: '--:--'});
-        if (vCash > 0) trList.push({id: Date.now()+5, p: 'Gotówka', s: 'Aplikacja', v: vCash, k: 0, time: '--:--'});
-        
-        sumV = vUber + vBolt + vFree + vInna + vCash;
-    } else {
-        let vCash = parseFloat(document.getElementById('dw-v-cash').value) || 0;
-        let vKarta = parseFloat(document.getElementById('dw-v-karta').value) || 0;
-        let vVouch = parseFloat(document.getElementById('dw-v-voucher').value) || 0;
-        
-        if (vCash > 0) trList.push({id: Date.now()+1, p: 'Gotówka', s: 'Postój/Centrala', v: vCash, k: 0, time: '--:--'});
-        if (vKarta > 0) trList.push({id: Date.now()+2, p: 'Karta', s: 'Terminal', v: vKarta, k: 0, time: '--:--'});
-        if (vVouch > 0) trList.push({id: Date.now()+3, p: 'Voucher', s: 'Korporacja', v: vVouch, k: 0, time: '--:--'});
-        
-        sumV = vCash + vKarta + vVouch;
-        
-        cf = vKarta * (d.cfg.cardF || 0);
-        vf = vVouch * (d.cfg.voucherF || 0);
+    let elTime = document.getElementById('live-ride-time');
+    let elDist = document.getElementById('live-ride-dist');
+
+    if (elTime) {
+        let isWaiting = d.sh.rWS !== null;
+        let diffMs = Date.now() - d.liveRideStart;
+        if(d.sh.rWT) diffMs -= d.sh.rWT;
+        if(isWaiting) diffMs -= (Date.now() - d.sh.rWS);
+
+        let totalSecs = Math.floor(diffMs / 1000);
+        let m = Math.floor(totalSecs / 60);
+        let s = totalSecs % 60;
+        elTime.innerHTML = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
     }
-    
-    if (sumV <= 0 && oS === 0 && oE === 0) {
-        if(window.sysAlert) window.sysAlert("Błąd", "Wprowadź chociaż jedną kwotę utargu lub stan licznika!", "error");
-        return;
+    if (elDist && d.sh.gpsDist !== undefined) {
+        elDist.innerHTML = Number(d.sh.gpsDist).toFixed(2);
     }
-    
-    let distTotal = 0;
-    if (oE > 0 && oS > 0 && oE >= oS) {
-        distTotal = oE - oS;
-        window.db.drv.odo = oE; 
-    }
-    
-    let emptyK = distTotal > pk ? (distTotal - pk) : 0;
-    
-    let taxRate = (d.cfg && d.cfg.tax) ? d.cfg.tax : 0;
-    let fuelPx = (d.cfg && d.cfg.fuelPx) ? d.cfg.fuelPx : 0;
-    let isPct = (d.cfg && d.cfg.eType === 'pct');
-    let ePct = (d.cfg && d.cfg.ePct) ? d.cfg.ePct : 0;
-    
-    let tax = sumV * taxRate;
-    let pFee = isPct ? sumV * ePct : 0;
-    let fc = distTotal * fuelPx; 
-    
-    let n = sumV - fc - tax - pFee - cf - vf;
-    
-    let periodStr = dFrom === dTo ? dFrom : (dFrom + ' do ' + dTo);
-    if (!periodStr) periodStr = window.getLocalYMD ? window.getLocalYMD() : 'Zaległa Zmiana';
-    
-    if (!window.db.drv.h) window.db.drv.h = [];
-    window.db.drv.h.push({
-        id: Date.now(),
-        dt: periodStr,
-        rD: rDateObj.toISOString(),
-        g: sumV,
-        n: n,
-        k: distTotal,
-        pk: pk,
-        emptyK: emptyK,
-        hW: h,
-        fc: fc,
-        tx: tax,
-        pF: pFee,
-        cF: cf,
-        vF: vf,
-        tr: trList
-    });
-    
-    window.db.drv.h.sort((a,b) => new Date(b.rD) - new Date(a.rD));
-    window.dShowOff = false;
-    
-    if(typeof window.save === 'function') window.save();
-    if(typeof window.render === 'function') window.render();
-    if(window.sysAlert) window.sysAlert("Zaksięgowano!", "Rozliczenie dodane. Puste kilometry zostały wyliczone.", "success");
 };
 
-// --- LOGIKA STOPERA I GPS PREMIUM ---
+// --- LOGIKA STOPERA I GPS ---
 window.startLiveRide = window.startLiveRide || function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
         window.db.drv.liveRideStart = Date.now();
@@ -128,35 +45,29 @@ window.startLiveRide = window.startLiveRide || function() {
         window.db.drv.sh.rWT = 0;
         window.db.drv.sh.gpsDist = 0;
         window.db.drv.sh.lastPos = null;
-        window.db.drv.sh.startPos = null; // Do historii trasy
 
         if ("geolocation" in navigator) {
             window.db.drv.sh.watchId = navigator.geolocation.watchPosition(function(position) {
-                if (window.db.drv.sh.rWS !== null) return; // Oczekiwanie na klienta
+                if (window.db.drv.sh.rWS !== null) return; // Jeśli postój, nie licz dystansu
                 
                 let lat = position.coords.latitude;
                 let lng = position.coords.longitude;
                 
-                if (!window.db.drv.sh.startPos) {
-                    window.db.drv.sh.startPos = {lat: lat, lng: lng}; // Zapisz start
-                }
-                
                 if (window.db.drv.sh.lastPos) {
                     let dist = window.getDistanceFromLatLonInKm(window.db.drv.sh.lastPos.lat, window.db.drv.sh.lastPos.lng, lat, lng);
-                    if (dist > 0.01) { 
+                    if (dist > 0.01) { // Dokładność
                         window.db.drv.sh.gpsDist += dist;
+                        window.updateLiveRideUI();
                     }
                 }
                 window.db.drv.sh.lastPos = {lat: lat, lng: lng};
-                if(typeof window.render === 'function') window.render();
             }, function(error) {
                 console.error("GPS Error", error);
-            }, {
-                enableHighAccuracy: true,
-                maximumAge: 5000,
-                timeout: 5000
-            });
+            }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 });
         }
+
+        if(window.liveRideTimer) clearInterval(window.liveRideTimer);
+        window.liveRideTimer = setInterval(window.updateLiveRideUI, 1000);
 
         if(typeof window.save === 'function') window.save();
         if(typeof window.render === 'function') window.render();
@@ -169,41 +80,44 @@ window.stopLiveRide = window.stopLiveRide || function() {
             navigator.geolocation.clearWatch(window.db.drv.sh.watchId);
             window.db.drv.sh.watchId = null;
         }
+        if(window.liveRideTimer) {
+            clearInterval(window.liveRideTimer);
+            window.liveRideTimer = null;
+        }
         
         let diffMs = Date.now() - window.db.drv.liveRideStart;
         if (window.db.drv.sh.rWT) diffMs -= window.db.drv.sh.rWT;
-        let diffMins = Math.max(0, Math.round(diffMs / 60000));
+        let finalMins = Math.max(0, Math.round(diffMs / 60000));
         let finalDist = window.db.drv.sh.gpsDist || 0;
-        
-        // Zapis do tymczasowych zmiennych dla formularza
-        window.db.drv.sh.tempEndPos = window.db.drv.sh.lastPos; 
-        window.db.drv.sh.tempStartPos = window.db.drv.sh.startPos;
+
+        // Zapisz do auto-uzupełnienia w renderze
+        window.db.drv.sh.tempAutoMins = finalMins;
+        window.db.drv.sh.tempAutoKm = finalDist.toFixed(2);
 
         window.db.drv.liveRideStart = null;
         window.db.drv.sh.rWS = null;
         window.db.drv.sh.lastPos = null;
-        window.db.drv.sh.startPos = null;
 
         if(typeof window.save === 'function') window.save();
         if(typeof window.render === 'function') window.render();
 
         setTimeout(function() {
-            let elM = document.getElementById('dt-m');
-            let elK = document.getElementById('dt-k');
-            if (elM) { elM.value = diffMins; elM.style.borderColor = '#10b981'; elM.style.color = '#10b981'; }
-            if (elK) { elK.value = finalDist.toFixed(2); elK.style.borderColor = '#10b981'; elK.style.color = '#10b981'; }
-        }, 300);
+            if(window.sysAlert) window.sysAlert("Trasa Zakończona!", "Czas i Dystans z GPS zostały automatycznie wpisane do formularza poniżej. Podaj kwotę utargu i zapisz kurs.", "success");
+        }, 100);
     }
 };
 
 window.toggleRideWait = window.toggleRideWait || function() {
     if(window.db && window.db.drv && window.db.drv.sh) {
         if(window.db.drv.sh.rWS) {
+            // Wznawiamy kurs
             window.db.drv.sh.rWT += (Date.now() - window.db.drv.sh.rWS);
             window.db.drv.sh.rWS = null;
         } else {
+            // Zaczynamy postój
             window.db.drv.sh.rWS = Date.now();
         }
+        window.updateLiveRideUI();
         if(typeof window.save === 'function') window.save();
         if(typeof window.render === 'function') window.render();
     }
@@ -230,26 +144,14 @@ window.rDrvPanel = function(d, t, nav, hdr) {
         
         let act = ''; 
 
-        // Style animacji dla radaru GPS
+        // Style dla radaru GPS
         let animStyle = '<style>' +
             '@keyframes radarPulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }' +
-            '@keyframes waitingPulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(14, 165, 233, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); } }' +
+            '@keyframes waitPulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(245, 158, 11, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }' +
         '</style>';
 
-        let panelProBanner = '<div class="pro-teaser-panel" style="margin: 0 15px 25px 15px; padding: 20px; background: linear-gradient(135deg, #130a1c 0%, #000000 100%); border: 1px solid rgba(217, 70, 239, 0.3); border-radius: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;" onclick="if(typeof window.sysAlert===\'function\') window.sysAlert(\'Centrum Funkcji PRO\', \'W wersji PRO zapomnisz o ręcznym wpisywaniu kursów! StyreOS automatycznie połączy się z Twoimi apkami i zaciągnie wszystkie przejazdy. Dodatkowo Asystent Głosowy obsłuży gotówkę! 🚀\', \'info\')">' +
-            '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
-            '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
-            '<div style="display: flex; align-items: center; gap: 15px;">' +
-                '<div style="font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(217,70,239,0.4));">🚕✨</div>' +
-                '<div style="text-align: left;">' +
-                    '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Usługi Taxi</h4>' +
-                    '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Automatyczne Zlecenia:</b> Kursy wpadają same.<br>✅ <b>Pełen GPS w Tle:</b> Prawdziwy Tracker tras!</div>' +
-                '</div>' +
-            '</div>' +
-        '</div>';
-
         if(t === 'term') {
-            act += animStyle; // Dodanie styli CSS do modulu GPS
+            act += animStyle;
 
             if(!window.dTSrc || (d.plat === 'corp' && window.dTSrc === 'Inna')) { window.dTSrc = d.plat === 'apps' ? 'Uber' : 'Centrala'; }
             if(!window.dTPay) { window.dTPay = d.plat === 'apps' ? 'Aplikacja' : 'Gotówka'; }
@@ -378,40 +280,29 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 // --- NOWY MODUŁ RADARU GPS (Apple Premium Style) ---
                 if(d.liveRideStart) {
                     let isWaiting = d.sh.rWS !== null;
-                    let diffRideMs = Date.now() - d.liveRideStart;
-                    if(d.sh.rWT) diffRideMs -= d.sh.rWT;
-                    if(isWaiting) diffRideMs -= (Date.now() - d.sh.rWS); // odliczenie trwającej pauzy
-                    
-                    let rMins = Math.floor(diffRideMs/60000);
-                    let rSecs = Math.floor((diffRideMs%60000)/1000);
-                    let timeFmt = (rMins < 10 ? "0"+rMins : rMins) + ":" + (rSecs < 10 ? "0"+rSecs : rSecs);
-
-                    act += '<div style="background: linear-gradient(145deg, #09090b, #111116); border: 1px solid '+(isWaiting?'rgba(14,165,233,0.3)':'rgba(16,185,129,0.3)')+'; padding: 25px 20px; border-radius: 24px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position:relative; overflow:hidden;">' +
-                        '<div style="position:absolute; top:-30px; left:50%; transform:translateX(-50%); width:150px; height:150px; background:'+(isWaiting?'rgba(14,165,233,0.1)':'rgba(16,185,129,0.1)')+'; border-radius:50%; filter:blur(40px);"></div>' +
+                    act += '<div style="background: linear-gradient(145deg, #09090b, #111116); border: 1px solid '+(isWaiting?'rgba(245,158,11,0.3)':'rgba(16,185,129,0.3)')+'; padding: 25px 20px; border-radius: 24px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position:relative; overflow:hidden;">' +
+                        '<div style="position:absolute; top:-30px; left:50%; transform:translateX(-50%); width:150px; height:150px; background:'+(isWaiting?'rgba(245,158,11,0.1)':'rgba(16,185,129,0.1)')+'; border-radius:50%; filter:blur(40px);"></div>' +
                         
-                        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; position:relative; z-index:2;">' +
+                        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; position:relative; z-index:2;">' +
                             '<div style="display:flex; align-items:center; gap:8px;">' +
-                                '<div style="width:14px; height:14px; border-radius:50%; background:'+(isWaiting?'#0ea5e9':'#10b981')+'; animation: '+(isWaiting?'waitingPulse':'radarPulse')+' 2s infinite;"></div>' +
-                                '<span style="font-size:0.75rem; font-weight:900; color:'+(isWaiting?'#0ea5e9':'#10b981')+'; text-transform:uppercase; letter-spacing:1px;">'+(isWaiting?'Oczekiwanie':'W Trasie')+'</span>' +
+                                '<div style="width:14px; height:14px; border-radius:50%; background:'+(isWaiting?'#f59e0b':'#10b981')+'; animation: '+(isWaiting?'waitPulse':'radarPulse')+' 2s infinite;"></div>' +
+                                '<span style="font-size:0.75rem; font-weight:900; color:'+(isWaiting?'#f59e0b':'#10b981')+'; text-transform:uppercase; letter-spacing:1px;">'+(isWaiting?'Oczekiwanie':'W Trasie')+'</span>' +
                             '</div>' +
-                            '<div style="font-size:0.9rem; font-weight:900; color:#fff; font-family:monospace; background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:8px;">⏱️ '+timeFmt+'</div>' +
+                            '<div style="font-size:1rem; font-weight:900; color:#fff; font-family:monospace; background:rgba(255,255,255,0.1); padding:6px 12px; border-radius:12px; border:1px inset rgba(255,255,255,0.1);">⏱️ <span id="live-ride-time">00:00</span></div>' +
                         '</div>' +
 
-                        '<div style="position:relative; z-index:2; margin: 20px 0;">' +
-                            '<div style="font-size:3.5rem; font-weight:900; color:#fff; font-family:monospace; text-shadow:0 0 20px '+(isWaiting?'rgba(14,165,233,0.4)':'rgba(16,185,129,0.4)')+'; line-height:1;">'+Number(d.sh.gpsDist||0).toFixed(2)+'</div>' +
+                        '<div style="position:relative; z-index:2; margin: 25px 0;">' +
+                            '<div style="font-size:4rem; font-weight:900; color:#fff; font-family:monospace; text-shadow:0 0 20px '+(isWaiting?'rgba(245,158,11,0.4)':'rgba(16,185,129,0.4)')+'; line-height:1;"><span id="live-ride-dist">'+Number(d.sh.gpsDist||0).toFixed(2)+'</span></div>' +
                             '<div style="font-size:0.8rem; color:var(--muted); font-weight:800; letter-spacing:2px; text-transform:uppercase; margin-top:5px;">Kilometrów (GPS)</div>' +
                         '</div>' +
 
-                        '<div style="display:flex; gap:12px; position:relative; z-index:2; margin-top:25px;">' +
-                            '<button style="flex:1; padding:16px; font-size:0.85rem; border-radius:16px; font-weight:800; background:'+(isWaiting?'#10b981':'rgba(14,165,233,0.15)')+'; color:'+(isWaiting?'#000':'#0ea5e9')+'; border:none; outline:none; box-shadow:'+(isWaiting?'0 4px 15px rgba(16,185,129,0.3)':'none')+';" onclick="if(typeof window.toggleRideWait===\'function\') window.toggleRideWait()">'+(isWaiting?'▶ RUSZAMY':'⏳ POSTÓJ')+'</button>' +
-                            '<button style="flex:1; padding:16px; border-radius:16px; font-size:0.85rem; font-weight:800; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); outline:none;" onclick="if(typeof window.stopLiveRide===\'function\') window.stopLiveRide()">🔴 ZAKOŃCZ</button>' +
+                        '<div style="font-size: 0.6rem; color: rgba(255,255,255,0.3); margin-bottom: 20px; font-weight: 700; text-transform:uppercase;">Ekran musi być włączony, by zliczać trasę</div>' +
+
+                        '<div style="display:flex; gap:12px; position:relative; z-index:2;">' +
+                            '<button style="flex:1; padding:18px; font-size:0.9rem; border-radius:18px; font-weight:900; letter-spacing:0.5px; background:'+(isWaiting?'#f59e0b':'rgba(245,158,11,0.15)')+'; color:'+(isWaiting?'#000':'#f59e0b')+'; border:none; outline:none; box-shadow:'+(isWaiting?'0 6px 20px rgba(245,158,11,0.4)':'none')+';" onclick="if(typeof window.toggleRideWait===\'function\') window.toggleRideWait()">'+(isWaiting?'▶ WZNÓW':'⏳ POSTÓJ')+'</button>' +
+                            '<button style="flex:1; padding:18px; border-radius:18px; font-size:0.9rem; font-weight:900; letter-spacing:0.5px; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); outline:none;" onclick="if(typeof window.stopLiveRide===\'function\') window.stopLiveRide()">🔴 ZAKOŃCZ</button>' +
                         '</div>' +
                     '</div>';
-                    
-                    // Wymuś odświeżanie co sekundę, żeby widać było timer (jeśli kurs trwa)
-                    if (!isWaiting) {
-                        setTimeout(function(){ if(window.db.drv.liveRideStart && window.db.drv.sh.rWS === null) window.render(); }, 1000);
-                    }
                 } else {
                     act += '<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:20px; margin-bottom:15px; text-align:center;">' +
                            '<div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; line-height:1.5;">⚠️ PWA usypia moduł GPS, gdy wyłączysz ekran.<br><span style="color:#d946ef; font-weight:900;">Pełen GPS działający w tle tylko w aplikacji PRO.</span></div>' +
@@ -419,6 +310,16 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                            '<button style="width:100%; background:linear-gradient(135deg, #10b981, #059669); color:#000; font-size:1rem; font-weight:900; letter-spacing:1px; padding:20px; border-radius:20px; border:none; box-shadow:0 8px 25px rgba(16,185,129,0.3); margin-bottom:20px; outline:none; display:flex; align-items:center; justify-content:center; gap:10px;" onclick="if(typeof window.startLiveRide===\'function\') window.startLiveRide()"><span style="font-size:1.4rem;">🛰️</span> ROZPOCZNIJ KURS (GPS)</button>';
                 }
                 
+                let autoM = window.db.drv.sh.tempAutoMins !== undefined ? window.db.drv.sh.tempAutoMins : '';
+                let autoK = window.db.drv.sh.tempAutoKm !== undefined ? window.db.drv.sh.tempAutoKm : '';
+                
+                // Ustawienie podświetlenia po wstawieniu z GPS
+                let highlightM = autoM !== '' ? 'border-color:#10b981; color:#10b981;' : 'border-color:rgba(255,255,255,0.08); color:#fff;';
+                let highlightK = autoK !== '' ? 'border-color:#10b981; color:#10b981;' : 'border-color:rgba(255,255,255,0.08); color:#fff;';
+                
+                window.db.drv.sh.tempAutoMins = undefined;
+                window.db.drv.sh.tempAutoKm = undefined;
+
                 act += '<div style="background: #111116; border: 1px solid #2a2a35; border-radius: 24px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px;">' +
                     '<div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; text-align: center;">Dodaj pojedynczy kurs</div>' +
                     '<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 5px;">'+ch1+'</div>' +
@@ -429,8 +330,8 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '<span style="font-size: 1.4rem; font-weight: 700; color: rgba(255,255,255,0.3); margin-top: 10px; margin-left: 5px;">zł</span>' +
                     '</div>' +
                     '<div class="inp-row" style="margin-bottom:15px; gap:10px;">' +
-                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-m" placeholder="Czas (min)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.95rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
-                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-k" placeholder="Dystans (km)" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#fff; border-radius:14px; padding:16px; text-align:center; font-size:0.95rem; font-weight:600; outline:none; width:100%; box-sizing:border-box;"></div>' +
+                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-m" placeholder="Czas (min)" value="'+autoM+'" style="background:rgba(255,255,255,0.03); border:1px solid; '+highlightM+' border-radius:14px; padding:16px; text-align:center; font-size:0.95rem; font-weight:600; outline:none; width:100%; box-sizing:border-box; transition:all 0.3s;"></div>' +
+                        '<div class="inp-group" style="margin:0;"><input type="number" id="dt-k" placeholder="Dystans (km)" value="'+autoK+'" style="background:rgba(255,255,255,0.03); border:1px solid; '+highlightK+' border-radius:14px; padding:16px; text-align:center; font-size:0.95rem; font-weight:600; outline:none; width:100%; box-sizing:border-box; transition:all 0.3s;"></div>' +
                     '</div>' +
                     '<div class="inp-group" style="margin-bottom:15px;">' +
                         '<select id="dt-cid" style="background:rgba(0,0,0,0.3); border-radius:14px; padding:16px; font-size:0.85rem; color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.08); outline:none; width:100%; box-sizing:border-box;"><option value="">-- Powiąż z Klientem VIP --</option>'+clientOpts+'</select>' +
@@ -543,6 +444,11 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 }
             }
             
+            // --- Uruchomienie update timera na koniec renderowania Panelu ---
+            if (t === 'term' && d.liveRideStart) {
+                setTimeout(window.updateLiveRideUI, 50);
+            }
+
             appContainer.innerHTML = hdr + act + '<div style="height:140px; width:100%; clear:both;"></div>' + nav;
         }
 
@@ -569,9 +475,8 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 else if(fM === 'today' && sd.toDateString() === now.toDateString()) fs.push(s);
                 else if(fM === 'month' && sd.getMonth() === now.getMonth() && sd.getFullYear() === now.getFullYear()) fs.push(s);
                 else if(fM === 'week') {
-                    let wN = new Date();
-                    let diff = wN.getDate() - wN.getDay() + (wN.getDay() === 0 ? -6 : 1);
-                    let st = new Date(wN.setDate(diff)); st.setHours(0,0,0,0);
+                    let diff = now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1);
+                    let st = new Date(now.setDate(diff)); st.setHours(0,0,0,0);
                     if(sd >= st) fs.push(s);
                 }
                 else if(fM === 'custom' && sd >= dF && sd <= dT) fs.push(s);
@@ -585,9 +490,8 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                 else if(fM === 'today' && ed.toDateString() === now.toDateString()) fe.push(e);
                 else if(fM === 'month' && ed.getMonth() === now.getMonth() && ed.getFullYear() === now.getFullYear()) fe.push(e);
                 else if(fM === 'week') {
-                    let wN = new Date();
-                    let diff = wN.getDate() - wN.getDay() + (wN.getDay() === 0 ? -6 : 1);
-                    let st = new Date(wN.setDate(diff)); st.setHours(0,0,0,0);
+                    let diff = now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1);
+                    let st = new Date(now.setDate(diff)); st.setHours(0,0,0,0);
                     if(ed >= st) fe.push(e);
                 }
                 else if(fM === 'custom' && ed >= dF && ed <= dT) fe.push(e);
@@ -721,7 +625,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
                     '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
                     '<div style="display: flex; align-items: center; gap: 15px;">' +
-                        '<div style="font-size: 2.5rem; filter: drop-shadow(0 0 15px rgba(217,70,239,0.4));">🏆✨</div>' +
+                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🏆✨</div>' +
                         '<div style="text-align: left;">' +
                             '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Wyniki</h4>' +
                             '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Rozliczenia AI:</b> Wszystko w jednym miejscu.<br>✅ <b>Pełna Historia:</b> Analizuj swoje zyski!</div>' +
@@ -733,7 +637,7 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                     '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #d946ef, #0ea5e9); box-shadow: 2px 0 12px rgba(217,70,239,0.6);"></div>' +
                     '<div style="position: absolute; top: 12px; right: 12px; background: #d946ef; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 8px; letter-spacing: 1px; animation: proPulse 2s infinite;">PRO</div>' +
                     '<div style="display: flex; align-items: center; gap: 15px;">' +
-                        '<div style="font-size: 2.5rem; filter: drop-shadow(0 0 15px rgba(217,70,239,0.4));">🏆✨</div>' +
+                        '<div style="font-size: 2.5rem; text-shadow: 0 0 15px rgba(217,70,239,0.4);">🏆✨</div>' +
                         '<div style="text-align: left;">' +
                             '<h4 style="color: #d946ef; margin: 0 0 6px 0; font-weight: 900; font-size: 1rem; letter-spacing: 0.5px;">Premium Wyniki</h4>' +
                             '<div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.4;">✅ <b>Integracja e-Kasy:</b> Automatyczne zaciąganie kursów (API).</div>' +
@@ -840,10 +744,6 @@ window.rDrvPanel = function(d, t, nav, hdr) {
                         '<div style="display:flex; justify-content:space-between; width:100%; align-items:center;">' +
                             '<span style="color:rgba(255,255,255,0.4); font-size:0.75rem; font-weight:600;">Brutto: <span style="color:#fff;">'+Number(x.g || 0).toFixed(2)+' zł</span> | '+Number(x.k || 0).toFixed(1)+' km</span>' +
                             '<div style="display:flex; gap:8px;">' +
-                                // NOWY PRZYCISK MAPY (jeśli mamy dane GPS w historii)
-                                (x.tr && x.tr[0] && x.tr[0].startPos && x.tr[0].endPos ? 
-                                    '<a href="https://www.google.com/maps/dir/?api=1&origin='+x.tr[0].startPos.lat+','+x.tr[0].startPos.lng+'&destination='+x.tr[0].endPos.lat+','+x.tr[0].endPos.lng+'" target="_blank" class="btn" style="padding:8px 12px; background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.3); border-radius:10px; font-size:0.8rem; cursor:pointer; text-decoration:none; outline:none;" title="Pokaż trasę GPS">🗺️</a>' 
-                                : '') +
                                 '<button class="btn" style="padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; font-size:0.8rem; cursor:pointer; outline:none;" onclick="if(typeof window.dEditHistory===\'function\') window.dEditHistory('+x.id+')">✏️</button>' +
                                 '<button class="btn-danger" style="padding:8px 12px; border:none; border-radius:10px; font-weight:bold; background:rgba(239,68,68,0.15); color:#ef4444; font-size:0.8rem; cursor:pointer; outline:none;" onclick="if(typeof window.dDelHistory===\'function\') window.dDelHistory('+x.id+')">🗑️</button>' +
                             '</div>' +
