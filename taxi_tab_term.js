@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Główny Panel (Terminal) [Glassmorphism 2.0]
+// PLIK: taxi_tab_term.js - Główny Panel (Terminal), GPS i Dodawanie Kursów
 // ==========================================
 
 // --- BEZPIECZNE FUNKCJE POMOCNICZE ---
@@ -124,7 +124,7 @@ window.stopLiveRide = function() {
         if(typeof window.render === 'function') window.render();
 
         setTimeout(function() {
-            if(window.sysAlert) window.sysAlert('Trasa Zakończona!', 'Czas i Dystans z GPS zostały automatycznie wpisane. Podaj kwotę utargu i zapisz kurs.', 'success');
+            if(window.sysAlert) window.sysAlert('Trasa Zakończona!', 'Czas i Dystans z GPS zostały automatycznie wpisane do formularza. Zapisz kurs.', 'success');
         }, 100);
     }
 };
@@ -551,4 +551,34 @@ window.rDrvTerm = function(d, t, nav, hdr) {
             appContainer.innerHTML = '<div style="padding:50px 20px; text-align:center; color:white;"><h3>Błąd Panelu (taxi_tab_term.js)</h3><p style="color:#ef4444;">' + err.message + '</p><button style="padding:15px; background:#fff; color:#000; font-weight:bold; border-radius:12px; width:100%;" onclick="window.location.reload()">ODŚWIEŻ</button></div>';
         }
     }
+};
+
+// --- ZAPISYWANIE KURSU ---
+window.dAddT = function() {
+    let v = parseFloat(document.getElementById('dt-v').value);
+    let m = parseFloat(document.getElementById('dt-m').value) || 0;
+    let k = parseFloat(document.getElementById('dt-k').value) || 0;
+    let cIdel = document.getElementById('dt-cid');
+    let cId = cIdel ? parseInt(cIdel.value) || null : null;
+    
+    if(isNaN(v) || v <= 0) { 
+        if(window.sysAlert) window.sysAlert("Brak Kwoty", "Podaj poprawną kwotę z apki!", "error"); 
+        return; 
+    }
+    
+    let otherSrcEl = document.getElementById('dt-other-src');
+    let finalSrc = window.dTSrc === 'Inna' ? (otherSrcEl ? otherSrcEl.value || 'Inna' : 'Inna') : window.dTSrc;
+    let time = new Date().toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'});
+    
+    if(!window.db.drv.sh.tr) window.db.drv.sh.tr = [];
+    window.db.drv.sh.tr.unshift({id: Date.now(), v: v, k: k, m: m, time: time, p: window.dTPay, s: finalSrc, c: cId});
+    
+    // Resetuj pola (Zgodnie ze standardami UI)
+    document.getElementById('dt-v').value = '';
+    document.getElementById('dt-m').value = '';
+    document.getElementById('dt-k').value = '';
+    
+    if(typeof window.save === 'function') window.save(); 
+    if(typeof window.render === 'function') window.render();
+    if(window.sysAlert) window.sysAlert("Dodano", "Kurs został poprawnie zapisany na zmianie.", "success");
 };
