@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: taxi_tab_term.js - Terminal Premium V12 (Ultra-Crystal UI, Neo-Input, Zero Lag)
+// PLIK: taxi_tab_term.js - Terminal Premium V13 (Ultra-Compact Glassmorphism, Premium Neo-Design)
 // ==========================================
 
 // --- 1. FUNKCJE POMOCNICZE I MATEMATYKA ---
@@ -183,7 +183,7 @@ window.toggleGoalMode = function(mode) {
 window.dSetGoal = function() {
     let isNetto = window.dGoalMode === 'netto';
     let current = isNetto ? ((window.db.drv.cfg && window.db.drv.cfg.goalNetto) || 300) : ((window.db.drv.cfg && window.db.drv.cfg.goalBrutto) || 400);
-    let modeName = isNetto ? 'NETTO (Kasa na czysto)' : 'BRUTTO (Utarg)';
+    let modeName = isNetto ? 'NETTO DZIENNE (Kasa na czysto)' : 'UTARG DZIENNY (Brutto)';
     
     let ng = prompt("Podaj CEL DZIENNY " + modeName + " (PLN):", current);
     if(ng !== null && ng !== '') {
@@ -211,6 +211,7 @@ window.toggleShiftPause = function() {
                 elPauseBtn.style.background = 'rgba(255,255,255,0.05)';
                 elPauseBtn.style.color = '#fff';
                 elPauseBtn.style.borderColor = 'rgba(255,255,255,0.1)';
+                elPauseBtn.style.transform = 'scale(1)';
             }
         } else { 
             s.sPS = Date.now(); 
@@ -219,6 +220,7 @@ window.toggleShiftPause = function() {
                 elPauseBtn.style.background = 'rgba(245,158,11,0.2)';
                 elPauseBtn.style.color = '#f59e0b';
                 elPauseBtn.style.borderColor = 'rgba(245,158,11,0.4)';
+                elPauseBtn.style.transform = 'scale(1.02)';
             }
         }
         setTimeout(function() { if(typeof window.save === 'function') window.save(); }, 10);
@@ -637,6 +639,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                         elPauseBtn.style.background = 'rgba(245,158,11,0.2)';
                         elPauseBtn.style.color = '#f59e0b';
                         elPauseBtn.style.borderColor = 'rgba(245,158,11,0.4)';
+                        elPauseBtn.style.transform = 'scale(1.02)';
                     }
                 } else {
                     if(elPauseBtn) {
@@ -644,6 +647,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                         elPauseBtn.style.background = 'rgba(255,255,255,0.05)';
                         elPauseBtn.style.color = '#fff';
                         elPauseBtn.style.borderColor = 'rgba(255,255,255,0.1)';
+                        elPauseBtn.style.transform = 'scale(1)';
                     }
                 }
                 
@@ -829,7 +833,7 @@ window.rDrvTerm = function(d, t, nav, hdr) {
                     html.push('<button style="background:rgba(255,255,255,0.05); color:#fff; border:none; border-radius:10px; padding:8px; margin-right:5px;" onclick="if(window.dEditT) window.dEditT('+x.id+')">✏️</button><button style="background:rgba(239,68,68,0.15); color:#ef4444; border:none; border-radius:10px; padding:8px;" onclick="if(window.dDelT) window.dDelT('+x.id+')">🗑️</button></div>');
                 }
             } else {
-                html.push('<div style="text-align:center; color:var(--muted); padding:20px 0; font-size:0.8rem; background:rgba(0,0,0,0.3); border-radius:16px; font-weight:700;">Brak wpisów w tej zmianie.</div>');
+                html.push('<div style="text-align:center; color:var(--muted); padding:20px 0; font-size:0.8rem; background:rgba(0,0,0,0.3); border-radius:166px; font-weight:700;">Brak wpisów w tej zmianie.</div>');
             }
             html.push('</div>'); // End padding container
         } else {
