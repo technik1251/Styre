@@ -1,5 +1,5 @@
 // ==========================================
-// PLIK: app.js - GŁÓWNY SILNIK I LAUNCHER
+// PLIK: app.js - GŁÓWNY SILNIK I LAUNCHER (Ultra-Premium Crystal Edition)
 // ==========================================
 
 // 1. Zabezpieczenia Antypirackie
@@ -39,11 +39,10 @@ if (savedLocal) {
 const APP = document.getElementById('app');
 window.wData = window.wData || {};
 
-// 3. Wstrzykiwanie "Bezpieczników" do bazy
+// 3. Wstrzykiwanie "Bezpieczników" do bazy (Zgodność z nowym systemem kosztów)
 window.patchDb = function(data) {
     let d = data || {};
     
-    // NAJPIERW USTALAMY NAZWĘ, ŻEBY NIE BYŁO DUPLIKATÓW
     if(!d.userName) d.userName = "Użytkownik";
     
     // Bezpieczniki Budżetu Domowego
@@ -56,7 +55,6 @@ window.patchDb = function(data) {
     if(!d.home.recurring) d.home.recurring = [];
     if(!Array.isArray(d.home.members)) d.home.members = [];
     
-    // Jeśli pusta lista, dajemy tylko jedną osobę - Ciebie (userName)!
     if(d.home.members.length === 0) d.home.members.push(d.userName);
     
     d.home.loans.forEach(l => {
@@ -66,9 +64,27 @@ window.patchDb = function(data) {
         if(l.declaredPay === undefined) l.declaredPay = '100';
     });
 
-    // Bezpieczniki Panelu Taxi
-    if(!d.drv) d.drv = { trans: [], shifts: [], clients: [], fuel: [], exp: [], h: [], cfg: { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 }, q: {s: 8, w: 60, t1: 3.5, t2: 4.5, t3: 6, t4: 8} };
-    if(!d.drv.cfg) d.drv.cfg = { tax: 0.085, cardF: 0.015, bC:0, cC:0, eC:0, goal: 350 };
+    // Bezpieczniki Panelu Taxi (Nowe, dynamiczne koszty)
+    if(!d.drv) d.drv = { trans: [], shifts: [], clients: [], fuel: [], exp: [], h: [], cfg: {}, q: {s: 9, w: 39, t1: 3.2, t2: 4.0, t3: 6.4, t4: 8.0} };
+    if(!d.drv.cfg) d.drv.cfg = {};
+    
+    if(d.drv.cfg.tax === undefined) d.drv.cfg.tax = 0.085;
+    if(d.drv.cfg.cardF === undefined) d.drv.cfg.cardF = 0.015;
+    if(d.drv.cfg.voucherF === undefined) d.drv.cfg.voucherF = 0.0;
+    
+    if(d.drv.cfg.carRent === undefined) d.drv.cfg.carRent = 0;
+    if(d.drv.cfg.carRentPeriod === undefined) d.drv.cfg.carRentPeriod = 'week';
+    if(d.drv.cfg.zus === undefined) d.drv.cfg.zus = 0;
+    if(d.drv.cfg.zusPeriod === undefined) d.drv.cfg.zusPeriod = 'month';
+    if(d.drv.cfg.eFix === undefined) d.drv.cfg.eFix = 0;
+    if(d.drv.cfg.ePeriod === undefined) d.drv.cfg.ePeriod = 'week';
+    if(d.drv.cfg.ePct === undefined) d.drv.cfg.ePct = 0;
+    if(d.drv.cfg.fixedDaily === undefined) d.drv.cfg.fixedDaily = 0;
+    if(d.drv.cfg.fixedOtherPeriod === undefined) d.drv.cfg.fixedOtherPeriod = 'day';
+
+    if(d.drv.cfg.goalBrutto === undefined) d.drv.cfg.goalBrutto = 400;
+    if(d.drv.cfg.goalNetto === undefined) d.drv.cfg.goalNetto = 300;
+
     if(d.drv.emp === undefined) d.drv.emp = 'partner';
     if(d.drv.plat === undefined) d.drv.plat = 'apps';
     if(d.drv.carType === undefined) d.drv.carType = 'rent';
@@ -81,8 +97,8 @@ window.patchDb = function(data) {
 // 4. Narzędzia Pomocnicze
 window.safeVal = function(id, def=0) {
     let el = document.getElementById(id);
-    if(!el) return def;
-    let v = parseFloat(el.value);
+    if(!el || el.value === '') return def;
+    let v = parseFloat(el.value.replace(',', '.'));
     return isNaN(v) ? def : v;
 };
 
@@ -106,7 +122,7 @@ window.onerror = function(msg, url, lineNo) {
 };
 
 // ==========================================
-// 5. GLOBALNE FUNKCJE NAWIGACYJNE
+// 5. GLOBALNE FUNKCJE NAWIGACYJNE I KRYSZTAŁOWY SWITCHER
 // ==========================================
 
 window.switchTab = function(t) { 
@@ -121,15 +137,23 @@ window.openSwitcher = function() {
     let btns = document.getElementById('switcher-btns');
     if(el && btns) {
         btns.innerHTML = `
-            <button class="btn" style="background:linear-gradient(135deg, var(--driver), #2563eb); color:#fff; padding:18px; font-weight:900; margin-bottom:12px; font-size:1.1rem; box-shadow:0 8px 25px rgba(59,130,246,0.35);" onclick="window.db.mainProfile='driver'; window.db.role='drv'; window.db.tab='term'; window.save(); document.getElementById('m-switcher').classList.add('hidden'); window.render();"><span class="float-icon" style="display:inline-block; margin-right:8px;">🚕</span> PANEL TAXI</button>
-            <button class="btn" style="background:linear-gradient(135deg, var(--life), #0f766e); color:#fff; padding:18px; font-weight:900; margin-bottom:18px; font-size:1.1rem; box-shadow:0 8px 25px rgba(20,184,166,0.35);" onclick="window.db.mainProfile='home'; window.db.role='home'; window.db.tab='dash'; window.save(); document.getElementById('m-switcher').classList.add('hidden'); window.render();"><span class="float-icon" style="display:inline-block; margin-right:8px;">🏠</span> BUDŻET DOMOWY</button>
-            <div style="height:1px; background:rgba(255,255,255,0.08); margin: 5px 0 15px 0;"></div>
-            <p style="color:var(--muted); font-size:0.7rem; text-transform:uppercase; margin-bottom:12px; font-weight:bold; letter-spacing:0.5px;">Zarządzaj innymi profilami</p>
-            <button class="btn" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:var(--muted); padding:15px; margin-bottom:10px;" onclick="if(window.sysAlert) window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca z zarządzaniem rewirami i stawkami za paczkę pojawi się w kolejnych aktualizacjach!', 'info')">📦 KURIER / DOSTAWA (Wkrótce)</button>
-            <button class="btn" style="background:rgba(168, 85, 247, 0.05); border:1px dashed rgba(168, 85, 247, 0.3); color:#c084fc; padding:15px; margin-bottom:10px; font-weight:bold;" onclick="if(window.sysAlert) window.sysAlert('Funkcja PRO', 'Pełny moduł Firma/Spedycja (z KSeF, fakturami i flotą) będzie dostępny w wersji StyreOS PRO!', 'info')">🚛 FIRMA / SPEDYCJA (PRO)</button>
-            <div style="height:1px; background:rgba(255,255,255,0.08); margin: 15px 0;"></div>
-            <button class="btn" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:14px; font-size:0.85rem; font-weight:bold;" onclick="window.logoutToLauncher()">⚙️ WRÓĆ DO EKRANU STARTOWEGO</button>
-            <button class="btn" style="background:transparent; color:var(--muted); margin-top:5px; box-shadow:none;" onclick="document.getElementById('m-switcher').classList.add('hidden')">ZAMKNIJ</button>
+            <div style="margin-bottom:20px; display:flex; flex-direction:column; gap:12px;">
+                <button class="btn" style="background:linear-gradient(135deg, rgba(14,165,233,0.15), rgba(0,0,0,0.6)); border:1px solid rgba(14,165,233,0.3); border-top-color:rgba(14,165,233,0.6); color:#fff; padding:18px; font-weight:900; font-size:1.1rem; box-shadow:0 8px 25px rgba(14,165,233,0.2); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; gap:10px;" onclick="window.db.mainProfile='driver'; window.db.role='drv'; window.db.tab='term'; window.save(); document.getElementById('m-switcher').classList.add('hidden'); window.render();"><span class="float-icon" style="font-size:1.4rem;">🚕</span> PANEL TAXI</button>
+                <button class="btn" style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(0,0,0,0.6)); border:1px solid rgba(16,185,129,0.3); border-top-color:rgba(16,185,129,0.6); color:#fff; padding:18px; font-weight:900; font-size:1.1rem; box-shadow:0 8px 25px rgba(16,185,129,0.2); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; gap:10px;" onclick="window.db.mainProfile='home'; window.db.role='home'; window.db.tab='dash'; window.save(); document.getElementById('m-switcher').classList.add('hidden'); window.render();"><span class="float-icon" style="font-size:1.4rem;">🏠</span> BUDŻET DOMOWY</button>
+            </div>
+            
+            <div style="height:1px; background:rgba(255,255,255,0.05); margin: 5px 0 15px 0;"></div>
+            <p style="color:var(--muted); font-size:0.65rem; text-transform:uppercase; margin-bottom:12px; font-weight:800; letter-spacing:1px; text-align:center;">Zarządzaj innymi profilami</p>
+            
+            <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+                <button class="btn" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.05); color:var(--muted); padding:15px; display:flex; align-items:center; justify-content:center; gap:10px;" onclick="if(window.sysAlert) window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca z zarządzaniem rewirami i stawkami za paczkę pojawi się w kolejnych aktualizacjach!', 'info')"><span style="filter:grayscale(100%);">📦</span> KURIER / DOSTAWA (Wkrótce)</button>
+                <button class="btn" style="background:linear-gradient(135deg, rgba(217,70,239,0.05), rgba(0,0,0,0.5)); border:1px dashed rgba(217,70,239,0.3); color:#d946ef; padding:15px; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:10px;" onclick="if(window.sysAlert) window.sysAlert('Funkcja PRO', 'Pełny moduł Firma/Spedycja (z KSeF, fakturami i flotą) będzie dostępny w wersji StyreOS PRO!', 'info')"><span>🚛</span> FIRMA / SPEDYCJA (PRO)</button>
+            </div>
+            
+            <div style="height:1px; background:rgba(255,255,255,0.05); margin: 15px 0;"></div>
+            
+            <button class="btn" style="background:transparent; border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.7); padding:15px; font-size:0.85rem; font-weight:800;" onclick="window.logoutToLauncher()">⚙️ WRÓĆ DO EKRANU STARTOWEGO</button>
+            <button class="btn" style="background:transparent; color:#ef4444; margin-top:5px; box-shadow:none; font-size:0.8rem;" onclick="document.getElementById('m-switcher').classList.add('hidden')">ZAMKNIJ MODAL</button>
         `;
         el.classList.remove('hidden');
     }
@@ -181,7 +205,7 @@ window.render = function() {
 }
 
 // ==========================================
-// 7. EKRAN LAUNCHERA I KREATORA (WIZARD)
+// 7. EKRAN LAUNCHERA (BRAMA GŁÓWNA)
 // ==========================================
 
 window.rLauncher = function() {
@@ -211,101 +235,77 @@ window.rLauncher = function() {
     </div>
     `;
 
-    APP.innerHTML = `
-    <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; text-align:center; background:var(--bg);">
-        <div style="width:90px;height:90px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
-            <img src="icon-512.png" class="float-icon" style="width:100%;height:100%;border-radius:24px;box-shadow:0 12px 30px rgba(0,0,0,0.6);" alt="Logo" onerror="this.outerHTML='<div style=\\'font-size:3.5rem;\\'>🚀</div>'">
-        </div>
-        <h1 style="color:#fff; font-size:2.4rem; margin-bottom:5px; letter-spacing:-1px;">Cześć, ${window.db.userName}! 👋</h1>
-        <p style="color:var(--muted); margin-bottom:35px; font-size:1rem;">Wybierz swój pulpit roboczy</p>
+    let uName = window.db.userName ? window.db.userName : 'Kierowco';
 
-        <div style="width:100%; max-width:350px; display:flex; flex-direction:column; gap:16px;">
-            <button class="btn" style="background:linear-gradient(135deg, var(--driver), #2563eb); color:#fff; padding:22px; font-size:1.2rem; font-weight:900; box-shadow:0 10px 30px rgba(59,130,246,0.4); display:flex; align-items:center; justify-content:center; gap:14px; border-radius:20px;" onclick="window.db.role='drv'; window.db.tab='term'; window.save(); window.render();">
-                <span style="font-size:1.6rem;" class="float-icon">🚕</span> PANEL TAXI
-            </button>
-            <button class="btn" style="background:linear-gradient(135deg, var(--life), #0f766e); color:#fff; padding:22px; font-size:1.2rem; font-weight:900; box-shadow:0 10px 30px rgba(20,184,166,0.4); display:flex; align-items:center; justify-content:center; gap:14px; border-radius:20px;" onclick="window.db.role='home'; window.db.tab='dash'; window.save(); window.render();">
-                <span style="font-size:1.6rem;" class="float-icon">🏠</span> BUDŻET DOMOWY
-            </button>
-            <button class="btn" style="background:rgba(255,255,255,0.03); color:var(--muted); border:1px dashed rgba(255,255,255,0.15); padding:16px; font-size:1rem; font-weight:bold; border-radius:18px; box-shadow:none;" onclick="if(window.sysAlert) window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca w kolejnej aktualizacji!', 'info')">
-                📦 KURIER / DOSTAWA
-            </button>
+    // LAUNCHER ZBUDOWANY NA SYSTEMIE CRYSTAL (Ostateczna Wersja)
+    APP.innerHTML = `
+    <style id="home-crystal-styles-v13">
+        .crystal-card { background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.2) 100%); border: 1px solid rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.3); border-radius: 16px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 8px 20px rgba(0,0,0,0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 20px; text-align: center; position: relative; overflow: hidden; margin-bottom:15px; cursor:pointer; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .crystal-card:active { transform: scale(0.96); }
+        .crystal-card::after { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%); transform: skewX(-25deg); animation: shine 5s infinite; }
+        .crystal-taxi { border-top-color: rgba(14,165,233,0.6); box-shadow: inset 0 1px 2px rgba(14,165,233,0.4), 0 8px 20px rgba(0,0,0,0.6), 0 0 25px rgba(14,165,233,0.2); background: linear-gradient(135deg, rgba(14,165,233,0.15), rgba(0,0,0,0.4)); }
+        .crystal-budget { border-top-color: rgba(16,185,129,0.6); box-shadow: inset 0 1px 2px rgba(16,185,129,0.4), 0 8px 20px rgba(0,0,0,0.6), 0 0 25px rgba(16,185,129,0.2); background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(0,0,0,0.4)); }
+        .crystal-locked { border-top-color: rgba(255,255,255,0.1); box-shadow: inset 0 1px 2px rgba(255,255,255,0.05), 0 8px 20px rgba(0,0,0,0.4); background: rgba(0,0,0,0.6); opacity: 0.6; cursor: not-allowed; }
+        .crystal-pro { border-top-color: rgba(217,70,239,0.4); box-shadow: inset 0 1px 2px rgba(217,70,239,0.2), 0 8px 20px rgba(0,0,0,0.4); background: linear-gradient(135deg, rgba(217,70,239,0.05), rgba(0,0,0,0.6)); opacity: 0.8; }
+        @keyframes shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+    </style>
+    
+    <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px 20px; text-align:center; background:var(--bg); animation:fadeIn 0.4s ease;">
+        <div style="display:inline-block; position:relative; margin-bottom:15px;">
+            <div style="width:80px; height:80px; background:rgba(255, 255, 255, 0.05); border:1px solid rgba(255, 255, 255, 0.1); border-radius:26px; display:flex; align-items:center; justify-content:center; font-size:2.8rem; box-shadow:0 15px 35px rgba(0,0,0,0.5); backdrop-filter:blur(10px);">🎛️</div>
+            <div style="position:absolute; top:-5px; right:-5px; background:#10b981; width:20px; height:20px; border-radius:50%; border:3px solid var(--bg); box-shadow:0 0 10px #10b981;"></div>
+        </div>
+        
+        <h1 style="color:#fff; font-size:2.2rem; font-weight:900; margin:0 0 5px 0; letter-spacing:-1px;">Cześć, ${uName}!</h1>
+        <p style="color:var(--muted); font-size:0.85rem; margin-bottom:30px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Wybierz swój pulpit roboczy</p>
+
+        <div style="width:100%; max-width:350px; display:flex; flex-direction:column; gap:0;">
+            <div class="crystal-card crystal-taxi" onclick="window.db.role='drv'; window.db.tab='term'; window.save(); window.render();">
+                <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
+                    <div style="font-size:2rem; filter:drop-shadow(0 0 10px rgba(14,165,233,0.5));">🚕</div>
+                    <h2 style="margin:0; font-size:1.4rem; font-weight:900; color:#fff; text-shadow:0 0 10px rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:1px;">Panel Taxi</h2>
+                </div>
+            </div>
+
+            <div class="crystal-card crystal-budget" onclick="window.db.role='home'; window.db.tab='dash'; window.save(); window.render();">
+                <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
+                    <div style="font-size:2rem; filter:drop-shadow(0 0 10px rgba(16,185,129,0.5));">🏠</div>
+                    <h2 style="margin:0; font-size:1.4rem; font-weight:900; color:#fff; text-shadow:0 0 10px rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:1px;">Budżet Domowy</h2>
+                </div>
+            </div>
+            
+            <div style="margin:20px 0 15px 0; font-size:0.65rem; color:rgba(255,255,255,0.3); font-weight:900; text-transform:uppercase; letter-spacing:2px; display:flex; align-items:center; gap:10px;">
+                <div style="flex:1; height:1px; background:rgba(255,255,255,0.05);"></div>ZARZĄDZAJ INNYMI PROFILAMI<div style="flex:1; height:1px; background:rgba(255,255,255,0.05);"></div>
+            </div>
+
+            <div class="crystal-card crystal-locked" onclick="if(window.sysAlert) window.sysAlert('Wkrótce', 'Profil Kurier/Dostawca pojawi się w kolejnej aktualizacji!', 'info')">
+                <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
+                    <div style="font-size:1.6rem; filter:grayscale(100%); opacity:0.5;">📦</div>
+                    <h2 style="margin:0; font-size:1rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Kurier / Dostawa</h2>
+                </div>
+            </div>
+
+            <div class="crystal-card crystal-pro" onclick="if(window.sysAlert) window.sysAlert('Wersja PRO', 'Profil Menadżera Floty będzie dostępny w StyreOS PRO.', 'info')">
+                <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
+                    <div style="font-size:1.6rem; filter:drop-shadow(0 0 5px rgba(217,70,239,0.5));">🚛</div>
+                    <h2 style="margin:0; font-size:1rem; font-weight:800; color:#d946ef; text-transform:uppercase; letter-spacing:1px;">Firma / Flota (PRO)</h2>
+                </div>
+            </div>
         </div>
 
         ${roadmapHtml}
 
-        <div style="margin-top:45px; display:flex; flex-direction:column; gap:15px; align-items:center;">
+        <div style="margin-top:40px; display:flex; flex-direction:column; gap:15px; align-items:center;">
             <button style="background:transparent; border:none; color:var(--danger); font-size:0.8rem; text-decoration:underline; cursor:pointer; opacity:0.8; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8" onclick="if(confirm('Chcesz zresetować konfigurację i zacząć od nowa?')){ localStorage.clear(); location.reload(); }">Wyczyść dane i zresetuj aplikację</button>
         </div>
     </div>
     `;
 }
 
-window.wS = function(id) { document.querySelectorAll('.wiz-screen').forEach(e=>e.classList.remove('active')); let t = document.getElementById(id); if(t) t.classList.add('active'); window.scrollTo({top:0, behavior:'smooth'}); }
-
-window.saveNameAndNext = function() {
-    let nameInp = document.getElementById('w-guest-name');
-    window.db.userName = nameInp ? (nameInp.value.trim() || 'Gość') : 'Gość';
-    if (!window.db.home.members.includes(window.db.userName)) {
-        window.db.home.members.unshift(window.db.userName);
-    }
-    window.save();
-    window.wS('w-modules');
-};
-
-window.wSetupChoice = function(choice) {
-    if (choice === 'taxi') {
-        window.wS('w-d1'); 
-    } else {
-        window.finishSetup(false);
-    }
-}
-
-window.dW = function(cat, val, el) { window.wData[cat] = val; el.parentElement.querySelectorAll('.opt-card').forEach(c=>{ c.style.borderColor='rgba(255,255,255,0.05)'; c.classList.remove('selected'); }); el.style.borderColor='var(--driver)'; el.classList.add('selected'); if(cat==='p') { let elB = document.getElementById('wd-b'); if(elB) elB.style.display = (val === 'corp') ? 'block' : 'none'; } if(cat==='c') { let elC = document.getElementById('wd-c'); if(elC) elC.style.display = (val === 'own') ? 'none' : 'block'; } if(cat==='e') { let ep = document.getElementById('wd-e-p'); let ej = document.getElementById('wd-e-j'); if(ep) ep.style.display = (val === 'partner') ? 'block' : 'none'; if(ej) ej.style.display = (val === 'jdg') ? 'block' : 'none'; } }
-window.dTogglePType = function(prefix) { let elT = document.getElementById(`${prefix}-p-type`); let val = elT ? elT.value : 'flat'; let flatBox = document.getElementById(`${prefix}-p-flat-box`); let pctBox = document.getElementById(`${prefix}-p-pct-box`); if(flatBox) flatBox.style.display = (val === 'flat') ? 'flex' : 'none'; if(pctBox) pctBox.style.display = (val === 'pct') ? 'block' : 'none'; }
-
-window.finishSetup = function(fromTaxi = true) { 
-    try {
-        window.db = window.patchDb(window.db); 
-        
-        if (fromTaxi) {
-            window.db.drv.plat = window.wData.p || 'apps'; 
-            window.db.drv.carType = window.wData.c || 'rent'; 
-            window.db.drv.emp = window.wData.e || 'partner'; 
-            
-            let b = window.db.drv.plat === 'corp' ? window.safeVal('wd-b-v') : 0; 
-            let bPer = document.getElementById('wd-b-period') ? document.getElementById('wd-b-period').value : 'month';
-            let c = window.db.drv.carType === 'own' ? 0 : window.safeVal('wd-c-v'); 
-            let cType = window.db.drv.carType === 'own' ? 'month' : (document.getElementById('wd-c-type') ? document.getElementById('wd-c-type').value : 'month');
-            let e = 0, eTy = 'flat', ePct = 0, ePer = 'month'; 
-            
-            if(window.db.drv.emp === 'partner') { 
-                eTy = document.getElementById('wd-p-type') ? document.getElementById('wd-p-type').value : 'flat'; 
-                if(eTy === 'flat') { e = window.safeVal('wd-p-v'); ePer = document.getElementById('wd-p-period') ? document.getElementById('wd-p-period').value : 'week'; } 
-                else { ePct = window.safeVal('wd-p-pct') / 100; } 
-            } else { 
-                e = window.safeVal('wd-j-v'); ePer = document.getElementById('wd-j-period') ? document.getElementById('wd-j-period').value : 'month'; 
-            } 
-            
-            window.db.drv.cfg.bC = b; window.db.drv.cfg.bPeriod = bPer; window.db.drv.cfg.cC = c; window.db.drv.cfg.cType = cType; 
-            window.db.drv.cfg.eC = e; window.db.drv.cfg.eType = eTy; window.db.drv.cfg.ePct = ePct || 0; window.db.drv.cfg.ePeriod = ePer; window.db.drv.cfg.iC = 0; window.db.drv.cfg.iPeriod = 'month';
-            window.db.drv.cfg.tax = window.safeVal('wd-tx-v', 8.5) / 100;
-        }
-
-        window.db.setupDone = true; 
-        window.db.init = true; 
-        window.db.role = null; 
-        
-        window.save(); 
-        window.render(); 
-    } catch(err) {
-        alert("Błąd podczas konfiguracji: " + err.message);
-    }
-}
-
-// --- GOOGLE LOGIN ---
+// --- LOGOWANIE GOOGLE ---
 window.loginWithGoogle = function() {
     if (typeof firebase === 'undefined' || !firebase.auth) {
-        if(window.sysAlert) return window.sysAlert('Brak połączenia', 'Zaczekaj sekundę na biblioteki Google lub sprawdź internet.', 'warning');
+        if(window.sysAlert) return window.sysAlert('Brak połączenia', 'Zaczekaj sekundę na biblioteki Google.', 'warning');
         return alert("Poczekaj na wczytanie bibliotek...");
     }
     
@@ -370,57 +370,3 @@ window.resolveConflict = function(choice) {
     window.render();
 }
 
-window.rWiz = function() {
-    let uName = window.db.userName || '';
-
-    APP.innerHTML = `
-    <div id="w-main" class="wiz-screen active" style="align-items:center; text-align:center;">
-        <div style="width:100px;height:100px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
-            <img src="icon-512.png" class="float-icon" style="width:100%;height:100%;border-radius:26px;box-shadow:0 15px 35px rgba(0,0,0,0.5);" alt="Logo" onerror="this.outerHTML='<div style=\\'font-size:3.5rem;\\'>🚀</div>'">
-        </div>
-        <h1 style="color:#fff; font-size:3.8rem; margin:0; font-weight:900; letter-spacing:-2.5px;">STYRE OS</h1>
-        <p style="color:var(--muted); font-size:1.15rem; font-weight:600; margin-top:5px; margin-bottom:45px; letter-spacing:1px;">Twój Asystent Finansowy</p>
-        <div style="width:100%; max-width:350px;">
-            <button class="btn" style="background:#fff; color:#000; box-shadow: 0 8px 25px rgba(255,255,255,0.25); display:flex; align-items:center; justify-content:center; gap:12px; font-weight:900; padding:18px; font-size:1.1rem;" onclick="window.loginWithGoogle()">
-                <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                Zaloguj przez Google
-            </button>
-            <p style="font-size:0.75rem; color:var(--success); margin-top:12px; margin-bottom:30px; font-weight:600;">Zalecane: bezpieczna kopia w chmurze</p>
-            <div style="display:flex; align-items:center; margin: 25px 0; color:var(--muted); font-size:0.75rem; text-transform:uppercase; font-weight:bold;"><div style="flex:1; height:1px; background:rgba(255,255,255,0.08);"></div><span style="padding:0 12px;">LUB</span><div style="flex:1; height:1px; background:rgba(255,255,255,0.08);"></div></div>
-            <button class="btn" style="background:rgba(255,255,255,0.03); color:var(--muted); border:1px solid rgba(255,255,255,0.15); padding:16px; font-size:0.95rem; box-shadow:none;" onclick="window.wS('w-name')">Rozpocznij (Konto Offline)</button>
-        </div>
-    </div>
-    <div id="w-name" class="wiz-screen" style="align-items:center; text-align:center;">
-        <div style="width:100%; max-width:350px; margin-top:50px;">
-            <h2 style="color:#fff; margin-bottom:5px; font-size:2.2rem;">Jak masz na imię?</h2>
-            <p style="color:var(--muted); font-size:0.95rem; margin-bottom:35px;">Abyśmy wiedzieli, jak się do Ciebie zwracać.</p>
-            <input type="text" id="w-guest-name" class="premium-input" placeholder="Wpisz imię..." value="${uName}" style="text-align:center; font-size:1.4rem; padding:18px; margin-bottom:35px;">
-            <button class="btn btn-home" style="padding:18px; font-size:1.1rem;" onclick="window.saveNameAndNext()">DALEJ ➔</button>
-            <button class="btn" style="background:transparent; color:var(--muted); margin-top:12px; box-shadow:none;" onclick="window.wS('w-main')">Wróć</button>
-        </div>
-    </div>
-    <div id="w-modules" class="wiz-screen" style="align-items:center; text-align:center;">
-        <div style="width:100%; max-width:380px; margin-top:30px;">
-            <h2 style="color:#fff; margin-bottom:5px; font-size:2.2rem;">Konfiguracja Konta</h2>
-            <p style="color:var(--muted); font-size:0.95rem; margin-bottom:35px;">Z czego będziesz korzystać w StyreOS?</p>
-            <div class="opt-card" style="border-color:rgba(59,130,246,0.4); background:rgba(59,130,246,0.05);" onclick="window.wSetupChoice('taxi')"><div class="opt-icon float-icon">🚕</div><div class="opt-text"><h3 style="color:var(--driver)">Jestem Kierowcą Taxi</h3><p>Skonfiguruj auto, prowizje i korporację</p></div></div>
-            <div class="opt-card" style="border-color:rgba(20,184,166,0.4); background:rgba(20,184,166,0.05);" onclick="window.wSetupChoice('home')"><div class="opt-icon float-icon">🏠</div><div class="opt-text"><h3 style="color:var(--life)">Tylko Budżet Domowy</h3><p>Zarządzaj domem, pomiń ustawienia Taxi</p></div></div>
-            <button class="btn" style="background:transparent; color:var(--muted); margin-top:25px; box-shadow:none;" onclick="window.wS('w-name')">Wróć</button>
-        </div>
-    </div>
-    <div id="w-d1" class="wiz-screen"><div class="w-title">System Pracy</div><div class="w-sub">Krok 1 z 3</div><div class="opt-card selected" onclick="window.dW('p','apps',this)"><div class="opt-icon">📱</div><div class="opt-text"><h3>Aplikacje</h3></div></div><div class="opt-card" onclick="window.dW('p','corp',this)"><div class="opt-icon">📻</div><div class="opt-text"><h3>Korporacja</h3></div></div><div id="wd-b" class="wiz-inputs" style="display:none;"><div class="inp-row"><div class="inp-group"><label>Opłata za bazę (zł)</label><input type="number" id="wd-b-v" placeholder="np. 400"></div><div class="inp-group"><label>Okres</label><select id="wd-b-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:25px; padding:18px; font-size:1.1rem;" onclick="window.wS('w-d2')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted); box-shadow:none;" onclick="window.wS('w-modules')">Wróć</button></div>
-    <div id="w-d2" class="wiz-screen"><div class="w-title">Twoje Auto</div><div class="w-sub">Krok 2 z 3</div><div class="opt-card selected" onclick="window.dW('c','rent',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Wynajem</h3></div></div><div class="opt-card" onclick="window.dW('c','lease',this)"><div class="opt-icon">📝</div><div class="opt-text"><h3>Leasing</h3></div></div><div class="opt-card" onclick="window.dW('c','own',this)"><div class="opt-icon">🚗</div><div class="opt-text"><h3>Własne</h3></div></div><div id="wd-c" style="display:block;"><div class="inp-row"><div class="inp-group"><label>Rata (zł)</label><input type="number" id="wd-c-v"></div><div class="inp-group"><label>Okres</label><select id="wd-c-type"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div></div><button class="btn btn-driver" style="margin-top:25px; padding:18px; font-size:1.1rem;" onclick="window.wS('w-d3')">Dalej</button><button class="btn" style="background:transparent; color:var(--muted); box-shadow:none;" onclick="window.wS('w-d1')">Wróć</button></div>
-    <div id="w-d3" class="wiz-screen"><div class="w-title">Koszty Stałe</div><div class="w-sub">Krok 3 z 3</div><div class="opt-card selected" onclick="window.dW('e','partner',this)"><div class="opt-icon">🤝</div><div class="opt-text"><h3>Partner</h3></div></div><div class="opt-card" onclick="window.dW('e','jdg',this)"><div class="opt-icon">💼</div><div class="opt-text"><h3>JDG</h3></div></div><div id="wd-e-p" style="display:block;"><div class="inp-group" style="margin-bottom:12px;"><label>Rodzaj umowy</label><select id="wd-p-type" onchange="window.dTogglePType('wd')"><option value="flat">Stała kwota</option><option value="pct">Procent</option></select></div><div class="inp-row" id="wd-p-flat-box"><div class="inp-group"><label>Kwota (zł)</label><input type="number" id="wd-p-v" placeholder="np. 50"></div><div class="inp-group"><label>Okres</label><select id="wd-p-period"><option value="week" selected>Tydzień</option><option value="month">Miesiąc</option></select></div></div><div class="inp-group" id="wd-p-pct-box" style="display:none;"><label>Prowizja (%)</label><input type="number" id="wd-p-pct"></div></div><div id="wd-e-j" style="display:none;"><div class="inp-row"><div class="inp-group"><label>ZUS (Kwota zł)</label><input type="number" id="wd-j-v" placeholder="np. 1600"></div><div class="inp-group"><label>Okres</label><select id="wd-j-period"><option value="week">Tydzień</option><option value="month" selected>Miesiąc</option></select></div></div></div><div class="inp-group" style="margin-top:15px;"><label>Podatek (%)</label><input type="number" id="wd-tx-v" value="8.5" step="0.1"></div><button class="btn btn-success" style="margin-top:35px; padding:18px; font-size:1.1rem;" onclick="window.finishSetup(true)">ZAKOŃCZ I WEJDŹ</button><button class="btn" style="background:transparent; color:var(--muted); box-shadow:none;" onclick="window.wS('w-d2')">Wróć</button></div>
-    `;
-}
-
-if (typeof firebase !== 'undefined' && firebase.auth) {
-    firebase.auth().onAuthStateChanged((user) => { 
-        let wiz = document.getElementById('w-main'); 
-        if (user && wiz && wiz.classList.contains('active')) { 
-            window.render(); 
-        } 
-    });
-}
-
-window.render();
